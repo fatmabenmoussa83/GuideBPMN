@@ -1,5 +1,9 @@
 # GuideBPMN — replication package
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24362598.svg)](https://doi.org/10.5281/zenodo.24362598)
+
+Website: https://fatmabenmoussa83.github.io/GuideBPMN/ · Archived version: https://doi.org/10.5281/zenodo.24362598
+
 GuideBPMN generates BPMN 2.0 models from textual process descriptions with LLMs and
 learns modeling guidelines from the mistakes it verifies. An orchestrator agent
 (LLM + LangGraph) calls the components as tools:
