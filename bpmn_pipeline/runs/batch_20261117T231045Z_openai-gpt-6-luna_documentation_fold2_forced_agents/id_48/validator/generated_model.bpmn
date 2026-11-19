@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/bpmn/vienna-night-run">
+  <bpmn:process id="Process_ViennaNightRun" name="App For Participating at the Vienna Night Run" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Participation" name="Decide to participate"/>
+    <bpmn:userTask id="Task_SelectStartingBlock" name="Select a starting block"/>
+    <bpmn:userTask id="Task_EnterInformation" name="Enter information into the app"/>
+    <bpmn:task id="Task_RunFiveKilometers" name="Run for 5 km"/>
+    <bpmn:task id="Task_MeasureQualificationTime" name="Measure the time"/>
+    <bpmn:exclusiveGateway id="Gateway_Qualification" name="Less than 25 minutes?" default="Flow_Qualification_No"/>
+    <bpmn:task id="Task_Train" name="Train"/>
+    <bpmn:task id="Task_CheckProgress" name="Check progress"/>
+    <bpmn:exclusiveGateway id="Gateway_GoalAchieved" name="Goal achieved?" default="Flow_Goal_NotAchieved"/>
+    <bpmn:exclusiveGateway id="Gateway_QualificationMerge" name="Qualification paths merge"/>
+    <bpmn:task id="Task_GetStartingNumber" name="Get the starting number"/>
+    <bpmn:task id="Task_AssessWorkdayTiming" name="Assess the time between workday end and starting time"/>
+    <bpmn:exclusiveGateway id="Gateway_TravelChoice" name="More than one hour left?" default="Flow_LeaveFromWork"/>
+    <bpmn:task id="Task_GoFromHome" name="Go to the event from home"/>
+    <bpmn:task id="Task_LeaveFromWork" name="Leave directly from work"/>
+    <bpmn:exclusiveGateway id="Gateway_TravelMerge" name="Travel paths merge"/>
+    <bpmn:parallelGateway id="Gateway_RaceSplit" name="Run, drink, and collect time in parallel"/>
+    <bpmn:task id="Task_RunNightRun" name="Run at the Night Run"/>
+    <bpmn:task id="Task_Drink" name="Drink while running"/>
+    <bpmn:task id="Task_MeasureFinalTime" name="Measure the final running time with fitness gadgets"/>
+    <bpmn:parallelGateway id="Gateway_RaceJoin" name="Wait for running, drinking, and time measurement"/>
+    <bpmn:task id="Task_ReceiveFinalTime" name="Receive the final running time"/>
+    <bpmn:endEvent id="EndEvent_FinalTimeReceived" name="Final running time received"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Select" sourceRef="StartEvent_Participation" targetRef="Task_SelectStartingBlock"/>
+    <bpmn:sequenceFlow id="Flow_Select_Enter" sourceRef="Task_SelectStartingBlock" targetRef="Task_EnterInformation"/>
+    <bpmn:sequenceFlow id="Flow_Enter_Run" sourceRef="Task_EnterInformation" targetRef="Task_RunFiveKilometers"/>
+    <bpmn:sequenceFlow id="Flow_Run_Measure" sourceRef="Task_RunFiveKilometers" targetRef="Task_MeasureQualificationTime"/>
+    <bpmn:sequenceFlow id="Flow_Measure_Qualification" sourceRef="Task_MeasureQualificationTime" targetRef="Gateway_Qualification"/>
+    <bpmn:sequenceFlow id="Flow_Qualification_Yes" name="Yes" sourceRef="Gateway_Qualification" targetRef="Gateway_QualificationMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">elapsed time is less than 25 minutes</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Qualification_No" name="No" sourceRef="Gateway_Qualification" targetRef="Task_Train"/>
+    <bpmn:sequenceFlow id="Flow_Train_Check" sourceRef="Task_Train" targetRef="Task_CheckProgress"/>
+    <bpmn:sequenceFlow id="Flow_Check_Goal" sourceRef="Task_CheckProgress" targetRef="Gateway_GoalAchieved"/>
+    <bpmn:sequenceFlow id="Flow_Goal_Achieved" name="Yes" sourceRef="Gateway_GoalAchieved" targetRef="Gateway_QualificationMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">goal achieved</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Goal_NotAchieved" name="No" sourceRef="Gateway_GoalAchieved" targetRef="Task_Train"/>
+    <bpmn:sequenceFlow id="Flow_QualificationMerge_Number" sourceRef="Gateway_QualificationMerge" targetRef="Task_GetStartingNumber"/>
+    <bpmn:sequenceFlow id="Flow_Number_Assess" sourceRef="Task_GetStartingNumber" targetRef="Task_AssessWorkdayTiming"/>
+    <bpmn:sequenceFlow id="Flow_Assess_TravelChoice" sourceRef="Task_AssessWorkdayTiming" targetRef="Gateway_TravelChoice"/>
+    <bpmn:sequenceFlow id="Flow_Travel_Home" name="Yes" sourceRef="Gateway_TravelChoice" targetRef="Task_GoFromHome">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">more than one hour remains between workday end and starting time</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_LeaveFromWork" name="No" sourceRef="Gateway_TravelChoice" targetRef="Task_LeaveFromWork"/>
+    <bpmn:sequenceFlow id="Flow_Home_TravelMerge" sourceRef="Task_GoFromHome" targetRef="Gateway_TravelMerge"/>
+    <bpmn:sequenceFlow id="Flow_Work_TravelMerge" sourceRef="Task_LeaveFromWork" targetRef="Gateway_TravelMerge"/>
+    <bpmn:sequenceFlow id="Flow_TravelMerge_RaceSplit" sourceRef="Gateway_TravelMerge" targetRef="Gateway_RaceSplit"/>
+    <bpmn:sequenceFlow id="Flow_RaceSplit_Run" sourceRef="Gateway_RaceSplit" targetRef="Task_RunNightRun"/>
+    <bpmn:sequenceFlow id="Flow_RaceSplit_Drink" sourceRef="Gateway_RaceSplit" targetRef="Task_Drink"/>
+    <bpmn:sequenceFlow id="Flow_RaceSplit_Measure" sourceRef="Gateway_RaceSplit" targetRef="Task_MeasureFinalTime"/>
+    <bpmn:sequenceFlow id="Flow_Run_RaceJoin" sourceRef="Task_RunNightRun" targetRef="Gateway_RaceJoin"/>
+    <bpmn:sequenceFlow id="Flow_Drink_RaceJoin" sourceRef="Task_Drink" targetRef="Gateway_RaceJoin"/>
+    <bpmn:sequenceFlow id="Flow_Measure_RaceJoin" sourceRef="Task_MeasureFinalTime" targetRef="Gateway_RaceJoin"/>
+    <bpmn:sequenceFlow id="Flow_RaceJoin_Receive" sourceRef="Gateway_RaceJoin" targetRef="Task_ReceiveFinalTime"/>
+    <bpmn:sequenceFlow id="Flow_Receive_End" sourceRef="Task_ReceiveFinalTime" targetRef="EndEvent_FinalTimeReceived"/>
+  </bpmn:process>
+</bpmn:definitions>

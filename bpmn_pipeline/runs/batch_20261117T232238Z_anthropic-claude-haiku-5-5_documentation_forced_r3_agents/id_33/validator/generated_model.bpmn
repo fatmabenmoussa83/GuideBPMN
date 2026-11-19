@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Custom3DPrint"
+                  targetNamespace="http://example.org/bpmn/custom-3d-print">
+  <bpmn:message id="Message_Sketches" name="Sketches sent"/>
+  <bpmn:message id="Message_ArtistResult" name="Artist result delivered"/>
+  <bpmn:message id="Message_ChangeRequest" name="Change request sent"/>
+  <bpmn:message id="Message_UpdatedResult" name="Updated result delivered"/>
+
+  <bpmn:collaboration id="Collaboration_Custom3DPrint">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_Artist" name="Artist"/>
+    <bpmn:messageFlow id="MessageFlow_SketchesToArtist" name="Send sketches" sourceRef="Task_SendSketches" targetRef="Participant_Artist"/>
+    <bpmn:messageFlow id="MessageFlow_ChangesToArtist" name="Tell changes" sourceRef="Task_RequestChanges" targetRef="Participant_Artist"/>
+    <bpmn:messageFlow id="MessageFlow_ResultFromArtist" name="Deliver result" sourceRef="Participant_Artist" targetRef="Event_ResultReceived"/>
+    <bpmn:messageFlow id="MessageFlow_UpdatedFromArtist" name="Deliver updated result" sourceRef="Participant_Artist" targetRef="Event_UpdatedResultReceived"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Customer" name="Instruct artist to create a 3D model and print it" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Request" name="Custom 3D model requested"/>
+
+    <bpmn:sendTask id="Task_SendSketches" name="Send sketches to artist" messageRef="Message_Sketches"/>
+    <bpmn:intermediateCatchEvent id="Event_ResultReceived" name="Artist result received">
+      <bpmn:messageEventDefinition id="MED_ResultReceived" messageRef="Message_ArtistResult"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_ReviewResult" name="Review result"/>
+    <bpmn:exclusiveGateway id="Gateway_Satisfied_Split" name="Satisfied with result?" default="Flow_NotSatisfied"/>
+    <bpmn:sendTask id="Task_RequestChanges" name="Tell artist what to change" messageRef="Message_ChangeRequest"/>
+    <bpmn:intermediateCatchEvent id="Event_UpdatedResultReceived" name="Updated result received">
+      <bpmn:messageEventDefinition id="MED_UpdatedResultReceived" messageRef="Message_UpdatedResult"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:userTask id="Task_ChooseColor" name="Choose plastic color"/>
+    <bpmn:exclusiveGateway id="Gateway_InStock_Split" name="Color in stock at home?" default="Flow_NotInStock"/>
+    <bpmn:task id="Task_CheckRemaining" name="Check remaining amount of color"/>
+    <bpmn:exclusiveGateway id="Gateway_Remaining_Split" name="Less than 100 g left?" default="Flow_NotUnder100"/>
+    <bpmn:task id="Task_AddToShoppingList" name="Add color to shopping list"/>
+    <bpmn:task id="Task_OrderColor" name="Order plastic color"/>
+    <bpmn:exclusiveGateway id="Gateway_Plastic_Merge" name="Plastic available"/>
+
+    <bpmn:parallelGateway id="Gateway_Prep_Split" name="Start printer preparation"/>
+    <bpmn:userTask id="Task_HeatPrinter" name="Turn on printer and heat bed and extruder">
+      <bpmn:documentation>The printer continuously sends its status back.</bpmn:documentation>
+    </bpmn:userTask>
+    <bpmn:task id="Task_GenerateGcode" name="Generate G-code from STL file"/>
+    <bpmn:parallelGateway id="Gateway_Prep_Join" name="Printer and G-code ready"/>
+    <bpmn:task id="Task_PrintModel" name="Print model"/>
+    <bpmn:endEvent id="EndEvent_Printed" name="Model printed"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Sketches" sourceRef="StartEvent_Request" targetRef="Task_SendSketches"/>
+    <bpmn:sequenceFlow id="Flow_Sketches_ResultWait" sourceRef="Task_SendSketches" targetRef="Event_ResultReceived"/>
+    <bpmn:sequenceFlow id="Flow_ResultWait_Review" sourceRef="Event_ResultReceived" targetRef="Task_ReviewResult"/>
+    <bpmn:sequenceFlow id="Flow_Review_SatisfiedSplit" sourceRef="Task_ReviewResult" targetRef="Gateway_Satisfied_Split"/>
+    <bpmn:sequenceFlow id="Flow_Satisfied" name="Yes" sourceRef="Gateway_Satisfied_Split" targetRef="Task_ChooseColor">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${satisfied}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotSatisfied" name="No" sourceRef="Gateway_Satisfied_Split" targetRef="Task_RequestChanges"/>
+    <bpmn:sequenceFlow id="Flow_Changes_UpdateWait" sourceRef="Task_RequestChanges" targetRef="Event_UpdatedResultReceived"/>
+    <bpmn:sequenceFlow id="Flow_UpdateWait_Review" sourceRef="Event_UpdatedResultReceived" targetRef="Task_ReviewResult"/>
+
+    <bpmn:sequenceFlow id="Flow_Color_InStockSplit" sourceRef="Task_ChooseColor" targetRef="Gateway_InStock_Split"/>
+    <bpmn:sequenceFlow id="Flow_InStock" name="Yes" sourceRef="Gateway_InStock_Split" targetRef="Task_CheckRemaining">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${inStock}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotInStock" name="No" sourceRef="Gateway_InStock_Split" targetRef="Task_OrderColor"/>
+    <bpmn:sequenceFlow id="Flow_Check_RemainingSplit" sourceRef="Task_CheckRemaining" targetRef="Gateway_Remaining_Split"/>
+    <bpmn:sequenceFlow id="Flow_Under100" name="Yes" sourceRef="Gateway_Remaining_Split" targetRef="Task_AddToShoppingList">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${remainingUnder100}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotUnder100" name="No" sourceRef="Gateway_Remaining_Split" targetRef="Gateway_Plastic_Merge"/>
+    <bpmn:sequenceFlow id="Flow_ShoppingList_Merge" sourceRef="Task_AddToShoppingList" targetRef="Gateway_Plastic_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Order_Merge" sourceRef="Task_OrderColor" targetRef="Gateway_Plastic_Merge"/>
+
+    <bpmn:sequenceFlow id="Flow_Merge_PrepSplit" sourceRef="Gateway_Plastic_Merge" targetRef="Gateway_Prep_Split"/>
+    <bpmn:sequenceFlow id="Flow_PrepSplit_Heat" sourceRef="Gateway_Prep_Split" targetRef="Task_HeatPrinter"/>
+    <bpmn:sequenceFlow id="Flow_PrepSplit_Gcode" sourceRef="Gateway_Prep_Split" targetRef="Task_GenerateGcode"/>
+    <bpmn:sequenceFlow id="Flow_Heat_PrepJoin" sourceRef="Task_HeatPrinter" targetRef="Gateway_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_Gcode_PrepJoin" sourceRef="Task_GenerateGcode" targetRef="Gateway_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_PrepJoin_Print" sourceRef="Gateway_Prep_Join" targetRef="Task_PrintModel"/>
+    <bpmn:sequenceFlow id="Flow_Print_End" sourceRef="Task_PrintModel" targetRef="EndEvent_Printed"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Subrogation" targetNamespace="http://example.org/bpmn/subrogation">
+
+  <bpmn:message id="Message_PaymentRequest" name="Payment request"/>
+  <bpmn:message id="Message_PaymentReceived" name="Payment received"/>
+  <bpmn:message id="Message_Disagreement" name="Insurant disagrees with recourse"/>
+
+  <bpmn:process id="Process_Recourse" name="Subrogation recourse" isExecutable="false">
+
+    <bpmn:startEvent id="StartEvent_PossibleSubrogation" name="Possible subrogation identified"/>
+
+    <bpmn:task id="Task_ObtainInformation" name="Get information on possible subrogation"/>
+    <bpmn:task id="Task_CheckCase" name="Check case"/>
+
+    <bpmn:exclusiveGateway id="Gateway_RecoursePossible" name="Recourse possible?"/>
+
+    <bpmn:task id="Task_CloseCaseNoRecourse" name="Close case"/>
+    <bpmn:endEvent id="EndEvent_NoRecourse" name="Case closed (no recourse)"/>
+
+    <bpmn:sendTask id="SendTask_PaymentRequest" name="Send request for payment to insurant" messageRef="Message_PaymentRequest"/>
+    <bpmn:task id="Task_CreateReminder" name="Create reminder"/>
+
+    <bpmn:eventBasedGateway id="Gateway_AwaitResponse" name="Await insurant response"/>
+
+    <bpmn:intermediateCatchEvent id="ICE_PaymentReceived" name="Payment received">
+      <bpmn:messageEventDefinition id="MED_PaymentReceived" messageRef="Message_PaymentReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="ICE_Disagreement" name="Insurant disagrees with recourse">
+      <bpmn:messageEventDefinition id="MED_Disagreement" messageRef="Message_Disagreement"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="ICE_DisagreementDeadline" name="Disagreement deadline reached">
+      <bpmn:documentation>The duration of the disagreement deadline is not specified in the description.</bpmn:documentation>
+      <bpmn:timerEventDefinition id="TED_DisagreementDeadline"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:task id="Task_MakeBooking" name="Make a booking"/>
+    <bpmn:task id="Task_CloseCasePaid" name="Close case"/>
+    <bpmn:endEvent id="EndEvent_Paid" name="Case closed (paid)"/>
+
+    <bpmn:task id="Task_CheckReasoning" name="Check reasoning of disagreement"/>
+    <bpmn:exclusiveGateway id="Gateway_ReasoningRight" name="Insurant right?"/>
+
+    <bpmn:task id="Task_CloseCaseAccepted" name="Close case"/>
+    <bpmn:endEvent id="EndEvent_DisagreementAccepted" name="Case closed (disagreement accepted)"/>
+
+    <bpmn:exclusiveGateway id="Gateway_ForwardMerge" name="Forward case needed"/>
+    <bpmn:task id="Task_ForwardToAgency" name="Forward case to collection agency"/>
+    <bpmn:endEvent id="EndEvent_Forwarded" name="Case forwarded to collection agency"/>
+
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_PossibleSubrogation" targetRef="Task_ObtainInformation"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_ObtainInformation" targetRef="Task_CheckCase"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_CheckCase" targetRef="Gateway_RecoursePossible"/>
+    <bpmn:sequenceFlow id="Flow_04" name="No" sourceRef="Gateway_RecoursePossible" targetRef="Task_CloseCaseNoRecourse"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_CloseCaseNoRecourse" targetRef="EndEvent_NoRecourse"/>
+    <bpmn:sequenceFlow id="Flow_06" name="Yes" sourceRef="Gateway_RecoursePossible" targetRef="SendTask_PaymentRequest"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="SendTask_PaymentRequest" targetRef="Task_CreateReminder"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_CreateReminder" targetRef="Gateway_AwaitResponse"/>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Gateway_AwaitResponse" targetRef="ICE_PaymentReceived"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Gateway_AwaitResponse" targetRef="ICE_Disagreement"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Gateway_AwaitResponse" targetRef="ICE_DisagreementDeadline"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="ICE_PaymentReceived" targetRef="Task_MakeBooking"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_MakeBooking" targetRef="Task_CloseCasePaid"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_CloseCasePaid" targetRef="EndEvent_Paid"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="ICE_Disagreement" targetRef="Task_CheckReasoning"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Task_CheckReasoning" targetRef="Gateway_ReasoningRight"/>
+    <bpmn:sequenceFlow id="Flow_17" name="Yes" sourceRef="Gateway_ReasoningRight" targetRef="Task_CloseCaseAccepted"/>
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Task_CloseCaseAccepted" targetRef="EndEvent_DisagreementAccepted"/>
+    <bpmn:sequenceFlow id="Flow_19" name="No" sourceRef="Gateway_ReasoningRight" targetRef="Gateway_ForwardMerge"/>
+    <bpmn:sequenceFlow id="Flow_20" sourceRef="ICE_DisagreementDeadline" targetRef="Gateway_ForwardMerge"/>
+    <bpmn:sequenceFlow id="Flow_21" sourceRef="Gateway_ForwardMerge" targetRef="Task_ForwardToAgency"/>
+    <bpmn:sequenceFlow id="Flow_22" sourceRef="Task_ForwardToAgency" targetRef="EndEvent_Forwarded"/>
+  </bpmn:process>
+</bpmn:definitions>

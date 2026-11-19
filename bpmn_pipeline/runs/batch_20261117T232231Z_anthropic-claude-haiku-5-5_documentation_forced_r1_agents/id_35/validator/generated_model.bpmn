@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Chainsaw" targetNamespace="http://example.org/bpmn/chainsaw">
+  <bpmn:message id="Msg_Order" name="Customer order with chainsaw properties"/>
+  <bpmn:message id="Msg_Update" name="Production update"/>
+  <bpmn:message id="Msg_FirstSaw" name="First chainsaw delivered"/>
+  <bpmn:message id="Msg_Feedback" name="Customer feedback on first chainsaw"/>
+
+  <bpmn:collaboration id="Collab_Chainsaw">
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_Producer" name="Chainsaw Producer" processRef="Process_Producer"/>
+    <bpmn:messageFlow id="MF_Order" name="Send order properties" sourceRef="Participant_Customer" targetRef="StartEvent_Order" messageRef="Msg_Order"/>
+    <bpmn:messageFlow id="MF_Update" name="Send production update" sourceRef="SendTask_Update" targetRef="Participant_Customer" messageRef="Msg_Update"/>
+    <bpmn:messageFlow id="MF_FirstSaw" name="Send first chainsaw" sourceRef="SendTask_FirstSaw" targetRef="Participant_Customer" messageRef="Msg_FirstSaw"/>
+    <bpmn:messageFlow id="MF_Feedback" name="Send feedback" sourceRef="Participant_Customer" targetRef="ReceiveTask_Feedback" messageRef="Msg_Feedback"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Producer" name="Chainsaw Production" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Order" name="Order received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Order" messageRef="Msg_Order"/>
+    </bpmn:startEvent>
+
+    <bpmn:parallelGateway id="Gateway_Production_Split" name="Start production">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- Branch A: ordering, arrival, inspection and assembly -->
+    <bpmn:task id="Task_OrderParts" name="Order parts from online sources">
+      <bpmn:documentation>Parts are ordered from various online sources; this branch runs in parallel with the production updates.</bpmn:documentation>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:intermediateCatchEvent id="Event_PartsArrived" name="Parts arrived">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:manualTask id="Task_InspectParts" name="Inspect all parts manually">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:task id="Task_AssembleSaw" name="Assemble chainsaw">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Branch B: regular production updates -->
+    <bpmn:exclusiveGateway id="Gateway_Update_Merge" name="Update due">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:incoming>Flow_Running</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sendTask id="SendTask_Update" name="Send production update to customer">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Running" name="Production still running?" default="Flow_Done">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_Running</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Done</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Synchronization of both production branches -->
+    <bpmn:parallelGateway id="Gateway_Production_Join" name="Production complete">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:incoming>Flow_Done</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:sendTask id="SendTask_FirstSaw" name="Send first chainsaw to customer">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:receiveTask id="ReceiveTask_Feedback" name="Receive customer feedback">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:receiveTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Liked" name="Customer likes the saw?" default="Flow_NotLiked">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_Liked</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotLiked</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_ProduceRest" name="Produce rest of the order">
+      <bpmn:incoming>Flow_Liked</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="EndEvent_Completed" name="Order completed">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_NotLiked" name="Rest of order not produced">
+      <bpmn:incoming>Flow_NotLiked</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_Order" targetRef="Gateway_Production_Split"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Gateway_Production_Split" targetRef="Task_OrderParts"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_OrderParts" targetRef="Event_PartsArrived"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Gateway_Production_Split" targetRef="Gateway_Update_Merge"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Event_PartsArrived" targetRef="Task_InspectParts"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_InspectParts" targetRef="Task_AssembleSaw"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_AssembleSaw" targetRef="Gateway_Production_Join"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Gateway_Update_Merge" targetRef="SendTask_Update"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="SendTask_Update" targetRef="Gateway_Running"/>
+    <bpmn:sequenceFlow id="Flow_Running" sourceRef="Gateway_Running" targetRef="Gateway_Update_Merge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${productionRunning}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Done" sourceRef="Gateway_Running" targetRef="Gateway_Production_Join"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Gateway_Production_Join" targetRef="SendTask_FirstSaw"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="SendTask_FirstSaw" targetRef="ReceiveTask_Feedback"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="ReceiveTask_Feedback" targetRef="Gateway_Liked"/>
+    <bpmn:sequenceFlow id="Flow_Liked" sourceRef="Gateway_Liked" targetRef="Task_ProduceRest">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${customerLikesSaw}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotLiked" sourceRef="Gateway_Liked" targetRef="EndEvent_NotLiked"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_ProduceRest" targetRef="EndEvent_Completed"/>
+  </bpmn:process>
+</bpmn:definitions>

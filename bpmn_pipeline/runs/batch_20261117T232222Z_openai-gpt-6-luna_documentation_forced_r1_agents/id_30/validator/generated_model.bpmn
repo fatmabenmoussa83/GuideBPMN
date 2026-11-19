@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" targetNamespace="http://example.com/bpmn/lan-party">
+  <bpmn:message id="Message_Invitations" name="Invitations"/>
+  <bpmn:message id="Message_GameList" name="List of games they want to play"/>
+  <bpmn:message id="Message_DateProposal" name="Date proposal"/>
+  <bpmn:message id="Message_DateResponses" name="Date responses"/>
+
+  <bpmn:process id="Process_LANParty" name="LAN Party" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_LANParty">
+      <bpmn:lane id="Lane_Organizer" name="Organizer">
+        <bpmn:flowNodeRef>StartEvent_Plan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendInvitations</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_ReceiveGameList</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ParallelSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AppointDate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendDateProposal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_ReceiveDateResponses</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_DateDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CheckRequestedGames</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_GamesAvailable</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DownloadMissingGames</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_GamesMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ParallelJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FindRequiredBeer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_BeerDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_BuyMissingBeer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_BeerMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnjoyParty</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Party</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_Plan" name="Plan LAN party"/>
+    <bpmn:sendTask id="Task_SendInvitations" name="Send invitations to 10 friends"/>
+    <bpmn:intermediateCatchEvent id="Event_ReceiveGameList" name="Receive the list of games they want to play">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_GameList" messageRef="Message_GameList"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:parallelGateway id="Gateway_ParallelSplit" name="Find a date and check for the requested games"/>
+    <bpmn:task id="Task_AppointDate" name="Appoint a date"/>
+    <bpmn:sendTask id="Task_SendDateProposal" name="Send the date to the friends"/>
+    <bpmn:intermediateCatchEvent id="Event_ReceiveDateResponses" name="Receive responses about who is free to join">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_DateResponses" messageRef="Message_DateResponses"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_DateDecision" name="Do 8 or more people agree on this date?" default="Flow_DateRetry"/>
+    <bpmn:task id="Task_CheckRequestedGames" name="Find out if all requested games are available"/>
+    <bpmn:exclusiveGateway id="Gateway_GamesAvailable" name="Are all the games available?" default="Flow_GamesMissing"/>
+    <bpmn:task id="Task_DownloadMissingGames" name="Download missing games"/>
+    <bpmn:exclusiveGateway id="Gateway_GamesMerge" name="Continue after checking games"/>
+    <bpmn:parallelGateway id="Gateway_ParallelJoin" name="Date and games are ready"/>
+    <bpmn:task id="Task_FindRequiredBeer" name="Find out how much beer the friends require"/>
+    <bpmn:exclusiveGateway id="Gateway_BeerDecision" name="Is there enough beer?" default="Flow_BeerMissing"/>
+    <bpmn:task id="Task_BuyMissingBeer" name="Buy the missing beer"/>
+    <bpmn:exclusiveGateway id="Gateway_BeerMerge" name="Continue after checking beer"/>
+    <bpmn:task id="Task_EnjoyParty" name="Enjoy the LAN party"/>
+    <bpmn:endEvent id="EndEvent_Party" name="LAN party enjoyed"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Invitations" sourceRef="StartEvent_Plan" targetRef="Task_SendInvitations"/>
+    <bpmn:sequenceFlow id="Flow_Invitations_GameList" sourceRef="Task_SendInvitations" targetRef="Event_ReceiveGameList"/>
+    <bpmn:sequenceFlow id="Flow_GameList_Split" sourceRef="Event_ReceiveGameList" targetRef="Gateway_ParallelSplit"/>
+
+    <bpmn:sequenceFlow id="Flow_Split_Date" sourceRef="Gateway_ParallelSplit" targetRef="Task_AppointDate"/>
+    <bpmn:sequenceFlow id="Flow_Date_SendProposal" sourceRef="Task_AppointDate" targetRef="Task_SendDateProposal"/>
+    <bpmn:sequenceFlow id="Flow_SendProposal_Responses" sourceRef="Task_SendDateProposal" targetRef="Event_ReceiveDateResponses"/>
+    <bpmn:sequenceFlow id="Flow_Responses_DateDecision" sourceRef="Event_ReceiveDateResponses" targetRef="Gateway_DateDecision"/>
+    <bpmn:sequenceFlow id="Flow_DateAccepted" name="8 or more people agree" sourceRef="Gateway_DateDecision" targetRef="Gateway_ParallelJoin">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">attendingCount &gt;= 8</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_DateRetry" name="Fewer than 8 people agree" sourceRef="Gateway_DateDecision" targetRef="Task_AppointDate"/>
+
+    <bpmn:sequenceFlow id="Flow_Split_CheckGames" sourceRef="Gateway_ParallelSplit" targetRef="Task_CheckRequestedGames"/>
+    <bpmn:sequenceFlow id="Flow_CheckGames_Availability" sourceRef="Task_CheckRequestedGames" targetRef="Gateway_GamesAvailable"/>
+    <bpmn:sequenceFlow id="Flow_GamesAvailable" name="All games are available" sourceRef="Gateway_GamesAvailable" targetRef="Gateway_GamesMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">allRequestedGamesAvailable</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_GamesMissing" name="Some games are missing" sourceRef="Gateway_GamesAvailable" targetRef="Task_DownloadMissingGames"/>
+    <bpmn:sequenceFlow id="Flow_Download_GamesMerge" sourceRef="Task_DownloadMissingGames" targetRef="Gateway_GamesMerge"/>
+    <bpmn:sequenceFlow id="Flow_GamesMerge_ParallelJoin" sourceRef="Gateway_GamesMerge" targetRef="Gateway_ParallelJoin"/>
+
+    <bpmn:sequenceFlow id="Flow_ParallelJoin_Beer" sourceRef="Gateway_ParallelJoin" targetRef="Task_FindRequiredBeer"/>
+    <bpmn:sequenceFlow id="Flow_Beer_Decision" sourceRef="Task_FindRequiredBeer" targetRef="Gateway_BeerDecision"/>
+    <bpmn:sequenceFlow id="Flow_BeerEnough" name="Enough beer" sourceRef="Gateway_BeerDecision" targetRef="Gateway_BeerMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">availableBeer &gt;= requiredBeer</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_BeerMissing" name="Not enough beer" sourceRef="Gateway_BeerDecision" targetRef="Task_BuyMissingBeer"/>
+    <bpmn:sequenceFlow id="Flow_BuyBeer_BeerMerge" sourceRef="Task_BuyMissingBeer" targetRef="Gateway_BeerMerge"/>
+    <bpmn:sequenceFlow id="Flow_BeerMerge_Enjoy" sourceRef="Gateway_BeerMerge" targetRef="Task_EnjoyParty"/>
+    <bpmn:sequenceFlow id="Flow_Enjoy_End" sourceRef="Task_EnjoyParty" targetRef="EndEvent_Party"/>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_LANParty">
+    <bpmn:participant id="Participant_Organizer" name="Organizer" processRef="Process_LANParty"/>
+    <bpmn:participant id="Participant_Friends" name="10 friends"/>
+    <bpmn:messageFlow id="MessageFlow_Invitations" name="Invitations" sourceRef="Task_SendInvitations" targetRef="Participant_Friends" messageRef="Message_Invitations"/>
+    <bpmn:messageFlow id="MessageFlow_GameList" name="List of games they want to play" sourceRef="Participant_Friends" targetRef="Event_ReceiveGameList" messageRef="Message_GameList"/>
+    <bpmn:messageFlow id="MessageFlow_DateProposal" name="Date proposal" sourceRef="Task_SendDateProposal" targetRef="Participant_Friends" messageRef="Message_DateProposal"/>
+    <bpmn:messageFlow id="MessageFlow_DateResponses" name="Date responses" sourceRef="Participant_Friends" targetRef="Event_ReceiveDateResponses" messageRef="Message_DateResponses"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

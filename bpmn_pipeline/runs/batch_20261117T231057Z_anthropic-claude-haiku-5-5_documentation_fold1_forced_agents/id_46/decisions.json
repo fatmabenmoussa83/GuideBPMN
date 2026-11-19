@@ -1,0 +1,305 @@
+{
+ "id": "46",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 12,
+  "T6": 2
+ },
+ "first_pass_error_counts": {
+  "T5": 21,
+  "T6": 5
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline (The generated model replaces the described check with a gateway (extra gateway X4 'Product available'), so the check activity is missing (M1), and the same pattern appears before the final readiness decision (M3). The description states both checks as steps (S2, S7) before the decisions they feed. The closest learned guideline LRN-097 covers a manual verification step only inside a repeated cycle,)",
+   "guideline_id": "LRN-099",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-099 (The records show two checks that the description states as separate steps (stock check M1 and order-readiness check M3). In the generated model, the stock check is replaced by an extra exclusiveGateway (X4), which is the pattern LRN-099 forbids, and the readiness check has no activity before its decision gateway (M3). The same guideline covers both cases, so the proposal is the existing learned ru)",
+   "guideline_id": "LRN-099",
+   "ref": "LRN-099",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines ACT-07 (The generated model sends the registration step back into the earlier 'Product available' gateway (G7), while the description states that after registration the order proceeds directly to the shipment-readiness check (S6, S7) and the reference has the flow F5. ACT-07 already allows unconditional outgoing flows but does not say when to use them instead of a gateway; this guideline adds that guidanc)",
+   "guideline_id": "LRN-100",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "abstained",
+   "detail": "M1 is a reference mismatch, not a generator error. The reference models the wait for the delivered product as a serviceTask, but a wait for an external occurrence is an intermediate catch event, which the earlier guideline and BPMN 2.0.2 both require. A guideline built on this difference would endorse a model that breaks BPMN semantics, so the record cannot support one. M2 is a labeling choice about the start event. The description gives a title, not a trigger, and the learned guidance (LRN-025) favours a neutral start-event label. The records show no semantic gap in the generated model that a",
+   "guideline_id": null,
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline (The generated model lacks the flow from the completeness decision back to the next-item selection (F4), although the description states this restart explicitly (S9). Documented GW-09 and PROC-05 do not cover a loop-back to an earlier gateway, and LRN-100 only forbids loops when no decision is stated, so this guideline does not conflict with it. LRN-073 covers rework returning to a production step )",
+   "guideline_id": "LRN-101",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "new guideline (The generated model has two selection tasks, 'Select first product from order' (X2) and 'Select next product from order' (X4), for the same act of selecting an item from one collection. The description states the first check (S2) and the return to selection after a failed check (S9), which is one cycle. Duplicating the selection as two tasks makes the model diverge from the described flow. The ref)",
+   "guideline_id": "LRN-102",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-099",
+   "instruction": "When the description states that a check is performed as its own step (for example, checking whether a item is available, or whether a set of items is complete) and that a decision follows on the result of that check: Model the check as its own activity placed before the exclusiveGateway that decides on its outcome: use a manualTask if a person performs it and a serviceTask if a system performs it. Do not fold the check into the decision gateway, its label, or the preceding activity, and do not replace it with an extra gateway that stands for the check.",
+   "situation": "the description states that a check is performed as its own step (for example, checking whether a item is available, or whether a set of items is complete) and that a decision follows on the result of that check",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-100",
+   "instruction": "When the description states that once a step is completed the process proceeds directly to a later named check, with no decision stated between them: Model a single unconditional sequence flow from the completed step to the element for that named check. Do not route the flow back into an earlier decision gateway, and do not add a conditional branch the description does not state.",
+   "situation": "the description states that once a step is completed the process proceeds directly to a later named check, with no decision stated between them",
+   "source": "learned guideline (refines ACT-07)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-101",
+   "instruction": "When the description says that when a final completeness decision fails, the next item of the same set is selected and the earlier check is repeated for that item, so the process loops back rather than ending: Model the failing outcome of that completeness decision as a sequence flow that returns to the gateway or activity that selects the next item of the set, so the earlier check runs again for that item. Do not add a new start event for the restart and do not duplicate the check elsewhere in the model.",
+   "situation": "the description says that when a final completeness decision fails, the next item of the same set is selected and the earlier check is repeated for that item, so the process loops back rather than ending",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-102",
+   "instruction": "When the description says that when a check on the current item of a collection fails, the next item of that collection is selected and the same check is repeated, so the flow returns to the selection: Model the selection of an item as one activity that serves as the entry point of the check-and-retry cycle. When the failed check loops back, route the flow to that same selection activity, and do not create a separate selection activity for the first item and another for the following items of the same collection.",
+   "situation": "the description says that when a check on the current item of a collection fails, the next item of that collection is selected and the same check is repeated, so the flow returns to the selection",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

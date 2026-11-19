@@ -1,0 +1,145 @@
+<div class="mb-3"><div class="kicker">Methodology</div><h1 class="h3 mb-0 text-gray-800 font-weight-bold">Structural validator</h1></div>
+<p class="mb-4" style="max-width:62rem">The Structural validator (step 3 of the pipeline) judges every model at four independent levels and records, for each level, a verdict,
+  a message and the offending elements with their line numbers. In a next iteration, these messages are sent back to the generator with the previous model. The red boxes below show example messages in the validator's format.
+  How the results are counted, with the equation of the precision, is in <a href="#performance">How the validator's results are measured</a>.</p>
+
+<div class="card shadow mb-3"><div class="card-body d-flex flex-column flex-md-row">
+  <span class="level-badge mr-md-4 mb-3 mb-md-0">L1</span>
+  <div><h6 class="font-weight-bold mb-1">Syntax &amp; schema</h6>
+    <p class="mb-1">The document parses and conforms to the official BPMN&nbsp;2.0 XSD (OMG). Child elements are first reordered, in memory, to the
+      schema's canonical order, so element order alone is not penalized; the stored model is the generator's output, unchanged.</p>
+    <div class="diag">L1: does not conform to the BPMN20.xsd schema &rarr; Element 'conditionalEventDefinition': Missing child element(s). Expected is ( condition ).</div></div>
+</div></div>
+
+<div class="card shadow mb-3"><div class="card-body d-flex flex-column flex-md-row">
+  <span class="level-badge mr-md-4 mb-3 mb-md-0">L2</span>
+  <div><h6 class="font-weight-bold mb-1">Gateways</h6>
+    <p class="mb-1">Only the five standard gateway types are used, including in nested elements. An <strong>event-based gateway</strong> has at least two
+      unconditioned outgoing flows, each leading directly to an intermediate catch event (message, timer, signal, conditional) or a receive task.</p>
+    <div class="diag">L2: event-based gateway leads directly to task 'Call_guest'; each branch must first reach an intermediate catch event (message, timer, signal, conditional) or a receive task</div></div>
+</div></div>
+
+<div class="card shadow mb-3"><div class="card-body d-flex flex-column flex-md-row">
+  <span class="level-badge mr-md-4 mb-3 mb-md-0" style="background:#2f55d4">L3</span>
+  <div class="w-100"><h6 class="font-weight-bold mb-1">Sequence flows: the control flow of each process, and recursively of each expanded sub-process</h6>
+    <div class="row">
+      <div class="col-lg-6"><ul class="rule-list small mb-2">
+        <li><strong>C1</strong> start and end events exist (a rule of our modeling profile; BPMN allows implicit ones in some cases)</li>
+        <li><strong>C2</strong> sequence flows connect existing nodes of the same scope</li>
+        <li><strong>C3</strong> incoming and outgoing flows, with the exceptions of start, end, boundary and link events; boundary events attached to an activity</li>
+        <li><strong>C4</strong> every gateway splits or merges</li>
+      </ul></div>
+      <div class="col-lg-6"><ul class="rule-list small mb-2">
+        <li><strong>C5</strong> every node is reachable from a start event and can reach an end event</li>
+        <li><strong>C6</strong> the same rules inside sub-processes; event and ad-hoc sub-processes exempt where rules do not apply</li>
+        <li><strong>C7</strong> the flow of a scope forms one connected block</li>
+        <li><strong>C8</strong> behavior: no deadlock, and the process can always complete (token game)</li>
+      </ul></div>
+    </div>
+    <div class="diag">L3: cannot reach an endEvent &rarr; ['StartEvent_Monitoring (line 18)'] (process 'Process_1')</div></div>
+</div></div>
+
+<div class="card shadow mb-4"><div class="card-body d-flex flex-column flex-md-row">
+  <span class="level-badge mr-md-4 mb-3 mb-md-0">L4</span>
+  <div><h6 class="font-weight-bold mb-1">Collaboration: pools, lanes and message flows</h6>
+    <p class="mb-1">Each lane, including nested lanes, lists only flow nodes of the process or sub-process it partitions, and a node belongs to at most one lane
+      of a lane set (nodes outside every lane are only reported). With a collaboration, message flows connect different pools, never attach to gateways or
+      lanes, and respect event direction. L4 is not applicable when a model has neither pools nor lanes.</p>
+    <div class="diag">L4: lane 'Chef': flowNodeRef 'Task_Pay' is not an element of process 'Process_Restaurant'</div></div>
+</div></div>
+
+<div class="card shadow mb-4" id="performance">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">How the validator's results are measured</h6></div>
+  <div class="card-body">
+    <p>Each level gives one verdict per model: <strong>pass</strong>, <strong>fail</strong>, or <strong>not applicable</strong> (L4, when the model has
+      neither pools nor lanes). On top of this verdict, the validator marks <strong>every element it inspects</strong> at that level as correct or
+      incorrect, with the reason. This gives a finer measure than pass or fail.</p>
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Level</th><th>Elements inspected</th><th>An element is incorrect when</th></tr></thead>
+      <tbody>
+        <tr><td><strong>L1</strong></td><td>Every XML element that has an id</td><td>The schema reports an error on its line, or on one of its children that has no id</td></tr>
+        <tr><td><strong>L2</strong></td><td>Every gateway, nested ones included</td><td>Its type is not one of the five standard types, or an event-based gateway breaks its rules</td></tr>
+        <tr><td><strong>L3</strong></td><td>Every flow node (activities, events, gateways, also inside sub-processes), plus one entry for each problem of a whole process, such as a missing start event</td><td>It breaks one of the rules C1 to C8</td></tr>
+        <tr><td><strong>L4</strong></td><td>Every lane and every message flow</td><td>A lane lists an element of another process; a message flow stays inside one pool, touches a gateway or a lane, or goes against the direction of an event</td></tr>
+      </tbody>
+    </table></div>
+    <div class="eq"><span>precision of a level</span> = <span class="frac"><span>correct elements (TP)</span><span>correct elements (TP) + incorrect elements (FP)</span></span></div>
+    <p class="eq-note">For one model, the elements are those of that model. For a run, the correct and incorrect elements of all the models where the
+      level applies are added first, then divided. A model where the level is not applicable is kept apart: it counts neither as correct nor as incorrect.</p>
+    <div class="eq"><span>pass rate of a level</span> = <span class="frac"><span>models that pass the level</span><span>models where the level applies</span></span>
+      <span class="eq-gap"></span><span>validity rate</span> = <span class="frac"><span>models that pass every applicable level</span><span>all models</span></span></div>
+    <p class="mb-1"><strong>Example</strong> (one earlier run, 55 descriptions, first draft; the figures of the study are in the <a href="run.html#cvCard">Study results</a>):</p>
+    <div class="table-responsive"><table class="table table-sm table-striped small mb-2">
+      <thead><tr><th>Level</th><th class="text-right">models pass</th><th class="text-right">fail</th><th class="text-right">not applicable</th>
+        <th class="text-right">elements correct</th><th class="text-right">incorrect</th><th>precision</th></tr></thead>
+      <tbody>
+        <tr><td>L1</td><td class="text-right">52</td><td class="text-right">3</td><td class="text-right">0</td><td class="text-right">2992</td><td class="text-right">9</td><td>2992 &divide; (2992 + 9) = 0.997</td></tr>
+        <tr><td>L2</td><td class="text-right">55</td><td class="text-right">0</td><td class="text-right">0</td><td class="text-right">238</td><td class="text-right">0</td><td>238 &divide; (238 + 0) = 1.000</td></tr>
+        <tr><td>L3</td><td class="text-right">45</td><td class="text-right">10</td><td class="text-right">0</td><td class="text-right">1117</td><td class="text-right">32</td><td>1117 &divide; (1117 + 32) = 0.972</td></tr>
+        <tr><td>L4</td><td class="text-right">48</td><td class="text-right">1</td><td class="text-right">6</td><td class="text-right">221</td><td class="text-right">1</td><td>221 &divide; (221 + 1) = 0.995</td></tr>
+      </tbody>
+    </table></div>
+    <p class="mb-1"><strong>Why precision only, and no recall or F1.</strong> An element is correct (TP) when it satisfies the BPMN 2.0.2 rules the level checks,
+      and incorrect (FP) when it breaks one; the reference model is not used. Recall would need the elements that are missing from the model (FN), and the
+      validator cannot see what a model omits. Precision is therefore the only measure it supports. The average of a model is the mean precision of the levels that apply to it.</p>
+    <p class="mb-0"><strong>Where to see it.</strong> On the <a href="run.html">Run</a> page, the tables &ldquo;Structural validator, element by element&rdquo; (first draft and kept draft)
+      and, for each draft, the list of incorrect elements with their reason. In the run folder: <code>validator_performance.json</code>.</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-6 mb-4">
+    <div class="card shadow h-100"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">C8: the deadlock check</h6></div>
+      <div class="card-body">
+        <p>When C1&ndash;C7 hold, the validator plays the BPMN <strong>token game</strong> over all reachable states of the scope
+          (<code>soundness.py</code>): exclusive gateways follow one branch, parallel gateways wait for all branches, inclusive joins wait while
+          a token can still arrive, boundary events replace or extend their host's completion, and a terminate end event stops the instance.</p>
+        <svg viewBox="0 0 440 120" class="w-100 mb-2" role="img" aria-label="Deadlock example: exclusive split joined by a parallel gateway">
+          <defs><marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3a3b45"/></marker></defs>
+          <g fill="#fff" stroke="#3a3b45" stroke-width="1.5">
+            <circle cx="18" cy="60" r="11"/><path d="M75 40 L95 60 L75 80 L55 60 Z"/>
+            <rect x="130" y="14" width="96" height="34" rx="6"/><rect x="130" y="72" width="96" height="34" rx="6"/>
+            <path d="M285 40 L305 60 L285 80 L265 60 Z" stroke="#c0392b" stroke-width="2.2"/>
+            <circle cx="400" cy="60" r="11" stroke-width="4"/>
+          </g>
+          <g stroke="#3a3b45" stroke-width="1.4" fill="none">
+            <path d="M29 60 H55" marker-end="url(#c)"/><path d="M75 40 V31 H130" marker-end="url(#c)"/><path d="M75 80 V89 H130" marker-end="url(#c)"/>
+            <path d="M226 31 H285 V40" marker-end="url(#c)"/><path d="M226 89 H285 V80" stroke="#c0392b" stroke-dasharray="4 3" marker-end="url(#c)"/>
+            <path d="M305 60 H389" marker-end="url(#c)"/>
+          </g>
+          <g font-family="Nunito, Arial" font-size="11" text-anchor="middle" fill="#3a3b45">
+            <text x="75" y="64" font-weight="800">&#215;</text><text x="285" y="65" font-weight="800" fill="#c0392b">+</text>
+            <text x="178" y="35">Pay by card</text><text x="178" y="93">Pay cash</text><text x="345" y="52" fill="#c0392b" font-size="10">waits forever</text>
+          </g>
+        </svg>
+        <div class="diag">L3: deadlock: parallelGateway 'Join_Payment' waits for flow(s) Flow_Cash_Join that can no longer receive a token (e.g. an exclusive split joined by a parallel gateway, or a parallel gateway used to merge a loop)</div>
+        <p class="small text-muted mt-2 mb-0">A flow that can carry two tokens at once (lack of synchronization) is reported as a warning only, since it can be intended,
+          e.g. a non-interrupting timer inside a loop.</p>
+      </div></div>
+  </div>
+  <div class="col-lg-6 mb-4">
+    <div class="card shadow h-100"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">What the generator receives in a next iteration</h6></div>
+      <div class="card-body">
+        <p class="mb-2"><strong>A next iteration sends exactly:</strong></p>
+        <ul class="small">
+          <li>the process description and the guidelines of the setting, as for the first draft;</li>
+          <li>the model kept so far (<code>previous_generated_bpmn_xml</code>);</li>
+          <li>the Structural validator's report of that model (<code>validation_profile</code>): for each level, the verdict, the message and the offending elements;</li>
+          <li>the guidelines sent back for this example (<code>guidelines_to_apply</code>).</li>
+        </ul>
+        <div class="note-honest mb-3"><i class="fas fa-lock mr-1"></i> The reference model and the similarity scores <strong>never</strong> enter what the generator receives.</div>
+        <p class="mb-2"><strong>Which model is kept.</strong> The new model replaces the previous one unless it is less valid or has more errors (T1 to T7).
+          So a next iteration cannot hand back a model less valid than the one it started from.</p>
+        <p class="small text-muted mb-0">Example (test process 40): the first model fails L3 with the message above; in the next generation the monitoring path is placed in
+          a sub-process that ends with &ldquo;Measurement cycle complete&rdquo;, and all levels pass.</p>
+      </div></div>
+  </div>
+</div>
+
+<div class="card shadow mb-4"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">What &ldquo;valid&rdquo; means, and what it does not</h6></div>
+  <div class="card-body"><div class="row">
+    <div class="col-md-6"><p class="mb-1"><i class="fas fa-check text-success mr-1"></i> Conformance to every implemented check (L1&ndash;L4, C1&ndash;C8).</p>
+      <p class="mb-0"><i class="fas fa-check text-success mr-1"></i> Checked on the 55 reference models: all of them pass every level.</p></div>
+    <div class="col-md-6"><p class="mb-1"><i class="fas fa-times text-danger mr-1"></i> Not full BPMN compliance (e.g., data or message semantics).</p>
+      <p class="mb-0"><i class="fas fa-times text-danger mr-1"></i> Not fidelity to the description: a valid model can still miss an activity.</p></div>
+  </div></div></div>

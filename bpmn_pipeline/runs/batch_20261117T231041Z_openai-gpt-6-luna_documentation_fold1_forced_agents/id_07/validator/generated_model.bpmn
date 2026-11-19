@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_TicketBooking"
+                  targetNamespace="http://example.com/bpmn/ticket-booking">
+  <bpmn:message id="Message_BookingDetails" name="Personal information and payment details"/>
+  <bpmn:message id="Message_Ticket" name="Ticket"/>
+  <bpmn:message id="Message_Reminder" name="Pre-travel reminders and instructions"/>
+
+  <bpmn:process id="Process_Customer" name="Customer ticket booking and travel" isExecutable="false">
+    <bpmn:startEvent id="Customer_Start" name="Customer searches for a ticket">
+      <bpmn:outgoing>Customer_Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Customer_Search" name="Search for a flight, train, or bus ticket">
+      <bpmn:incoming>Customer_Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Customer_Select" name="Select preferred route, date, and time">
+      <bpmn:incoming>Customer_Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Customer_ProvideDetails" name="Provide personal information and payment details">
+      <bpmn:incoming>Customer_Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:receiveTask id="Customer_ReceiveTicket" name="Receive ticket" messageRef="Message_Ticket">
+      <bpmn:incoming>Customer_Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_5</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="Customer_ReminderSplit" name="Receive pre-travel reminders?" default="Customer_Flow_7">
+      <bpmn:incoming>Customer_Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_6</bpmn:outgoing>
+      <bpmn:outgoing>Customer_Flow_7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:receiveTask id="Customer_ReceiveReminder" name="Receive reminders and check-in or boarding instructions" messageRef="Message_Reminder">
+      <bpmn:incoming>Customer_Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_8</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="Customer_ReminderMerge" name="Continue to journey">
+      <bpmn:incoming>Customer_Flow_7</bpmn:incoming>
+      <bpmn:incoming>Customer_Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Customer_CompleteJourney" name="Complete journey">
+      <bpmn:incoming>Customer_Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_10</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Customer_PostTravelSplit" name="Post-travel feedback or services?" default="Customer_Flow_12">
+      <bpmn:incoming>Customer_Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_11</bpmn:outgoing>
+      <bpmn:outgoing>Customer_Flow_12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Customer_PostTravel" name="Complete post-travel feedback or services">
+      <bpmn:incoming>Customer_Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_13</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Customer_PostTravelMerge" name="Continue after post-travel activity">
+      <bpmn:incoming>Customer_Flow_12</bpmn:incoming>
+      <bpmn:incoming>Customer_Flow_13</bpmn:incoming>
+      <bpmn:outgoing>Customer_Flow_14</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="Customer_End" name="Customer process concludes">
+      <bpmn:incoming>Customer_Flow_14</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Customer_Flow_1" sourceRef="Customer_Start" targetRef="Customer_Search"/>
+    <bpmn:sequenceFlow id="Customer_Flow_2" sourceRef="Customer_Search" targetRef="Customer_Select"/>
+    <bpmn:sequenceFlow id="Customer_Flow_3" sourceRef="Customer_Select" targetRef="Customer_ProvideDetails"/>
+    <bpmn:sequenceFlow id="Customer_Flow_4" sourceRef="Customer_ProvideDetails" targetRef="Customer_ReceiveTicket"/>
+    <bpmn:sequenceFlow id="Customer_Flow_5" sourceRef="Customer_ReceiveTicket" targetRef="Customer_ReminderSplit"/>
+    <bpmn:sequenceFlow id="Customer_Flow_6" name="Reminders received" sourceRef="Customer_ReminderSplit" targetRef="Customer_ReceiveReminder"/>
+    <bpmn:sequenceFlow id="Customer_Flow_7" name="No reminders received" sourceRef="Customer_ReminderSplit" targetRef="Customer_ReminderMerge"/>
+    <bpmn:sequenceFlow id="Customer_Flow_8" sourceRef="Customer_ReceiveReminder" targetRef="Customer_ReminderMerge"/>
+    <bpmn:sequenceFlow id="Customer_Flow_9" sourceRef="Customer_ReminderMerge" targetRef="Customer_CompleteJourney"/>
+    <bpmn:sequenceFlow id="Customer_Flow_10" sourceRef="Customer_CompleteJourney" targetRef="Customer_PostTravelSplit"/>
+    <bpmn:sequenceFlow id="Customer_Flow_11" name="Post-travel activity" sourceRef="Customer_PostTravelSplit" targetRef="Customer_PostTravel"/>
+    <bpmn:sequenceFlow id="Customer_Flow_12" name="No post-travel activity" sourceRef="Customer_PostTravelSplit" targetRef="Customer_PostTravelMerge"/>
+    <bpmn:sequenceFlow id="Customer_Flow_13" sourceRef="Customer_PostTravel" targetRef="Customer_PostTravelMerge"/>
+    <bpmn:sequenceFlow id="Customer_Flow_14" sourceRef="Customer_PostTravelMerge" targetRef="Customer_End"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_TravelCompany" name="Travel company ticket processing" isExecutable="false">
+    <bpmn:laneSet id="Company_LaneSet">
+      <bpmn:lane id="Lane_BookingSystem" name="Booking system">
+        <bpmn:flowNodeRef>Company_BookingReceived</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Company_GenerateTicket</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Company_SendTicket</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_TravelCompany" name="Travel company">
+        <bpmn:flowNodeRef>Company_UpdateInventory</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Company_ReminderSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Company_SendReminder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Company_EndAfterReminder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Company_EndWithoutReminder</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Company_BookingReceived" name="Booking details received">
+      <bpmn:outgoing>Company_Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Company_BookingMessageDefinition" messageRef="Message_BookingDetails"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Company_GenerateTicket" name="Generate ticket">
+      <bpmn:incoming>Company_Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Company_Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="Company_SendTicket" name="Send ticket to customer via email or SMS" messageRef="Message_Ticket">
+      <bpmn:incoming>Company_Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Company_Flow_3</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:task id="Company_UpdateInventory" name="Update seat inventory">
+      <bpmn:incoming>Company_Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Company_Flow_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Company_ReminderSplit" name="Send pre-travel reminders?" default="Company_Flow_6">
+      <bpmn:incoming>Company_Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Company_Flow_5</bpmn:outgoing>
+      <bpmn:outgoing>Company_Flow_6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Company_SendReminder" name="Send reminders and check-in or boarding instructions" messageRef="Message_Reminder">
+      <bpmn:incoming>Company_Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Company_Flow_7</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="Company_EndAfterReminder" name="Company process concludes after reminders">
+      <bpmn:incoming>Company_Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="Company_EndWithoutReminder" name="Company process concludes without reminders">
+      <bpmn:incoming>Company_Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Company_Flow_1" sourceRef="Company_BookingReceived" targetRef="Company_GenerateTicket"/>
+    <bpmn:sequenceFlow id="Company_Flow_2" sourceRef="Company_GenerateTicket" targetRef="Company_SendTicket"/>
+    <bpmn:sequenceFlow id="Company_Flow_3" sourceRef="Company_SendTicket" targetRef="Company_UpdateInventory"/>
+    <bpmn:sequenceFlow id="Company_Flow_4" sourceRef="Company_UpdateInventory" targetRef="Company_ReminderSplit"/>
+    <bpmn:sequenceFlow id="Company_Flow_5" name="Reminders sent" sourceRef="Company_ReminderSplit" targetRef="Company_SendReminder"/>
+    <bpmn:sequenceFlow id="Company_Flow_6" name="No reminders sent" sourceRef="Company_ReminderSplit" targetRef="Company_EndWithoutReminder"/>
+    <bpmn:sequenceFlow id="Company_Flow_7" sourceRef="Company_SendReminder" targetRef="Company_EndAfterReminder"/>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_TicketBooking">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_TravelCompany" name="Travel company" processRef="Process_TravelCompany"/>
+    <bpmn:messageFlow id="MessageFlow_BookingDetails" name="Personal information and payment details" sourceRef="Customer_ProvideDetails" targetRef="Company_BookingReceived" messageRef="Message_BookingDetails"/>
+    <bpmn:messageFlow id="MessageFlow_Ticket" name="Ticket" sourceRef="Company_SendTicket" targetRef="Customer_ReceiveTicket" messageRef="Message_Ticket"/>
+    <bpmn:messageFlow id="MessageFlow_Reminder" name="Pre-travel reminders and instructions" sourceRef="Company_SendReminder" targetRef="Customer_ReceiveReminder" messageRef="Message_Reminder"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

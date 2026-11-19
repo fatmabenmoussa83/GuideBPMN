@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_SmartphoneRepair" targetNamespace="http://example.com/bpmn/smartphone-repair">
+  <bpmn:message id="Message_PhoneDetails" name="Phone model and fault"/>
+  <bpmn:message id="Message_ListsAndChoices" name="Materials, tools, and ordering choices"/>
+  <bpmn:message id="Message_InstructionRequest" name="Request for repair instructions"/>
+  <bpmn:message id="Message_RepairInstructions" name="Repair instructions"/>
+  <bpmn:message id="Message_FriendContact" name="Contact about borrowing or buying items"/>
+  <bpmn:message id="Message_Review" name="Review"/>
+  <bpmn:message id="Message_RepairVideo" name="Repair video"/>
+  <bpmn:message id="Message_PhoneForExpert" name="Phone for expert repair"/>
+
+  <bpmn:process id="Process_User" name="DIY repair of a broken smartphone screen" isExecutable="false">
+    <bpmn:startEvent id="User_Start" name="Start DIY repair"/>
+    <bpmn:sendTask id="User_EnterDetails" name="Enter phone model and what is broken" messageRef="Message_PhoneDetails"/>
+    <bpmn:receiveTask id="User_ReceiveLists" name="Receive materials, tools, and ordering choices" messageRef="Message_ListsAndChoices"/>
+    <bpmn:userTask id="User_CheckItems" name="Check which listed items are already available"/>
+    <bpmn:exclusiveGateway id="User_FriendsAvailable" name="Can friends provide items to borrow or buy cheaply?"/>
+    <bpmn:sendTask id="User_ContactFriends" name="Contact friends about borrowing or buying items" messageRef="Message_FriendContact"/>
+    <bpmn:exclusiveGateway id="User_FriendsMerge" name="Continue sourcing items"/>
+    <bpmn:userTask id="User_BuyRemaining" name="Buy remaining materials and tools"/>
+    <bpmn:sendTask id="User_RequestInstructions" name="Request repair instructions" messageRef="Message_InstructionRequest"/>
+    <bpmn:receiveTask id="User_ReceiveInstructions" name="Receive repair instructions" messageRef="Message_RepairInstructions"/>
+    <bpmn:manualTask id="User_RepairPhone" name="Repair the phone"/>
+    <bpmn:exclusiveGateway id="User_RepairOutcome" name="Did the repair work?"/>
+    <bpmn:inclusiveGateway id="User_FeedbackSplit" name="Choose review and/or video to send"/>
+    <bpmn:sendTask id="User_SendReview" name="Send a review" messageRef="Message_Review"/>
+    <bpmn:sendTask id="User_SendVideo" name="Send a video of the repair" messageRef="Message_RepairVideo"/>
+    <bpmn:inclusiveGateway id="User_FeedbackJoin" name="Finish sending feedback"/>
+    <bpmn:endEvent id="User_EndSuccess" name="Repair successful and feedback sent"/>
+    <bpmn:sendTask id="User_SendToExpert" name="Send the phone to an expert" messageRef="Message_PhoneForExpert"/>
+    <bpmn:endEvent id="User_EndExpert" name="Phone sent to an expert"/>
+
+    <bpmn:sequenceFlow id="U_Flow_01" sourceRef="User_Start" targetRef="User_EnterDetails"/>
+    <bpmn:sequenceFlow id="U_Flow_02" sourceRef="User_EnterDetails" targetRef="User_ReceiveLists"/>
+    <bpmn:sequenceFlow id="U_Flow_03" sourceRef="User_ReceiveLists" targetRef="User_CheckItems"/>
+    <bpmn:sequenceFlow id="U_Flow_04" sourceRef="User_CheckItems" targetRef="User_FriendsAvailable"/>
+    <bpmn:sequenceFlow id="U_Flow_05" name="Yes" sourceRef="User_FriendsAvailable" targetRef="User_ContactFriends">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">friendsCanHelp</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="U_Flow_06" name="No" sourceRef="User_FriendsAvailable" targetRef="User_FriendsMerge"/>
+    <bpmn:sequenceFlow id="U_Flow_07" sourceRef="User_ContactFriends" targetRef="User_FriendsMerge"/>
+    <bpmn:sequenceFlow id="U_Flow_08" sourceRef="User_FriendsMerge" targetRef="User_BuyRemaining"/>
+    <bpmn:sequenceFlow id="U_Flow_09" sourceRef="User_BuyRemaining" targetRef="User_RequestInstructions"/>
+    <bpmn:sequenceFlow id="U_Flow_10" sourceRef="User_RequestInstructions" targetRef="User_ReceiveInstructions"/>
+    <bpmn:sequenceFlow id="U_Flow_11" sourceRef="User_ReceiveInstructions" targetRef="User_RepairPhone"/>
+    <bpmn:sequenceFlow id="U_Flow_12" sourceRef="User_RepairPhone" targetRef="User_RepairOutcome"/>
+    <bpmn:sequenceFlow id="U_Flow_13" name="Worked" sourceRef="User_RepairOutcome" targetRef="User_FeedbackSplit">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">repairWorked</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="U_Flow_14" name="Did not work" sourceRef="User_RepairOutcome" targetRef="User_SendToExpert"/>
+    <bpmn:sequenceFlow id="U_Flow_15" name="Send review" sourceRef="User_FeedbackSplit" targetRef="User_SendReview">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">sendReview</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="U_Flow_16" name="Send video" sourceRef="User_FeedbackSplit" targetRef="User_SendVideo">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">sendVideo</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="U_Flow_17" sourceRef="User_SendReview" targetRef="User_FeedbackJoin"/>
+    <bpmn:sequenceFlow id="U_Flow_18" sourceRef="User_SendVideo" targetRef="User_FeedbackJoin"/>
+    <bpmn:sequenceFlow id="U_Flow_19" sourceRef="User_FeedbackJoin" targetRef="User_EndSuccess"/>
+    <bpmn:sequenceFlow id="U_Flow_20" sourceRef="User_SendToExpert" targetRef="User_EndExpert"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_OnlineTool" name="Online repair tool" isExecutable="false">
+    <bpmn:startEvent id="Tool_Start" name="Phone details received">
+      <bpmn:messageEventDefinition id="Tool_StartMessageDefinition" messageRef="Message_PhoneDetails"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Tool_GenerateLists" name="Generate materials, tools, and ordering choices"/>
+    <bpmn:sendTask id="Tool_SendLists" name="Provide materials, tools, and ordering choices" messageRef="Message_ListsAndChoices"/>
+    <bpmn:receiveTask id="Tool_ReceiveInstructionRequest" name="Receive request for repair instructions" messageRef="Message_InstructionRequest"/>
+    <bpmn:serviceTask id="Tool_ProvideInstructions" name="Provide repair instructions"/>
+    <bpmn:sendTask id="Tool_SendInstructions" name="Send repair instructions" messageRef="Message_RepairInstructions"/>
+    <bpmn:endEvent id="Tool_End" name="Instructions sent"/>
+
+    <bpmn:sequenceFlow id="T_Flow_01" sourceRef="Tool_Start" targetRef="Tool_GenerateLists"/>
+    <bpmn:sequenceFlow id="T_Flow_02" sourceRef="Tool_GenerateLists" targetRef="Tool_SendLists"/>
+    <bpmn:sequenceFlow id="T_Flow_03" sourceRef="Tool_SendLists" targetRef="Tool_ReceiveInstructionRequest"/>
+    <bpmn:sequenceFlow id="T_Flow_04" sourceRef="Tool_ReceiveInstructionRequest" targetRef="Tool_ProvideInstructions"/>
+    <bpmn:sequenceFlow id="T_Flow_05" sourceRef="Tool_ProvideInstructions" targetRef="Tool_SendInstructions"/>
+    <bpmn:sequenceFlow id="T_Flow_06" sourceRef="Tool_SendInstructions" targetRef="Tool_End"/>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_SmartphoneRepair" name="DIY smartphone repair">
+    <bpmn:participant id="Participant_User" name="Person repairing the phone" processRef="Process_User"/>
+    <bpmn:participant id="Participant_Tool" name="Online repair tool" processRef="Process_OnlineTool"/>
+    <bpmn:participant id="Participant_Friends" name="Friends"/>
+    <bpmn:participant id="Participant_Expert" name="Repair expert"/>
+
+    <bpmn:messageFlow id="MessageFlow_PhoneDetails" sourceRef="User_EnterDetails" targetRef="Tool_Start" messageRef="Message_PhoneDetails"/>
+    <bpmn:messageFlow id="MessageFlow_Lists" sourceRef="Tool_SendLists" targetRef="User_ReceiveLists" messageRef="Message_ListsAndChoices"/>
+    <bpmn:messageFlow id="MessageFlow_InstructionRequest" sourceRef="User_RequestInstructions" targetRef="Tool_ReceiveInstructionRequest" messageRef="Message_InstructionRequest"/>
+    <bpmn:messageFlow id="MessageFlow_Instructions" sourceRef="Tool_SendInstructions" targetRef="User_ReceiveInstructions" messageRef="Message_RepairInstructions"/>
+    <bpmn:messageFlow id="MessageFlow_Friends" sourceRef="User_ContactFriends" targetRef="Participant_Friends" messageRef="Message_FriendContact"/>
+    <bpmn:messageFlow id="MessageFlow_Review" sourceRef="User_SendReview" targetRef="Participant_Tool" messageRef="Message_Review"/>
+    <bpmn:messageFlow id="MessageFlow_Video" sourceRef="User_SendVideo" targetRef="Participant_Tool" messageRef="Message_RepairVideo"/>
+    <bpmn:messageFlow id="MessageFlow_Expert" sourceRef="User_SendToExpert" targetRef="Participant_Expert" messageRef="Message_PhoneForExpert"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

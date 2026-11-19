@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/shipping">
+  <bpmn:collaboration id="Collaboration_Shipping">
+    <bpmn:participant id="Participant_Organization" name="Organization" processRef="Process_Shipping"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Shipping" name="Ship goods" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Shipping">
+      <bpmn:lane id="Lane_Secretary" name="Secretary">
+        <bpmn:flowNodeRef>StartEvent_ShippingRequired</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ClarifyShipper</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ParallelSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Amount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_InviteCompanies</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SelectCompany</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_UsePost</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ShippingMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_WriteLabel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_InsuranceJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ParallelJoin</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_LogisticsHead" name="Logistics department head">
+        <bpmn:flowNodeRef>Gateway_InsuranceSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TakeInsurance</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Warehousemen" name="Warehousemen">
+        <bpmn:flowNodeRef>Task_PackageGoods</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PreparePickup</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ReadyForPickup</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_ShippingRequired" name="Goods shall be shipped"/>
+    <bpmn:task id="Task_ClarifyShipper" name="Clarify who will do the shipping"/>
+    <bpmn:parallelGateway id="Gateway_ParallelSplit" name="Proceed with arrangements and packaging"/>
+    <bpmn:exclusiveGateway id="Gateway_Amount" name="Are the amounts large?"/>
+    <bpmn:task id="Task_InviteCompanies" name="Invite three logistics companies to make offers"/>
+    <bpmn:task id="Task_SelectCompany" name="Select one logistics company"/>
+    <bpmn:task id="Task_UsePost" name="Use normal post shipment"/>
+    <bpmn:exclusiveGateway id="Gateway_ShippingMerge" name="Merge shipping method paths"/>
+    <bpmn:inclusiveGateway id="Gateway_InsuranceSplit" name="Is parcel insurance necessary?"/>
+    <bpmn:task id="Task_WriteLabel" name="Write package label"/>
+    <bpmn:task id="Task_TakeInsurance" name="Take parcel insurance"/>
+    <bpmn:inclusiveGateway id="Gateway_InsuranceJoin" name="Wait for required label and any necessary insurance"/>
+    <bpmn:task id="Task_PackageGoods" name="Package goods"/>
+    <bpmn:parallelGateway id="Gateway_ParallelJoin" name="Wait until arrangements and packaging are ready"/>
+    <bpmn:task id="Task_PreparePickup" name="Prepare packaged goods for pickup by the logistics company"/>
+    <bpmn:endEvent id="EndEvent_ReadyForPickup" name="Goods prepared for pickup"/>
+
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_ShippingRequired" targetRef="Task_ClarifyShipper"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_ClarifyShipper" targetRef="Gateway_ParallelSplit"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Gateway_ParallelSplit" targetRef="Gateway_Amount"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Gateway_ParallelSplit" targetRef="Task_PackageGoods"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Gateway_Amount" targetRef="Task_InviteCompanies">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">amounts are large</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_InviteCompanies" targetRef="Task_SelectCompany"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_SelectCompany" targetRef="Gateway_ShippingMerge"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Gateway_Amount" targetRef="Task_UsePost">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">amounts are small</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_UsePost" targetRef="Gateway_ShippingMerge"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Gateway_ShippingMerge" targetRef="Gateway_InsuranceSplit"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Gateway_InsuranceSplit" targetRef="Task_WriteLabel"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Gateway_InsuranceSplit" targetRef="Task_TakeInsurance">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">parcel insurance is necessary</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_WriteLabel" targetRef="Gateway_InsuranceJoin"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_TakeInsurance" targetRef="Gateway_InsuranceJoin"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Gateway_InsuranceJoin" targetRef="Gateway_ParallelJoin"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Task_PackageGoods" targetRef="Gateway_ParallelJoin"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Gateway_ParallelJoin" targetRef="Task_PreparePickup"/>
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Task_PreparePickup" targetRef="EndEvent_ReadyForPickup"/>
+  </bpmn:process>
+</bpmn:definitions>

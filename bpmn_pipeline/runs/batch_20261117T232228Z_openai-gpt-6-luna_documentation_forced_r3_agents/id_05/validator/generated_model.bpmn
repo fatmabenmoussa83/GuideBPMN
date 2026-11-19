@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/bpmn/supplier-selection">
+  <bpmn:message id="Message_RFP" name="Request for proposals"/>
+  <bpmn:message id="Message_Proposal" name="Supplier proposal"/>
+  <bpmn:message id="Message_Terms" name="Contract terms"/>
+
+  <bpmn:collaboration id="Collaboration_SupplierSelection">
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_SupplierSelection"/>
+    <bpmn:participant id="Participant_Suppliers" name="Suppliers"/>
+    <bpmn:messageFlow id="MessageFlow_RFP" name="Issue RFP" sourceRef="Task_IssueRFP" targetRef="Participant_Suppliers" messageRef="Message_RFP"/>
+    <bpmn:messageFlow id="MessageFlow_Proposal" name="Submit proposals" sourceRef="Participant_Suppliers" targetRef="Task_ReceiveProposals" messageRef="Message_Proposal"/>
+    <bpmn:messageFlow id="MessageFlow_Negotiation_Out" name="Discuss contract terms" sourceRef="Task_Negotiate" targetRef="Participant_Suppliers" messageRef="Message_Terms"/>
+    <bpmn:messageFlow id="MessageFlow_Negotiation_In" name="Discuss contract terms" sourceRef="Participant_Suppliers" targetRef="Task_Negotiate" messageRef="Message_Terms"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_SupplierSelection" name="Select and onboard a supplier" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_SupplierSelection">
+      <bpmn:lane id="Lane_Company" name="Company">
+        <bpmn:flowNodeRef>Start_NeedIdentified</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Procurement" name="Procurement team">
+        <bpmn:flowNodeRef>Task_IssueRFP</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReceiveProposals</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EvaluateProposals</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ConsiderVisits</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ConductVisits</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_VisitsMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SelectSupplier</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Negotiate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SignContract</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_OnboardSupplier</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_SupplierOnboarded</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_NeedIdentified" name="Need for a new supplier identified"/>
+    <bpmn:sendTask id="Task_IssueRFP" name="Issue request for proposals"/>
+    <bpmn:receiveTask id="Task_ReceiveProposals" name="Receive supplier proposals"/>
+    <bpmn:task id="Task_EvaluateProposals" name="Evaluate proposals against cost, quality, and delivery time"/>
+    <bpmn:exclusiveGateway id="Gateway_ConsiderVisits" name="Conduct site visits or interviews?" default="Flow_SkipVisits"/>
+    <bpmn:task id="Task_ConductVisits" name="Conduct site visits or interviews"/>
+    <bpmn:exclusiveGateway id="Gateway_VisitsMerge" name="Continue after optional assessment"/>
+    <bpmn:task id="Task_SelectSupplier" name="Select supplier"/>
+    <bpmn:task id="Task_Negotiate" name="Negotiate contract terms until both parties agree"/>
+    <bpmn:task id="Task_SignContract" name="Sign contract"/>
+    <bpmn:task id="Task_OnboardSupplier" name="Officially onboard supplier"/>
+    <bpmn:endEvent id="End_SupplierOnboarded" name="Supplier onboarded and contract executed"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_IssueRFP" sourceRef="Start_NeedIdentified" targetRef="Task_IssueRFP"/>
+    <bpmn:sequenceFlow id="Flow_IssueRFP_Receive" sourceRef="Task_IssueRFP" targetRef="Task_ReceiveProposals"/>
+    <bpmn:sequenceFlow id="Flow_Receive_Evaluate" sourceRef="Task_ReceiveProposals" targetRef="Task_EvaluateProposals"/>
+    <bpmn:sequenceFlow id="Flow_Evaluate_ConsiderVisits" sourceRef="Task_EvaluateProposals" targetRef="Gateway_ConsiderVisits"/>
+    <bpmn:sequenceFlow id="Flow_ConductVisits" sourceRef="Gateway_ConsiderVisits" targetRef="Task_ConductVisits">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Site visits or interviews are conducted</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SkipVisits" sourceRef="Gateway_ConsiderVisits" targetRef="Gateway_VisitsMerge"/>
+    <bpmn:sequenceFlow id="Flow_VisitsToMerge" sourceRef="Task_ConductVisits" targetRef="Gateway_VisitsMerge"/>
+    <bpmn:sequenceFlow id="Flow_Merge_Select" sourceRef="Gateway_VisitsMerge" targetRef="Task_SelectSupplier"/>
+    <bpmn:sequenceFlow id="Flow_Select_Negotiate" sourceRef="Task_SelectSupplier" targetRef="Task_Negotiate"/>
+    <bpmn:sequenceFlow id="Flow_Negotiate_Sign" sourceRef="Task_Negotiate" targetRef="Task_SignContract"/>
+    <bpmn:sequenceFlow id="Flow_Sign_Onboard" sourceRef="Task_SignContract" targetRef="Task_OnboardSupplier"/>
+    <bpmn:sequenceFlow id="Flow_Onboard_End" sourceRef="Task_OnboardSupplier" targetRef="End_SupplierOnboarded"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,312 @@
+{
+ "id": "33",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 28,
+  "T6": 7
+ },
+ "first_pass_error_counts": {
+  "T5": 28,
+  "T6": 7
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines ACT-05 (In the generated model, the wait for the artist's result and for the order confirmation is absent (M1, M3). The waits that do appear are modeled as receive tasks (X2, X3), so the process flow does not show a wait before the dependent step. The description requires the process to wait for the artist's sketches reply (S2) and for the order before the plastic can be used. A wait for a message is an e)",
+   "guideline_id": "LRN-070",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-070 (Every missing-element record M1, M2, M3 and M4 is a receipt from an outside party that the generated model dropped, and the description states each one as a step the process must wait for (S2, S7). The generator's one receive element, X2, shows the receipt was modeled as a receive task elsewhere, so the omission is the main gap and the choice of element is secondary. The records do not show a gap )",
+   "guideline_id": "LRN-070",
+   "ref": "LRN-070",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-059 (The reference has a receive task between the first sketch send and the decision on the returned work (M1, F1), and the generated model omits it and lets the process continue directly (M1, S2). LRN-059 already requires a wait for outside answers placed before the deciding gateway, so the new rule restates it for sends of several items; the same omission also appears after the order (M3). The wordin)",
+   "guideline_id": "LRN-059",
+   "ref": "LRN-059",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "new guideline (M2 shows the reference receives a status stream that the generated model omits entirely. S7 says the printer keeps sending its status while the bed and extruder heat, and S8 says gcode generation runs alongside that heating, so the status reception is a parallel wait, not a single reply. LRN-070 covers a one-off confirmation wait placed before a dependent step. It does not cover repeated updates r)",
+   "guideline_id": "LRN-071",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: satisfied",
+   "guideline_id": "EXS-071",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "new guideline (The reference models the reply to each feedback round as a receive task before the satisfaction gateway, and the generated model has no such wait; the loop and gateway elements (M5, M6) are also missing. The closest learned guideline LRN-070 covers a reply wait only when no decision depends on it, so it explicitly excludes this case. No documented guideline covers a reply wait inside a repeated fe)",
+   "guideline_id": "LRN-072",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-070",
+   "instruction": "When The description says the process sends a request or places an order with an outside party, and the next step can only happen after that party's reply or confirmation arrives, without describing a decision based on that reply.: Model the wait for the reply or confirmation as an intermediate message catch event placed after the request activity and before the step that depends on it, connected by sequence flows in that order. Do not model the wait as a task, and do not leave it out so that the next step follows the request directly.",
+   "situation": "The description says the process sends a request or places an order with an outside party, and the next step can only happen after that party's reply or confirmation arrives, without describing a decision based on that reply.",
+   "source": "learned guideline (refines ACT-05)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-059",
+   "instruction": "When the description says that a later decision depends on answers that other people must give, so the process has to wait until those answers have been collected: Model the wait for those answers as an intermediate catch event, placed after the task that requests the answers and before the exclusive gateway that decides on them. Do not replace the wait with a task, and do not route the decision before the wait.",
+   "situation": "the description says the process sends several items or a request to an outside party and then must receive the returned work before a later decision or revision step can be taken",
+   "source": "learned guideline (refines EVT-03)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-071",
+   "instruction": "When the description says that while the process runs one activity, an outside party or device keeps sending status or update messages back to the process: Model the incoming status updates as a message catch event (or receive task) in the process's own pool. Place it on a branch that runs in parallel with the activity it reports on, so the updates are received while that activity proceeds, and do not wait for the activity to finish before receiving them. Do not leave the updates out, and do not model them as flows to or from a separate pool unless the description gives that party its own behavior.",
+   "situation": "the description says that while the process runs one activity, an outside party or device keeps sending status or update messages back to the process",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "EXS-071",
+   "instruction": "When the description says that a request or instruction sent to an outside party is repeated, with the process waiting for each reply, until a satisfaction condition is met, so that the process loops back to the repeated request after an unsatisfactory reply: Model each repeated request as an activity whose reply is awaited by an intermediate message catch event, followed by an exclusive gateway that decides whether the process is satisfied. Place an exclusive merge gateway before the repeated request activity, so that the first entry into the loop and the return from the 'not satisfied' branch both enter it. Connect the 'not satisfied' outgoing flow of the decision gateway back to that merge gateway, and leave the 'satisfied' outgoing flow to continue the process. Do not connect the decision gateway directly to the request activity without a merge, and do not omit the wait before the decision.",
+   "situation": "the description says that a request or instruction sent to an outside party is repeated, with the process waiting for each reply, until a satisfaction condition is met, so that the process loops back to the repeated request after an unsatisfactory reply",
+   "source": "example-specific guideline",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-072",
+   "instruction": "When the description says the process sends material or feedback to an outside party, then sends further feedback in a repeated cycle, and a later decision checks whether the outcome is acceptable, so each reply must arrive before that decision: Model each send of material or feedback as an activity inside the cycle. Model the wait for the outside party's reply as an intermediate message catch event that follows the send and comes before the acceptance decision gateway, so every round is answered before the decision. Connect the decision's repeat branch back to the feedback send through a merging exclusive gateway, and keep the wait inside the loop. Do not model the reply wait as a plain task, and do not let the acceptance decision follow the send directly.",
+   "situation": "the description says the process sends material or feedback to an outside party, then sends further feedback in a repeated cycle, and a later decision checks whether the outcome is acceptable, so each reply must arrive before that decision",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

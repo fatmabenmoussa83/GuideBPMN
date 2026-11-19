@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_BlizzardCharacterGenerator"
+                  targetNamespace="http://example.com/bpmn/blizzard-character-generator">
+  <bpmn:message id="Message_ConfirmationEmail" name="Account confirmation email"/>
+  <bpmn:message id="Message_CharacterConfirmationAndSelfies" name="Character confirmation and selfies"/>
+  <bpmn:message id="Message_ExpansionRelease" name="Expansion release message"/>
+
+  <bpmn:process id="Process_CharacterCreation" name="Create a World of Warcraft character" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_CreateCharacter" name="Start creating a character">
+      <bpmn:outgoing>Flow_StartToParallel</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:parallelGateway id="Gateway_StartParallel" name="Set up account and come up with names">
+      <bpmn:incoming>Flow_StartToParallel</bpmn:incoming>
+      <bpmn:outgoing>Flow_ParallelToAccountCheck</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ParallelToThinkNames</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:userTask id="Task_CheckBattleNetAccount" name="Check whether you have a Battle.net account">
+      <bpmn:incoming>Flow_ParallelToAccountCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_AccountCheckToGateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_BattleNetAccountExists" name="Do you have a Battle.net account?">
+      <bpmn:incoming>Flow_AccountCheckToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_AccountExists</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoAccount</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="Task_EnterAccountInformation" name="Enter Battle.net account information">
+      <bpmn:incoming>Flow_NoAccount</bpmn:incoming>
+      <bpmn:outgoing>Flow_AccountInfoToEmail</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:intermediateCatchEvent id="Event_ReceiveConfirmationEmail" name="Receive the confirmation email">
+      <bpmn:incoming>Flow_AccountInfoToEmail</bpmn:incoming>
+      <bpmn:outgoing>Flow_EmailToClickLink</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_ConfirmationEmail" messageRef="Message_ConfirmationEmail"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:userTask id="Task_ClickConfirmationLink" name="Click the link in the confirmation email">
+      <bpmn:incoming>Flow_EmailToClickLink</bpmn:incoming>
+      <bpmn:outgoing>Flow_ClickLinkToAccountMerge</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_AccountMerge" name="Continue with a Battle.net account">
+      <bpmn:incoming>Flow_AccountExists</bpmn:incoming>
+      <bpmn:incoming>Flow_ClickLinkToAccountMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_AccountMergeToSubscriptionCheck</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="Task_CheckSubscription" name="Check whether you have an active WoW subscription">
+      <bpmn:incoming>Flow_AccountMergeToSubscriptionCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_SubscriptionCheckToGateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_ActiveSubscription" name="Do you have an active WoW subscription?">
+      <bpmn:incoming>Flow_SubscriptionCheckToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_SubscriptionActive</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoActiveSubscription</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="Task_SelectPaymentMethod" name="Select a payment method">
+      <bpmn:incoming>Flow_NoActiveSubscription</bpmn:incoming>
+      <bpmn:outgoing>Flow_PaymentMethodToGateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_PaymentMethod" name="Choose payment method">
+      <bpmn:incoming>Flow_PaymentMethodToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_CreditCard</bpmn:outgoing>
+      <bpmn:outgoing>Flow_BankAccount</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="Task_EnterCreditCardInformation" name="Enter credit card information">
+      <bpmn:incoming>Flow_CreditCard</bpmn:incoming>
+      <bpmn:outgoing>Flow_CreditCardToPaymentMerge</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="Task_EnterBankDetails" name="Enter your IBAN and BIC">
+      <bpmn:incoming>Flow_BankAccount</bpmn:incoming>
+      <bpmn:outgoing>Flow_BankDetailsToPaymentMerge</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_PaymentMerge" name="Continue after subscription check">
+      <bpmn:incoming>Flow_SubscriptionActive</bpmn:incoming>
+      <bpmn:incoming>Flow_CreditCardToPaymentMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_BankDetailsToPaymentMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_PaymentMergeToLogin</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="Task_Login" name="Log into the game">
+      <bpmn:incoming>Flow_PaymentMergeToLogin</bpmn:incoming>
+      <bpmn:outgoing>Flow_LoginToSelectCharacterOptions</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="Task_SelectCharacterOptions" name="Select your character's realm, race, and class">
+      <bpmn:incoming>Flow_LoginToSelectCharacterOptions</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelectOptionsToParallelMerge</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="Task_ThinkOfCharacterNames" name="Come up with good character names">
+      <bpmn:incoming>Flow_ParallelToThinkNames</bpmn:incoming>
+      <bpmn:outgoing>Flow_ThinkNamesToParallelMerge</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:parallelGateway id="Gateway_AccountAndNamesMerge" name="Account setup and names ready">
+      <bpmn:incoming>Flow_SelectOptionsToParallelMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_ThinkNamesToParallelMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_ParallelMergeToEnterName</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:userTask id="Task_EnterCharacterName" name="Enter a character name">
+      <bpmn:incoming>Flow_ParallelMergeToEnterName</bpmn:incoming>
+      <bpmn:incoming>Flow_NameUnavailable</bpmn:incoming>
+      <bpmn:outgoing>Flow_EnterNameToAvailabilityCheck</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:task id="Task_CheckNameAvailability" name="Check whether the character name is available">
+      <bpmn:incoming>Flow_EnterNameToAvailabilityCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_AvailabilityCheckToGateway</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_NameAvailable" name="Is the name available?">
+      <bpmn:incoming>Flow_AvailabilityCheckToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_NameAvailable</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NameUnavailable</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:intermediateCatchEvent id="Event_ReceiveCharacterConfirmation" name="Receive character confirmation and selfies">
+      <bpmn:incoming>Flow_NameAvailable</bpmn:incoming>
+      <bpmn:outgoing>Flow_CharacterConfirmationToReleaseWait</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_CharacterConfirmationAndSelfies" messageRef="Message_CharacterConfirmationAndSelfies"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:intermediateCatchEvent id="Event_ReceiveExpansionMessage" name="Receive another message when the expansion is released">
+      <bpmn:incoming>Flow_CharacterConfirmationToReleaseWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_ExpansionMessageToEnd</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_ExpansionRelease" messageRef="Message_ExpansionRelease"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:endEvent id="EndEvent_CharacterCreationComplete" name="Receive the expansion release message">
+      <bpmn:incoming>Flow_ExpansionMessageToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_StartToParallel" sourceRef="StartEvent_CreateCharacter" targetRef="Gateway_StartParallel"/>
+    <bpmn:sequenceFlow id="Flow_ParallelToAccountCheck" sourceRef="Gateway_StartParallel" targetRef="Task_CheckBattleNetAccount"/>
+    <bpmn:sequenceFlow id="Flow_ParallelToThinkNames" sourceRef="Gateway_StartParallel" targetRef="Task_ThinkOfCharacterNames"/>
+    <bpmn:sequenceFlow id="Flow_AccountCheckToGateway" sourceRef="Task_CheckBattleNetAccount" targetRef="Gateway_BattleNetAccountExists"/>
+    <bpmn:sequenceFlow id="Flow_AccountExists" name="Yes" sourceRef="Gateway_BattleNetAccountExists" targetRef="Gateway_AccountMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">accountExists = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoAccount" name="No" sourceRef="Gateway_BattleNetAccountExists" targetRef="Task_EnterAccountInformation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">accountExists = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_AccountInfoToEmail" sourceRef="Task_EnterAccountInformation" targetRef="Event_ReceiveConfirmationEmail"/>
+    <bpmn:sequenceFlow id="Flow_EmailToClickLink" sourceRef="Event_ReceiveConfirmationEmail" targetRef="Task_ClickConfirmationLink"/>
+    <bpmn:sequenceFlow id="Flow_ClickLinkToAccountMerge" sourceRef="Task_ClickConfirmationLink" targetRef="Gateway_AccountMerge"/>
+    <bpmn:sequenceFlow id="Flow_AccountMergeToSubscriptionCheck" sourceRef="Gateway_AccountMerge" targetRef="Task_CheckSubscription"/>
+    <bpmn:sequenceFlow id="Flow_SubscriptionCheckToGateway" sourceRef="Task_CheckSubscription" targetRef="Gateway_ActiveSubscription"/>
+    <bpmn:sequenceFlow id="Flow_SubscriptionActive" name="Yes" sourceRef="Gateway_ActiveSubscription" targetRef="Gateway_PaymentMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">activeSubscription = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoActiveSubscription" name="No" sourceRef="Gateway_ActiveSubscription" targetRef="Task_SelectPaymentMethod">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">activeSubscription = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_PaymentMethodToGateway" sourceRef="Task_SelectPaymentMethod" targetRef="Gateway_PaymentMethod"/>
+    <bpmn:sequenceFlow id="Flow_CreditCard" name="Credit card" sourceRef="Gateway_PaymentMethod" targetRef="Task_EnterCreditCardInformation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">paymentMethod = "credit card"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_BankAccount" name="Bank account" sourceRef="Gateway_PaymentMethod" targetRef="Task_EnterBankDetails">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">paymentMethod = "bank account"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_CreditCardToPaymentMerge" sourceRef="Task_EnterCreditCardInformation" targetRef="Gateway_PaymentMerge"/>
+    <bpmn:sequenceFlow id="Flow_BankDetailsToPaymentMerge" sourceRef="Task_EnterBankDetails" targetRef="Gateway_PaymentMerge"/>
+    <bpmn:sequenceFlow id="Flow_PaymentMergeToLogin" sourceRef="Gateway_PaymentMerge" targetRef="Task_Login"/>
+    <bpmn:sequenceFlow id="Flow_LoginToSelectCharacterOptions" sourceRef="Task_Login" targetRef="Task_SelectCharacterOptions"/>
+    <bpmn:sequenceFlow id="Flow_SelectOptionsToParallelMerge" sourceRef="Task_SelectCharacterOptions" targetRef="Gateway_AccountAndNamesMerge"/>
+    <bpmn:sequenceFlow id="Flow_ThinkNamesToParallelMerge" sourceRef="Task_ThinkOfCharacterNames" targetRef="Gateway_AccountAndNamesMerge"/>
+    <bpmn:sequenceFlow id="Flow_ParallelMergeToEnterName" sourceRef="Gateway_AccountAndNamesMerge" targetRef="Task_EnterCharacterName"/>
+    <bpmn:sequenceFlow id="Flow_EnterNameToAvailabilityCheck" sourceRef="Task_EnterCharacterName" targetRef="Task_CheckNameAvailability"/>
+    <bpmn:sequenceFlow id="Flow_AvailabilityCheckToGateway" sourceRef="Task_CheckNameAvailability" targetRef="Gateway_NameAvailable"/>
+    <bpmn:sequenceFlow id="Flow_NameAvailable" name="Available" sourceRef="Gateway_NameAvailable" targetRef="Event_ReceiveCharacterConfirmation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">nameAvailable = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NameUnavailable" name="Unavailable; enter another name" sourceRef="Gateway_NameAvailable" targetRef="Task_EnterCharacterName">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">nameAvailable = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_CharacterConfirmationToReleaseWait" sourceRef="Event_ReceiveCharacterConfirmation" targetRef="Event_ReceiveExpansionMessage"/>
+    <bpmn:sequenceFlow id="Flow_ExpansionMessageToEnd" sourceRef="Event_ReceiveExpansionMessage" targetRef="EndEvent_CharacterCreationComplete"/>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_CharacterCreation">
+    <bpmn:participant id="Participant_Player" name="Player" processRef="Process_CharacterCreation"/>
+    <bpmn:participant id="Participant_Blizzard" name="Blizzard"/>
+    <bpmn:messageFlow id="MessageFlow_ConfirmationEmail" name="Account confirmation email" sourceRef="Participant_Blizzard" targetRef="Event_ReceiveConfirmationEmail" messageRef="Message_ConfirmationEmail"/>
+    <bpmn:messageFlow id="MessageFlow_CharacterConfirmationAndSelfies" name="Character confirmation and selfies" sourceRef="Participant_Blizzard" targetRef="Event_ReceiveCharacterConfirmation" messageRef="Message_CharacterConfirmationAndSelfies"/>
+    <bpmn:messageFlow id="MessageFlow_ExpansionRelease" name="Expansion release message" sourceRef="Participant_Blizzard" targetRef="Event_ReceiveExpansionMessage" messageRef="Message_ExpansionRelease"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

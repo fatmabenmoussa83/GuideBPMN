@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Contract"
+                  targetNamespace="http://example.com/bpmn/contract">
+  <bpmn:message id="Message_QuoteRequest" name="Quote request"/>
+  <bpmn:message id="Message_Offers" name="Availability, price and delivery estimates"/>
+  <bpmn:message id="Message_Order" name="Parts order"/>
+  <bpmn:message id="Message_DeliveryBatch" name="Parts delivery batch"/>
+  <bpmn:message id="Message_FriendsEmail" name="Complaint email about webshops"/>
+
+  <bpmn:collaboration id="Collaboration_Contract">
+    <bpmn:participant id="Participant_Contract" name="Contract project" processRef="Process_Contract"/>
+    <bpmn:participant id="Participant_WebShops" name="Web shops"/>
+    <bpmn:participant id="Participant_Friends" name="Friends"/>
+    <bpmn:messageFlow id="MessageFlow_QuoteRequest" name="Query all web shops"
+                      sourceRef="Task_QueryShops" targetRef="Participant_WebShops"
+                      messageRef="Message_QuoteRequest"/>
+    <bpmn:messageFlow id="MessageFlow_Offers" name="Shop offers"
+                      sourceRef="Participant_WebShops" targetRef="Task_ReceiveOffers"
+                      messageRef="Message_Offers"/>
+    <bpmn:messageFlow id="MessageFlow_InitialOrders" name="Initial parts orders"
+                      sourceRef="Task_PlaceInitialOrders" targetRef="Participant_WebShops"
+                      messageRef="Message_Order"/>
+    <bpmn:messageFlow id="MessageFlow_FirstBatch" name="First parts batch"
+                      sourceRef="Participant_WebShops" targetRef="Event_FirstBatch"
+                      messageRef="Message_DeliveryBatch"/>
+    <bpmn:messageFlow id="MessageFlow_LaterBatches" name="Further parts batches"
+                      sourceRef="Participant_WebShops" targetRef="Event_LaterBatch"
+                      messageRef="Message_DeliveryBatch"/>
+    <bpmn:messageFlow id="MessageFlow_CheapestReorder" name="Order from cheapest shop"
+                      sourceRef="Task_ReorderCheapest" targetRef="Participant_WebShops"
+                      messageRef="Message_Order"/>
+    <bpmn:messageFlow id="MessageFlow_FastestReorder" name="Order from fastest shop"
+                      sourceRef="Task_ReorderFastest" targetRef="Participant_WebShops"
+                      messageRef="Message_Order"/>
+    <bpmn:messageFlow id="MessageFlow_FriendsEmail" name="Complaint email"
+                      sourceRef="Task_EmailFriends" targetRef="Participant_Friends"
+                      messageRef="Message_FriendsEmail"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Contract" name="Contract" isExecutable="false">
+    <bpmn:startEvent id="Start_Contract" name="Parts needed for contract project"/>
+    <bpmn:sendTask id="Task_QueryShops" name="Query all web shops"/>
+    <bpmn:receiveTask id="Task_ReceiveOffers" name="Receive availability, prices and delivery times"/>
+    <bpmn:task id="Task_AllocateParts" name="Allocate parts to the cheapest shops, using several shops if needed"/>
+    <bpmn:task id="Task_CreateShopLists" name="Create a list of parts to order from each shop"/>
+    <bpmn:sendTask id="Task_PlaceInitialOrders" name="Place initial parts orders"/>
+    <bpmn:intermediateCatchEvent id="Event_FirstBatch" name="First parts batch arrives">
+      <bpmn:documentation>Parts arrive in batches in a random order, typically about two days earlier or later than expected. Building starts when the first parts arrive, while other batches may still be pending.</bpmn:documentation>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_FirstBatch" messageRef="Message_DeliveryBatch"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_BuildProject" name="Build project"/>
+
+    <bpmn:exclusiveGateway id="Gateway_ZeroStock" name="Is stock for a single part zero?" default="Flow_ZeroStock_No"/>
+    <bpmn:sendTask id="Task_EmailFriends" name="Email friends complaining about the webshops"/>
+    <bpmn:endEvent id="End_Complaint" name="Complaint email sent"/>
+
+    <bpmn:exclusiveGateway id="Gateway_BelowFive" name="Is stock for a single part below five?" default="Flow_BelowFive_No"/>
+    <bpmn:sendTask id="Task_ReorderCheapest" name="Reorder the part from the cheapest shop"/>
+    <bpmn:exclusiveGateway id="Gateway_BelowThree" name="Is stock for a single part below three?" default="Flow_BelowThree_No"/>
+    <bpmn:sendTask id="Task_ReorderFastest" name="Reorder the part from the fastest shop"/>
+    <bpmn:exclusiveGateway id="Gateway_ReorderMerge" name="Continue building"/>
+    <bpmn:sequenceFlow id="Flow_Build_ZeroCheck" sourceRef="Task_BuildProject" targetRef="Gateway_ZeroStock"/>
+    <bpmn:sequenceFlow id="Flow_ZeroStock_Yes" sourceRef="Gateway_ZeroStock" targetRef="Task_EmailFriends">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">stock for a single part = 0</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ZeroStock_EmailEnd" sourceRef="Task_EmailFriends" targetRef="End_Complaint"/>
+    <bpmn:sequenceFlow id="Flow_ZeroStock_No" sourceRef="Gateway_ZeroStock" targetRef="Gateway_BelowFive"/>
+    <bpmn:sequenceFlow id="Flow_BelowFive_Yes" sourceRef="Gateway_BelowFive" targetRef="Task_ReorderCheapest">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">stock for a single part &lt; 5</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_BelowFive_No" sourceRef="Gateway_BelowFive" targetRef="Gateway_ReorderMerge"/>
+    <bpmn:sequenceFlow id="Flow_Cheapest_BelowThree" sourceRef="Task_ReorderCheapest" targetRef="Gateway_BelowThree"/>
+    <bpmn:sequenceFlow id="Flow_BelowThree_Yes" sourceRef="Gateway_BelowThree" targetRef="Task_ReorderFastest">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">stock for a single part &lt; 3</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_BelowThree_No" sourceRef="Gateway_BelowThree" targetRef="Gateway_ReorderMerge"/>
+    <bpmn:sequenceFlow id="Flow_Fastest_ReorderMerge" sourceRef="Task_ReorderFastest" targetRef="Gateway_ReorderMerge"/>
+    <bpmn:sequenceFlow id="Flow_ReorderMerge_Build" sourceRef="Gateway_ReorderMerge" targetRef="Task_BuildProject"/>
+
+    <bpmn:subProcess id="EventSubProcess_LaterBatches" name="Receive further parts batches" triggeredByEvent="true">
+      <bpmn:startEvent id="Event_LaterBatch" name="Further parts batch arrives" isInterrupting="false">
+        <bpmn:messageEventDefinition id="MessageEventDefinition_LaterBatch" messageRef="Message_DeliveryBatch"/>
+      </bpmn:startEvent>
+      <bpmn:task id="Task_AddBatchToStock" name="Add received batch to stock"/>
+      <bpmn:endEvent id="End_LaterBatch" name="Batch added to stock"/>
+      <bpmn:sequenceFlow id="Flow_LaterBatch_AddStock" sourceRef="Event_LaterBatch" targetRef="Task_AddBatchToStock"/>
+      <bpmn:sequenceFlow id="Flow_AddStock_EndLaterBatch" sourceRef="Task_AddBatchToStock" targetRef="End_LaterBatch"/>
+    </bpmn:subProcess>
+
+    <bpmn:sequenceFlow id="Flow_Start_Query" sourceRef="Start_Contract" targetRef="Task_QueryShops"/>
+    <bpmn:sequenceFlow id="Flow_Query_Offers" sourceRef="Task_QueryShops" targetRef="Task_ReceiveOffers"/>
+    <bpmn:sequenceFlow id="Flow_Offers_Allocate" sourceRef="Task_ReceiveOffers" targetRef="Task_AllocateParts"/>
+    <bpmn:sequenceFlow id="Flow_Allocate_Lists" sourceRef="Task_AllocateParts" targetRef="Task_CreateShopLists"/>
+    <bpmn:sequenceFlow id="Flow_Lists_Orders" sourceRef="Task_CreateShopLists" targetRef="Task_PlaceInitialOrders"/>
+    <bpmn:sequenceFlow id="Flow_Orders_FirstBatch" sourceRef="Task_PlaceInitialOrders" targetRef="Event_FirstBatch"/>
+    <bpmn:sequenceFlow id="Flow_FirstBatch_Build" sourceRef="Event_FirstBatch" targetRef="Task_BuildProject"/>
+  </bpmn:process>
+</bpmn:definitions>

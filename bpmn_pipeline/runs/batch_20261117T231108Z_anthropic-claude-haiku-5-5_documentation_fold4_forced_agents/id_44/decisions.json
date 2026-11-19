@@ -1,0 +1,305 @@
+{
+ "id": "44",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 32,
+  "T6": 8
+ },
+ "first_pass_error_counts": {
+  "T5": 32,
+  "T6": 8
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines EVT-03 (The reference models the fixed-interval status updates as an intermediate catch event after the update task, while the generated model attached a boundary event 'Every 30 seconds' to the activity (X2), which is why the reference's wait event (M12) has no counterpart. The learned guidelines do not cover timers, so no learned guideline is the same. The wording avoids the forbidden word and does not )",
+   "guideline_id": "LRN-098",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines ACT-07 (The description asks the customer whether he wants a menu or just the burger, then says 'If he wants a menu' and branches on the answer. The reference models this as an exclusive gateway after receiving the order (M8). The generated model instead has the question as a user task labeled to match the reference's 'Select burger' (P4), with no decision gateway that routes the two cases. ACT-07 already)",
+   "guideline_id": "LRN-099",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-098 (The reference models the 30-second updates as a repeated update task followed by a timed intermediate catch event looping back, with no boundary event. The generated model attaches a timer boundary event named 'Every 30 seconds' to the activity (X2, the missing catch event M12) and ends the flow after each update (X3). LRN-098 already says to use an intermediate timer catch event instead of a time)",
+   "guideline_id": "LRN-098",
+   "ref": "LRN-098",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "abstained",
+   "detail": "The description says the robot asks whether the customer wants a menu or just the burger, and only then branches on the answer. The reference places the exclusive gateway \"Menu or just the burger ?\" directly after \"Receive order\" and before the question task (M8). That order makes the decision precede the question it depends on, so the reference contradicts the description (S2). Following it would encode a process the text does not state, so no guideline should be learned from M8. The label mismatches (P1-P6) are similarity scores between differently modeled elements, not evidence of a missing",
+   "guideline_id": null,
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline (The reference models the 30-second recurrence as an intermediate timer catch event (M12), while the generated model uses a boundary timer on the activity (X2) and an extra end event for each update (X3). The documented guidelines closest to this topic (EVT-11, EVT-07, EVT-13, EVT-10) govern boundary attachment and catch/throw direction but do not say how to model a recurring wait within an activit)",
+   "guideline_id": "LRN-100",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: menu",
+   "guideline_id": "EXS-103",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-098",
+   "instruction": "When the description states that after an activity is completed, the process waits for a stated fixed time interval before the next step or before a repeated update, and that this wait is separate from the activity's own work: Model the timed wait as a bpmn:intermediateCatchEvent with a timer event definition, placed in the sequence flow between the preceding activity and the next element (or the repeated update). Connect it with bpmn:sequenceFlow elements. Do not attach a timer boundary event to the activity, because that makes the wait part of the activity instead of a separate step in the flow.",
+   "situation": "the description states that after an activity is completed, the process waits for a stated fixed time interval before the next step or before a repeated update, and that this wait is separate from the activity's own work",
+   "source": "learned guideline (refines EVT-03)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-099",
+   "instruction": "When the description has a party ask a question whose answer then decides which of two or more alternative activity sequences follows, expressed as an 'if' or 'if you want' branch on that answer: Model the asking as an activity, and place an exclusive gateway directly after it. Give each alternative answer its own outgoing flow with a condition that states that answer, and continue each flow into its own sequence of activities. Do not model the question alone with a plain sequence flow, and do not let the following branch activities depend on the question without a gateway.",
+   "situation": "the description has a party ask a question whose answer then decides which of two or more alternative activity sequences follows, expressed as an 'if' or 'if you want' branch on that answer",
+   "source": "learned guideline (refines ACT-07)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-100",
+   "instruction": "When the description says that, while an activity is still being performed, something is repeated at a stated fixed time interval (a periodic output or update given during the activity): Model each periodic occurrence as a timer intermediate catch event with the stated interval as its duration, placed in a loop that emits the repeated output, waits on the timer, and then repeats until the activity completes. Do not attach a timer boundary event to the ongoing activity to represent the recurrence.",
+   "situation": "the description says that, while an activity is still being performed, something is repeated at a stated fixed time interval (a periodic output or update given during the activity)",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "EXS-103",
+   "instruction": "When the description says a party poses a question to the customer that offers a choice between alternatives (for example, a menu or a single item, or one of two sides), and the answer then decides which flow follows: Model the posed question as a user task performed by the party that poses it, and name that task after the choice being made (the subject of the question, in the description's own words) rather than after the question's wording or a generic verb. Place the task directly before an exclusive gateway that routes on the recorded selection. When the same party poses several such questions in sequence, model each as its own user task in the order the description gives, and do not merge them into one task.",
+   "situation": "the description says a party poses a question to the customer that offers a choice between alternatives (for example, a menu or a single item, or one of two sides), and the answer then decides which flow follows",
+   "source": "example-specific guideline",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

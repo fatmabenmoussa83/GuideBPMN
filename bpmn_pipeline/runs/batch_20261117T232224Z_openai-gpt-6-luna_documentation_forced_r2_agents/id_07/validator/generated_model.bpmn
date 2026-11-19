@@ -1,0 +1,75 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_TicketBooking" targetNamespace="http://example.com/bpmn/ticket-booking">
+  <bpmn:message id="Message_BookingDetails" name="Booking details and payment"/>
+  <bpmn:message id="Message_Ticket" name="Ticket"/>
+  <bpmn:message id="Message_Reminder" name="Pre-travel reminders and instructions"/>
+  <bpmn:collaboration id="Collaboration_TicketBooking">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_TravelCompany" name="Travel company" processRef="Process_TravelCompany"/>
+    <bpmn:messageFlow id="MessageFlow_BookingDetails" name="Submit booking details" sourceRef="Task_SubmitDetails" targetRef="StartEvent_BookingReceived" messageRef="Message_BookingDetails"/>
+    <bpmn:messageFlow id="MessageFlow_Ticket_Email" name="Email ticket" sourceRef="Task_SendTicketEmail" targetRef="Task_ReceiveTicket" messageRef="Message_Ticket"/>
+    <bpmn:messageFlow id="MessageFlow_Ticket_SMS" name="Send ticket by SMS" sourceRef="Task_SendTicketSMS" targetRef="Task_ReceiveTicket" messageRef="Message_Ticket"/>
+    <bpmn:messageFlow id="MessageFlow_Reminder" name="Send pre-travel reminders and instructions" sourceRef="Task_SendReminder" targetRef="Task_ReceiveReminder" messageRef="Message_Reminder"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Customer" name="Customer ticket journey" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Customer" name="Begin ticket search"/>
+    <bpmn:task id="Task_Search" name="Search for a flight, train, or bus ticket"/>
+    <bpmn:task id="Task_Select" name="Select route, date, and time"/>
+    <bpmn:sendTask id="Task_SubmitDetails" name="Provide personal information and payment details" messageRef="Message_BookingDetails"/>
+    <bpmn:receiveTask id="Task_ReceiveTicket" name="Receive ticket" messageRef="Message_Ticket"/>
+    <bpmn:exclusiveGateway id="Gateway_ReminderDecision" name="Will reminders be received?" default="Flow_Customer_NoReminder"/>
+    <bpmn:receiveTask id="Task_ReceiveReminder" name="Receive pre-travel reminders and instructions" messageRef="Message_Reminder"/>
+    <bpmn:exclusiveGateway id="Gateway_ReminderMerge" name="Continue after reminder decision"/>
+    <bpmn:task id="Task_CompleteJourney" name="Complete the journey"/>
+    <bpmn:exclusiveGateway id="Gateway_PostTravelDecision" name="Will post-travel feedback or services extend the process?" default="Flow_PostTravel_NoExtension"/>
+    <bpmn:task id="Task_PostTravel" name="Engage in post-travel feedback or services"/>
+    <bpmn:endEvent id="EndEvent_Journey" name="Journey completed"/>
+    <bpmn:endEvent id="EndEvent_PostTravel" name="Post-travel extension completed"/>
+    <bpmn:sequenceFlow id="Flow_Customer_Start_Search" sourceRef="StartEvent_Customer" targetRef="Task_Search"/>
+    <bpmn:sequenceFlow id="Flow_Customer_Search_Select" sourceRef="Task_Search" targetRef="Task_Select"/>
+    <bpmn:sequenceFlow id="Flow_Customer_Select_Submit" sourceRef="Task_Select" targetRef="Task_SubmitDetails"/>
+    <bpmn:sequenceFlow id="Flow_Customer_Submit_Ticket" sourceRef="Task_SubmitDetails" targetRef="Task_ReceiveTicket"/>
+    <bpmn:sequenceFlow id="Flow_Customer_Ticket_ReminderDecision" sourceRef="Task_ReceiveTicket" targetRef="Gateway_ReminderDecision"/>
+    <bpmn:sequenceFlow id="Flow_Customer_ReminderYes" name="Reminder received" sourceRef="Gateway_ReminderDecision" targetRef="Task_ReceiveReminder">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">reminderSent</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Customer_NoReminder" name="No reminder" sourceRef="Gateway_ReminderDecision" targetRef="Gateway_ReminderMerge"/>
+    <bpmn:sequenceFlow id="Flow_Customer_ReminderReceived" sourceRef="Task_ReceiveReminder" targetRef="Gateway_ReminderMerge"/>
+    <bpmn:sequenceFlow id="Flow_Customer_ReminderMerge_Journey" sourceRef="Gateway_ReminderMerge" targetRef="Task_CompleteJourney"/>
+    <bpmn:sequenceFlow id="Flow_Customer_Journey_PostTravelDecision" sourceRef="Task_CompleteJourney" targetRef="Gateway_PostTravelDecision"/>
+    <bpmn:sequenceFlow id="Flow_PostTravel_Extension" name="Post-travel feedback or services" sourceRef="Gateway_PostTravelDecision" targetRef="Task_PostTravel">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">postTravelExtension</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_PostTravel_NoExtension" name="No extension" sourceRef="Gateway_PostTravelDecision" targetRef="EndEvent_Journey"/>
+    <bpmn:sequenceFlow id="Flow_PostTravel_End" sourceRef="Task_PostTravel" targetRef="EndEvent_PostTravel"/>
+  </bpmn:process>
+  <bpmn:process id="Process_TravelCompany" name="Travel company ticket processing" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_BookingReceived" name="Booking details received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_BookingReceived" messageRef="Message_BookingDetails"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_GenerateTicket" name="Generate ticket"/>
+    <bpmn:exclusiveGateway id="Gateway_TicketChannel" name="Choose ticket delivery channel" default="Flow_Ticket_SMS"/>
+    <bpmn:sendTask id="Task_SendTicketEmail" name="Send ticket by email" messageRef="Message_Ticket"/>
+    <bpmn:sendTask id="Task_SendTicketSMS" name="Send ticket by SMS" messageRef="Message_Ticket"/>
+    <bpmn:exclusiveGateway id="Gateway_TicketChannelMerge" name="Continue after ticket delivery"/>
+    <bpmn:task id="Task_UpdateInventory" name="Update seat inventory"/>
+    <bpmn:exclusiveGateway id="Gateway_ReminderSendDecision" name="Send pre-travel reminders and instructions?" default="Flow_NoReminderSend"/>
+    <bpmn:sendTask id="Task_SendReminder" name="Send pre-travel reminders and instructions" messageRef="Message_Reminder"/>
+    <bpmn:endEvent id="EndEvent_CompanyReminderSent" name="Reminders sent"/>
+    <bpmn:endEvent id="EndEvent_CompanyNoReminder" name="Ticket processing completed"/>
+    <bpmn:sequenceFlow id="Flow_Company_Start_Generate" sourceRef="StartEvent_BookingReceived" targetRef="Task_GenerateTicket"/>
+    <bpmn:sequenceFlow id="Flow_Generate_TicketChannel" sourceRef="Task_GenerateTicket" targetRef="Gateway_TicketChannel"/>
+    <bpmn:sequenceFlow id="Flow_Ticket_Email" name="Email" sourceRef="Gateway_TicketChannel" targetRef="Task_SendTicketEmail">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">deliveryChannel = "email"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Ticket_SMS" name="SMS" sourceRef="Gateway_TicketChannel" targetRef="Task_SendTicketSMS"/>
+    <bpmn:sequenceFlow id="Flow_Email_TicketMerge" sourceRef="Task_SendTicketEmail" targetRef="Gateway_TicketChannelMerge"/>
+    <bpmn:sequenceFlow id="Flow_SMS_TicketMerge" sourceRef="Task_SendTicketSMS" targetRef="Gateway_TicketChannelMerge"/>
+    <bpmn:sequenceFlow id="Flow_TicketMerge_Inventory" sourceRef="Gateway_TicketChannelMerge" targetRef="Task_UpdateInventory"/>
+    <bpmn:sequenceFlow id="Flow_Inventory_ReminderDecision" sourceRef="Task_UpdateInventory" targetRef="Gateway_ReminderSendDecision"/>
+    <bpmn:sequenceFlow id="Flow_SendReminder" name="Send reminders" sourceRef="Gateway_ReminderSendDecision" targetRef="Task_SendReminder">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">remindersApplicable</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoReminderSend" name="No reminders" sourceRef="Gateway_ReminderSendDecision" targetRef="EndEvent_CompanyNoReminder"/>
+    <bpmn:sequenceFlow id="Flow_ReminderSent_End" sourceRef="Task_SendReminder" targetRef="EndEvent_CompanyReminderSent"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_OEE"
+                  targetNamespace="http://example.com/bpmn/oee">
+  <bpmn:message id="Message_OEE_Alert" name="OEE alert email"/>
+
+  <bpmn:collaboration id="Collaboration_OEE">
+    <bpmn:participant id="Participant_OEE_Process" name="OEE monitoring" processRef="Process_OEE"/>
+    <bpmn:participant id="Participant_Engineer" name="Engineer"/>
+    <bpmn:messageFlow id="MessageFlow_OEE_Alert"
+                      name="OEE alert email"
+                      sourceRef="Task_SendEmail"
+                      targetRef="Participant_Engineer"
+                      messageRef="Message_OEE_Alert"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_OEE" name="OEE" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Monitoring" name="Start monitoring"/>
+    <bpmn:exclusiveGateway id="Gateway_CheckConnection"
+                           name="Machine disconnected?"
+                           default="Flow_Connection_Connected"/>
+    <bpmn:task id="Task_CollectInformation" name="Collect machine information"/>
+    <bpmn:task id="Task_CalculateOEE" name="Calculate OEE"/>
+    <bpmn:exclusiveGateway id="Gateway_CheckOEE"
+                           name="OEE below threshold?"
+                           default="Flow_OEE_NotBelow"/>
+    <bpmn:task id="Task_StopMachine" name="Stop machine"/>
+    <bpmn:sendTask id="Task_SendEmail"
+                   name="Send email to engineer"
+                   messageRef="Message_OEE_Alert"/>
+    <bpmn:eventBasedGateway id="Gateway_WaitForRestartOrDisconnection"
+                            name="Wait for machine restart or disconnection"
+                            eventGatewayType="Exclusive"/>
+    <bpmn:intermediateCatchEvent id="Event_MachineRestarted" name="Machine restarted">
+      <bpmn:conditionalEventDefinition id="ConditionalEventDefinition_MachineRestarted">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">machineRestarted</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_MachineDisconnected" name="Machine disconnected">
+      <bpmn:conditionalEventDefinition id="ConditionalEventDefinition_MachineDisconnected">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">machineDisconnected</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="EndEvent_Disconnected" name="Process stopped because machine is disconnected"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_To_ConnectionCheck"
+                       sourceRef="StartEvent_Monitoring"
+                       targetRef="Gateway_CheckConnection"/>
+    <bpmn:sequenceFlow id="Flow_Connection_Disconnected"
+                       name="Disconnected"
+                       sourceRef="Gateway_CheckConnection"
+                       targetRef="EndEvent_Disconnected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">machineDisconnected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Connection_Connected"
+                       name="Connected"
+                       sourceRef="Gateway_CheckConnection"
+                       targetRef="Task_CollectInformation"/>
+    <bpmn:sequenceFlow id="Flow_Collect_To_Calculate"
+                       sourceRef="Task_CollectInformation"
+                       targetRef="Task_CalculateOEE"/>
+    <bpmn:sequenceFlow id="Flow_Calculate_To_CheckOEE"
+                       sourceRef="Task_CalculateOEE"
+                       targetRef="Gateway_CheckOEE"/>
+    <bpmn:sequenceFlow id="Flow_OEE_Below"
+                       name="Below threshold"
+                       sourceRef="Gateway_CheckOEE"
+                       targetRef="Task_StopMachine">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">oee &lt; threshold</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_OEE_NotBelow"
+                       name="Not below threshold"
+                       sourceRef="Gateway_CheckOEE"
+                       targetRef="Gateway_CheckConnection"/>
+    <bpmn:sequenceFlow id="Flow_Stop_To_Email"
+                       sourceRef="Task_StopMachine"
+                       targetRef="Task_SendEmail"/>
+    <bpmn:sequenceFlow id="Flow_Email_To_Wait"
+                       sourceRef="Task_SendEmail"
+                       targetRef="Gateway_WaitForRestartOrDisconnection"/>
+    <bpmn:sequenceFlow id="Flow_Wait_To_Restart"
+                       sourceRef="Gateway_WaitForRestartOrDisconnection"
+                       targetRef="Event_MachineRestarted"/>
+    <bpmn:sequenceFlow id="Flow_Wait_To_Disconnected"
+                       sourceRef="Gateway_WaitForRestartOrDisconnection"
+                       targetRef="Event_MachineDisconnected"/>
+    <bpmn:sequenceFlow id="Flow_Restart_To_ConnectionCheck"
+                       sourceRef="Event_MachineRestarted"
+                       targetRef="Gateway_CheckConnection"/>
+    <bpmn:sequenceFlow id="Flow_Disconnected_To_End"
+                       sourceRef="Event_MachineDisconnected"
+                       targetRef="EndEvent_Disconnected"/>
+  </bpmn:process>
+</bpmn:definitions>

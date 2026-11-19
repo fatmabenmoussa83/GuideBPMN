@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_SmartphoneRepair" targetNamespace="http://example.com/bpmn/smartphone-repair">
+  <bpmn:collaboration id="Collaboration_SmartphoneRepair">
+    <bpmn:participant id="Participant_Repairer" name="Repairer" processRef="Process_SmartphoneRepair"/>
+    <bpmn:participant id="Participant_OnlineTool" name="Online repair tool"/>
+    <bpmn:participant id="Participant_Friends" name="Friends"/>
+    <bpmn:participant id="Participant_Expert" name="Expert"/>
+    <bpmn:messageFlow id="MessageFlow_EnterDetails" name="Phone model and problem" sourceRef="Task_EnterPhoneDetails" targetRef="Participant_OnlineTool"/>
+    <bpmn:messageFlow id="MessageFlow_MaterialsList" name="Materials list" sourceRef="Participant_OnlineTool" targetRef="Task_ReceiveMaterialsList"/>
+    <bpmn:messageFlow id="MessageFlow_ToolsList" name="Tools list" sourceRef="Participant_OnlineTool" targetRef="Task_ReceiveToolsList"/>
+    <bpmn:messageFlow id="MessageFlow_OrderingChoices" name="Ordering choices for each part" sourceRef="Participant_OnlineTool" targetRef="Task_ReceiveOrderingChoices"/>
+    <bpmn:messageFlow id="MessageFlow_RepairInstructions" name="Repair instructions" sourceRef="Participant_OnlineTool" targetRef="Task_ReceiveInstructions"/>
+    <bpmn:messageFlow id="MessageFlow_ContactFriends" name="Ask about borrowing or buying items cheaply" sourceRef="Task_ContactFriends" targetRef="Participant_Friends"/>
+    <bpmn:messageFlow id="MessageFlow_SendReview" name="Review" sourceRef="Task_SendReview" targetRef="Participant_OnlineTool"/>
+    <bpmn:messageFlow id="MessageFlow_SendVideo" name="Repair video" sourceRef="Task_SendVideo" targetRef="Participant_OnlineTool"/>
+    <bpmn:messageFlow id="MessageFlow_SendToExpert" name="Phone for expert repair" sourceRef="Task_SendToExpert" targetRef="Participant_Expert"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_SmartphoneRepair" name="DIY Repair of a Broken Smartphone Screen" isExecutable="false">
+    <bpmn:startEvent id="Start_Repair" name="Start repair"/>
+    <bpmn:userTask id="Task_EnterPhoneDetails" name="Enter phone model and what is broken"/>
+    <bpmn:parallelGateway id="Gateway_ReceiveListsSplit" name="Receive information"/>
+    <bpmn:receiveTask id="Task_ReceiveMaterialsList" name="Receive materials list"/>
+    <bpmn:receiveTask id="Task_ReceiveToolsList" name="Receive tools list"/>
+    <bpmn:receiveTask id="Task_ReceiveOrderingChoices" name="Receive ordering choices for each part"/>
+    <bpmn:parallelGateway id="Gateway_ReceiveListsJoin" name="Information received"/>
+    <bpmn:userTask id="Task_AssessOwnedItems" name="Assess which items are already available"/>
+    <bpmn:exclusiveGateway id="Gateway_ItemsAvailability" name="Are all required items available?"/>
+    <bpmn:exclusiveGateway id="Gateway_AcquisitionChoice" name="How to obtain missing items?"/>
+    <bpmn:userTask id="Task_ContactFriends" name="Contact friends about borrowing or buying items cheaply"/>
+    <bpmn:exclusiveGateway id="Gateway_AcquisitionMerge" name="Continue with missing items"/>
+    <bpmn:userTask id="Task_BuyRemainingItems" name="Buy remaining items"/>
+    <bpmn:exclusiveGateway id="Gateway_ItemsReadyMerge" name="Items ready"/>
+    <bpmn:receiveTask id="Task_ReceiveInstructions" name="Receive instructions for fixing the phone"/>
+    <bpmn:manualTask id="Task_RepairPhone" name="Repair the phone"/>
+    <bpmn:exclusiveGateway id="Gateway_RepairOutcome" name="Did the repair work?"/>
+    <bpmn:inclusiveGateway id="Gateway_FeedbackSplit" name="Send a review, a video, or both"/>
+    <bpmn:sendTask id="Task_SendReview" name="Send a review"/>
+    <bpmn:sendTask id="Task_SendVideo" name="Send a video of the repair"/>
+    <bpmn:inclusiveGateway id="Gateway_FeedbackJoin" name="Feedback sent"/>
+    <bpmn:endEvent id="End_FeedbackSent" name="Feedback sent"/>
+    <bpmn:userTask id="Task_SendToExpert" name="Send the phone to an expert"/>
+    <bpmn:endEvent id="End_SentToExpert" name="Phone sent to an expert"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Enter" sourceRef="Start_Repair" targetRef="Task_EnterPhoneDetails"/>
+    <bpmn:sequenceFlow id="Flow_Enter_ListsSplit" sourceRef="Task_EnterPhoneDetails" targetRef="Gateway_ReceiveListsSplit"/>
+    <bpmn:sequenceFlow id="Flow_ListsSplit_Materials" sourceRef="Gateway_ReceiveListsSplit" targetRef="Task_ReceiveMaterialsList"/>
+    <bpmn:sequenceFlow id="Flow_ListsSplit_Tools" sourceRef="Gateway_ReceiveListsSplit" targetRef="Task_ReceiveToolsList"/>
+    <bpmn:sequenceFlow id="Flow_ListsSplit_Choices" sourceRef="Gateway_ReceiveListsSplit" targetRef="Task_ReceiveOrderingChoices"/>
+    <bpmn:sequenceFlow id="Flow_Materials_ListsJoin" sourceRef="Task_ReceiveMaterialsList" targetRef="Gateway_ReceiveListsJoin"/>
+    <bpmn:sequenceFlow id="Flow_Tools_ListsJoin" sourceRef="Task_ReceiveToolsList" targetRef="Gateway_ReceiveListsJoin"/>
+    <bpmn:sequenceFlow id="Flow_Choices_ListsJoin" sourceRef="Task_ReceiveOrderingChoices" targetRef="Gateway_ReceiveListsJoin"/>
+    <bpmn:sequenceFlow id="Flow_ListsJoin_Assess" sourceRef="Gateway_ReceiveListsJoin" targetRef="Task_AssessOwnedItems"/>
+    <bpmn:sequenceFlow id="Flow_Assess_Availability" sourceRef="Task_AssessOwnedItems" targetRef="Gateway_ItemsAvailability"/>
+    <bpmn:sequenceFlow id="Flow_AllAvailable_Ready" name="All required items available" sourceRef="Gateway_ItemsAvailability" targetRef="Gateway_ItemsReadyMerge"/>
+    <bpmn:sequenceFlow id="Flow_ItemsMissing_Acquisition" name="Some items are missing" sourceRef="Gateway_ItemsAvailability" targetRef="Gateway_AcquisitionChoice"/>
+    <bpmn:sequenceFlow id="Flow_Acquisition_Friends" name="Ask friends" sourceRef="Gateway_AcquisitionChoice" targetRef="Task_ContactFriends"/>
+    <bpmn:sequenceFlow id="Flow_Acquisition_Buy" name="Buy missing items" sourceRef="Gateway_AcquisitionChoice" targetRef="Gateway_AcquisitionMerge"/>
+    <bpmn:sequenceFlow id="Flow_Friends_AcquisitionMerge" sourceRef="Task_ContactFriends" targetRef="Gateway_AcquisitionMerge"/>
+    <bpmn:sequenceFlow id="Flow_AcquisitionMerge_Buy" sourceRef="Gateway_AcquisitionMerge" targetRef="Task_BuyRemainingItems"/>
+    <bpmn:sequenceFlow id="Flow_Buy_ItemsReady" sourceRef="Task_BuyRemainingItems" targetRef="Gateway_ItemsReadyMerge"/>
+    <bpmn:sequenceFlow id="Flow_ItemsReady_Instructions" sourceRef="Gateway_ItemsReadyMerge" targetRef="Task_ReceiveInstructions"/>
+    <bpmn:sequenceFlow id="Flow_Instructions_Repair" sourceRef="Task_ReceiveInstructions" targetRef="Task_RepairPhone"/>
+    <bpmn:sequenceFlow id="Flow_Repair_Outcome" sourceRef="Task_RepairPhone" targetRef="Gateway_RepairOutcome"/>
+    <bpmn:sequenceFlow id="Flow_Outcome_Success" name="Yes" sourceRef="Gateway_RepairOutcome" targetRef="Gateway_FeedbackSplit"/>
+    <bpmn:sequenceFlow id="Flow_Feedback_Review" name="Send a review" sourceRef="Gateway_FeedbackSplit" targetRef="Task_SendReview"/>
+    <bpmn:sequenceFlow id="Flow_Feedback_Video" name="Send a video" sourceRef="Gateway_FeedbackSplit" targetRef="Task_SendVideo"/>
+    <bpmn:sequenceFlow id="Flow_Review_FeedbackJoin" sourceRef="Task_SendReview" targetRef="Gateway_FeedbackJoin"/>
+    <bpmn:sequenceFlow id="Flow_Video_FeedbackJoin" sourceRef="Task_SendVideo" targetRef="Gateway_FeedbackJoin"/>
+    <bpmn:sequenceFlow id="Flow_FeedbackJoin_End" sourceRef="Gateway_FeedbackJoin" targetRef="End_FeedbackSent"/>
+    <bpmn:sequenceFlow id="Flow_Outcome_Failure" name="No" sourceRef="Gateway_RepairOutcome" targetRef="Task_SendToExpert"/>
+    <bpmn:sequenceFlow id="Flow_Expert_End" sourceRef="Task_SendToExpert" targetRef="End_SentToExpert"/>
+  </bpmn:process>
+</bpmn:definitions>

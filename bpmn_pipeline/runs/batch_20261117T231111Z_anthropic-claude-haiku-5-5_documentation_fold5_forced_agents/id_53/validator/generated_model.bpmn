@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Dismissal" targetNamespace="http://example.org/bpmn/dismissal">
+  <bpmn:message id="Message_Dismissal" name="Dismissal"/>
+  <bpmn:collaboration id="Collaboration_Dismissal">
+    <bpmn:participant id="Participant_MSPN" name="MSPN" processRef="Process_MSPN"/>
+    <bpmn:participant id="Participant_MSPO" name="MSPO" processRef="Process_MSPO"/>
+    <bpmn:messageFlow id="MessageFlow_Dismissal" name="Dismissal" sourceRef="Task_SendDismissal" targetRef="Task_ReceiveDismissal" messageRef="Message_Dismissal"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_MSPN" name="MSPN process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_MSPN" name="Process started">
+      <bpmn:outgoing>SequenceFlow_MSPN_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_SendDismissal" name="Send dismissal to MSPO" messageRef="Message_Dismissal">
+      <bpmn:incoming>SequenceFlow_MSPN_1</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_MSPN_2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_DismissalSent" name="Dismissal sent">
+      <bpmn:incoming>SequenceFlow_MSPN_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_MSPN_1" sourceRef="StartEvent_MSPN" targetRef="Task_SendDismissal"/>
+    <bpmn:sequenceFlow id="SequenceFlow_MSPN_2" sourceRef="Task_SendDismissal" targetRef="EndEvent_DismissalSent"/>
+  </bpmn:process>
+  <bpmn:process id="Process_MSPO" name="MSPO process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_MSPO" name="Process started">
+      <bpmn:outgoing>SequenceFlow_MSPO_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:receiveTask id="Task_ReceiveDismissal" name="Receive dismissal from MSPN" messageRef="Message_Dismissal">
+      <bpmn:incoming>SequenceFlow_MSPO_1</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_MSPO_2</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:task id="Task_ReviewDismissal" name="Review dismissal">
+      <bpmn:incoming>SequenceFlow_MSPO_2</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_MSPO_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Decision_Split" name="Decision on dismissal">
+      <bpmn:incoming>SequenceFlow_MSPO_3</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_MSPO_Reject</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_MSPO_Confirm</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_RejectDismissal" name="Reject dismissal of MSPN">
+      <bpmn:incoming>SequenceFlow_MSPO_Reject</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_MSPO_RejectDone</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ConfirmDismissal" name="Confirm dismissal of MSPN">
+      <bpmn:incoming>SequenceFlow_MSPO_Confirm</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_MSPO_ConfirmDone</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Decision_Merge" name="Decision merged">
+      <bpmn:incoming>SequenceFlow_MSPO_RejectDone</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_MSPO_ConfirmDone</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_MSPO_4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_DecisionMade" name="Dismissal decision made">
+      <bpmn:incoming>SequenceFlow_MSPO_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_MSPO_1" sourceRef="StartEvent_MSPO" targetRef="Task_ReceiveDismissal"/>
+    <bpmn:sequenceFlow id="SequenceFlow_MSPO_2" sourceRef="Task_ReceiveDismissal" targetRef="Task_ReviewDismissal"/>
+    <bpmn:sequenceFlow id="SequenceFlow_MSPO_3" sourceRef="Task_ReviewDismissal" targetRef="Gateway_Decision_Split"/>
+    <bpmn:sequenceFlow id="SequenceFlow_MSPO_Reject" name="Rejects" sourceRef="Gateway_Decision_Split" targetRef="Task_RejectDismissal"/>
+    <bpmn:sequenceFlow id="SequenceFlow_MSPO_Confirm" name="Confirms" sourceRef="Gateway_Decision_Split" targetRef="Task_ConfirmDismissal"/>
+    <bpmn:sequenceFlow id="SequenceFlow_MSPO_RejectDone" sourceRef="Task_RejectDismissal" targetRef="Gateway_Decision_Merge"/>
+    <bpmn:sequenceFlow id="SequenceFlow_MSPO_ConfirmDone" sourceRef="Task_ConfirmDismissal" targetRef="Gateway_Decision_Merge"/>
+    <bpmn:sequenceFlow id="SequenceFlow_MSPO_4" sourceRef="Gateway_Decision_Merge" targetRef="EndEvent_DecisionMade"/>
+  </bpmn:process>
+</bpmn:definitions>

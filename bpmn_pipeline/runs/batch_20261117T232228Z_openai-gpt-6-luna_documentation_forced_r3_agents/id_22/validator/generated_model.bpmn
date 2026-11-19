@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Recourse"
+                  targetNamespace="http://example.com/bpmn/recourse">
+  <bpmn:process id="Process_Recourse" name="Recourse case handling" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_InformationReceived" name="Information about possible subrogation received"/>
+    <bpmn:task id="Task_CheckCase" name="Check the case"/>
+    <bpmn:exclusiveGateway id="Gateway_RecoursePossible" name="Recourse possibility"/>
+    <bpmn:sendTask id="Task_SendPaymentRequest" name="Send request for payment"/>
+    <bpmn:task id="Task_MakeReminder" name="Make a reminder"/>
+    <bpmn:eventBasedGateway id="Gateway_WaitForOutcome" name="Wait for payment, disagreement, or deadline" gatewayDirection="Diverging"/>
+    <bpmn:intermediateCatchEvent id="Event_PaymentReceived" name="Money received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_PaymentReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_DisagreementReceived" name="Disagreement received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_DisagreementReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_DisagreementDeadline" name="Disagreement deadline reached with no money received">
+      <bpmn:timerEventDefinition id="TimerEventDefinition_DisagreementDeadline"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_MakeBooking" name="Make a booking"/>
+    <bpmn:task id="Task_CheckReasoning" name="Check the reasoning"/>
+    <bpmn:exclusiveGateway id="Gateway_InsurantRight" name="Insurant is right"/>
+    <bpmn:exclusiveGateway id="Gateway_CloseCaseMerge" name="Merge case closure paths" gatewayDirection="Converging"/>
+    <bpmn:task id="Task_CloseCase" name="Close the case"/>
+    <bpmn:endEvent id="EndEvent_CaseClosed" name="Case closed"/>
+    <bpmn:exclusiveGateway id="Gateway_ReferralMerge" name="Merge referral paths" gatewayDirection="Converging"/>
+    <bpmn:task id="Task_ForwardCase" name="Forward the case to the collection agency"/>
+    <bpmn:endEvent id="EndEvent_CaseForwarded" name="Case forwarded to the collection agency"/>
+
+    <bpmn:sequenceFlow id="Flow_InformationToCheck" sourceRef="StartEvent_InformationReceived" targetRef="Task_CheckCase"/>
+    <bpmn:sequenceFlow id="Flow_CheckToPossibility" sourceRef="Task_CheckCase" targetRef="Gateway_RecoursePossible"/>
+    <bpmn:sequenceFlow id="Flow_RecoursePossible" name="Yes" sourceRef="Gateway_RecoursePossible" targetRef="Task_SendPaymentRequest"/>
+    <bpmn:sequenceFlow id="Flow_RecourseNotPossible" name="No" sourceRef="Gateway_RecoursePossible" targetRef="Gateway_CloseCaseMerge"/>
+    <bpmn:sequenceFlow id="Flow_RequestToReminder" sourceRef="Task_SendPaymentRequest" targetRef="Task_MakeReminder"/>
+    <bpmn:sequenceFlow id="Flow_ReminderToWait" sourceRef="Task_MakeReminder" targetRef="Gateway_WaitForOutcome"/>
+    <bpmn:sequenceFlow id="Flow_WaitForPayment" sourceRef="Gateway_WaitForOutcome" targetRef="Event_PaymentReceived"/>
+    <bpmn:sequenceFlow id="Flow_WaitForDisagreement" sourceRef="Gateway_WaitForOutcome" targetRef="Event_DisagreementReceived"/>
+    <bpmn:sequenceFlow id="Flow_WaitForDeadline" sourceRef="Gateway_WaitForOutcome" targetRef="Event_DisagreementDeadline"/>
+    <bpmn:sequenceFlow id="Flow_PaymentToBooking" sourceRef="Event_PaymentReceived" targetRef="Task_MakeBooking"/>
+    <bpmn:sequenceFlow id="Flow_BookingToCloseMerge" sourceRef="Task_MakeBooking" targetRef="Gateway_CloseCaseMerge"/>
+    <bpmn:sequenceFlow id="Flow_DisagreementToReasoning" sourceRef="Event_DisagreementReceived" targetRef="Task_CheckReasoning"/>
+    <bpmn:sequenceFlow id="Flow_ReasoningToDecision" sourceRef="Task_CheckReasoning" targetRef="Gateway_InsurantRight"/>
+    <bpmn:sequenceFlow id="Flow_InsurantRight" name="Yes" sourceRef="Gateway_InsurantRight" targetRef="Gateway_CloseCaseMerge"/>
+    <bpmn:sequenceFlow id="Flow_InsurantWrong" name="No" sourceRef="Gateway_InsurantRight" targetRef="Gateway_ReferralMerge"/>
+    <bpmn:sequenceFlow id="Flow_DeadlineToReferralMerge" sourceRef="Event_DisagreementDeadline" targetRef="Gateway_ReferralMerge"/>
+    <bpmn:sequenceFlow id="Flow_CloseMergeToClose" sourceRef="Gateway_CloseCaseMerge" targetRef="Task_CloseCase"/>
+    <bpmn:sequenceFlow id="Flow_CloseToEnd" sourceRef="Task_CloseCase" targetRef="EndEvent_CaseClosed"/>
+    <bpmn:sequenceFlow id="Flow_ReferralMergeToForward" sourceRef="Gateway_ReferralMerge" targetRef="Task_ForwardCase"/>
+    <bpmn:sequenceFlow id="Flow_ForwardToEnd" sourceRef="Task_ForwardCase" targetRef="EndEvent_CaseForwarded"/>
+  </bpmn:process>
+</bpmn:definitions>

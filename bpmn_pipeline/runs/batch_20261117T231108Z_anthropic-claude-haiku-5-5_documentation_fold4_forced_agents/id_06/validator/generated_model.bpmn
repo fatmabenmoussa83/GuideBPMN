@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_OrderFulfillment" targetNamespace="http://example.com/bpmn/order-fulfillment">
+  <bpmn:message id="Msg_OrderConfirmation" name="Order confirmation"/>
+  <bpmn:message id="Msg_OrderHandover" name="Order handed over to logistics provider"/>
+  <bpmn:message id="Msg_TrackingInformation" name="Tracking information"/>
+  <bpmn:message id="Msg_DeliveryStatus" name="Delivery status to customer address"/>
+  <bpmn:message id="Msg_FeedbackOrReturn" name="Customer feedback or return"/>
+
+  <bpmn:collaboration id="Collaboration_OrderFulfillment">
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_Company" name="Order Fulfillment" processRef="Process_OrderFulfillment"/>
+    <bpmn:participant id="Participant_Logistics" name="Logistics Provider"/>
+    <bpmn:messageFlow id="MessageFlow_OrderConfirmation" name="Order confirmation" sourceRef="SendTask_OrderConfirmation" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MessageFlow_OrderHandover" name="Order handed over" sourceRef="SendTask_HandoverToLogistics" targetRef="Participant_Logistics"/>
+    <bpmn:messageFlow id="MessageFlow_TrackingInformation" name="Tracking information" sourceRef="SendTask_SendTracking" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MessageFlow_DeliveryStatus" name="Shipment status" sourceRef="Participant_Logistics" targetRef="ReceiveTask_MonitorShipment"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_OrderFulfillment" name="Order Fulfillment" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Fulfillment">
+      <bpmn:lane id="Lane_Customer" name="Customer">
+        <bpmn:flowNodeRef>StartEvent_OrderPlaced</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ChannelSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PlaceOrderOnline</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PlaceOrderPhone</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_OrderSystem" name="Order System">
+        <bpmn:flowNodeRef>Gateway_ChannelMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ServiceTask_GenerateConfirmation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SendTask_OrderConfirmation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SendTask_SendTracking</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ReceiveTask_MonitorShipment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Delivered</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Warehouse" name="Warehouse Team">
+        <bpmn:flowNodeRef>Task_PickAndPack</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ServiceTask_GenerateShippingLabel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SendTask_HandoverToLogistics</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_OrderPlaced"/>
+    <bpmn:exclusiveGateway id="Gateway_ChannelSplit" name="Order channel"/>
+    <bpmn:task id="Task_PlaceOrderOnline" name="Place order through online platform"/>
+    <bpmn:task id="Task_PlaceOrderPhone" name="Place order by phone"/>
+    <bpmn:exclusiveGateway id="Gateway_ChannelMerge"/>
+    <bpmn:serviceTask id="ServiceTask_GenerateConfirmation" name="Generate order confirmation"/>
+    <bpmn:sendTask id="SendTask_OrderConfirmation" name="Send order confirmation to customer" messageRef="Msg_OrderConfirmation"/>
+    <bpmn:task id="Task_PickAndPack" name="Pick and pack items"/>
+    <bpmn:serviceTask id="ServiceTask_GenerateShippingLabel" name="Generate shipping label"/>
+    <bpmn:sendTask id="SendTask_HandoverToLogistics" name="Hand over order to logistics provider" messageRef="Msg_OrderHandover"/>
+    <bpmn:sendTask id="SendTask_SendTracking" name="Send tracking information to customer" messageRef="Msg_TrackingInformation"/>
+    <bpmn:receiveTask id="ReceiveTask_MonitorShipment" name="Monitor shipment until delivered" messageRef="Msg_DeliveryStatus"/>
+    <bpmn:endEvent id="EndEvent_Delivered" name="Order completed: shipment delivered"/>
+
+    <bpmn:sequenceFlow id="Flow_StartToChannelSplit" sourceRef="StartEvent_OrderPlaced" targetRef="Gateway_ChannelSplit"/>
+    <bpmn:sequenceFlow id="Flow_SplitToOnline" sourceRef="Gateway_ChannelSplit" targetRef="Task_PlaceOrderOnline"/>
+    <bpmn:sequenceFlow id="Flow_SplitToPhone" sourceRef="Gateway_ChannelSplit" targetRef="Task_PlaceOrderPhone"/>
+    <bpmn:sequenceFlow id="Flow_OnlineToMerge" sourceRef="Task_PlaceOrderOnline" targetRef="Gateway_ChannelMerge"/>
+    <bpmn:sequenceFlow id="Flow_PhoneToMerge" sourceRef="Task_PlaceOrderPhone" targetRef="Gateway_ChannelMerge"/>
+    <bpmn:sequenceFlow id="Flow_MergeToGenerateConfirmation" sourceRef="Gateway_ChannelMerge" targetRef="ServiceTask_GenerateConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_GenerateToSendConfirmation" sourceRef="ServiceTask_GenerateConfirmation" targetRef="SendTask_OrderConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_SendConfirmationToPickPack" sourceRef="SendTask_OrderConfirmation" targetRef="Task_PickAndPack"/>
+    <bpmn:sequenceFlow id="Flow_PickPackToLabel" sourceRef="Task_PickAndPack" targetRef="ServiceTask_GenerateShippingLabel"/>
+    <bpmn:sequenceFlow id="Flow_LabelToHandover" sourceRef="ServiceTask_GenerateShippingLabel" targetRef="SendTask_HandoverToLogistics"/>
+    <bpmn:sequenceFlow id="Flow_HandoverToTracking" sourceRef="SendTask_HandoverToLogistics" targetRef="SendTask_SendTracking"/>
+    <bpmn:sequenceFlow id="Flow_TrackingToMonitor" sourceRef="SendTask_SendTracking" targetRef="ReceiveTask_MonitorShipment"/>
+    <bpmn:sequenceFlow id="Flow_MonitorToDelivered" sourceRef="ReceiveTask_MonitorShipment" targetRef="EndEvent_Delivered"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_FeedbackOrReturn" name="Handle customer feedback or return" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_FeedbackOrReturn" name="Customer feedback or return received">
+      <bpmn:messageEventDefinition id="MED_FeedbackOrReturn" messageRef="Msg_FeedbackOrReturn"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_ProcessFeedbackOrReturn" name="Process feedback or return"/>
+    <bpmn:endEvent id="EndEvent_FeedbackHandled" name="Feedback or return handled"/>
+
+    <bpmn:sequenceFlow id="Flow_FeedbackStartToTask" sourceRef="StartEvent_FeedbackOrReturn" targetRef="Task_ProcessFeedbackOrReturn"/>
+    <bpmn:sequenceFlow id="Flow_FeedbackTaskToEnd" sourceRef="Task_ProcessFeedbackOrReturn" targetRef="EndEvent_FeedbackHandled"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_OEE" targetNamespace="http://example.com/bpmn/oee">
+  <bpmn:message id="Message_MachineData" name="Machine data"/>
+  <bpmn:message id="Message_StopMachine" name="Stop machine"/>
+  <bpmn:message id="Message_OEEAlert" name="OEE below threshold alert"/>
+  <bpmn:message id="Message_MachineRestarted" name="Machine restarted"/>
+  <bpmn:collaboration id="Collaboration_OEE">
+    <bpmn:participant id="Participant_OEE" name="OEE Process" processRef="Process_OEE"/>
+    <bpmn:participant id="Participant_Machine" name="Machine"/>
+    <bpmn:participant id="Participant_Engineer" name="Engineer"/>
+    <bpmn:messageFlow id="MessageFlow_AvailabilityData" name="Machine data" messageRef="Message_MachineData" sourceRef="Participant_Machine" targetRef="Task_CollectAvailability"/>
+    <bpmn:messageFlow id="MessageFlow_PerformanceData" name="Machine data" messageRef="Message_MachineData" sourceRef="Participant_Machine" targetRef="Task_CollectPerformance"/>
+    <bpmn:messageFlow id="MessageFlow_QualityData" name="Machine data" messageRef="Message_MachineData" sourceRef="Participant_Machine" targetRef="Task_CollectQuality"/>
+    <bpmn:messageFlow id="MessageFlow_StopMachine" name="Stop machine" messageRef="Message_StopMachine" sourceRef="Task_StopMachine" targetRef="Participant_Machine"/>
+    <bpmn:messageFlow id="MessageFlow_OEEAlert" name="OEE alert" messageRef="Message_OEEAlert" sourceRef="Task_SendEmail" targetRef="Participant_Engineer"/>
+    <bpmn:messageFlow id="MessageFlow_MachineRestarted" name="Machine restarted" messageRef="Message_MachineRestarted" sourceRef="Participant_Machine" targetRef="Event_MachineRestarted"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_OEE" name="OEE" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Begin" name="Start measuring">
+      <bpmn:outgoing>Flow_Start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_Loop_Merge" name="Measuring cycle">
+      <bpmn:incoming>Flow_Start</bpmn:incoming>
+      <bpmn:incoming>Flow_OEEAcceptable</bpmn:incoming>
+      <bpmn:incoming>Flow_RestartLoop</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToConnectionCheck</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_Connected" name="Machine connected?" default="Flow_Connected">
+      <bpmn:incoming>Flow_ToConnectionCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_Connected</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Disconnected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_ProcessStopped" name="Process stopped">
+      <bpmn:incoming>Flow_Disconnected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:parallelGateway id="Gateway_Collect_Split" name="Collect measurements">
+      <bpmn:incoming>Flow_Connected</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToAvailability</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToPerformance</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToQuality</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_CollectAvailability" name="Collect availability data">
+      <bpmn:incoming>Flow_ToAvailability</bpmn:incoming>
+      <bpmn:outgoing>Flow_AvailabilityDone</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_CollectPerformance" name="Collect performance data">
+      <bpmn:incoming>Flow_ToPerformance</bpmn:incoming>
+      <bpmn:outgoing>Flow_PerformanceDone</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_CollectQuality" name="Collect quality data">
+      <bpmn:incoming>Flow_ToQuality</bpmn:incoming>
+      <bpmn:outgoing>Flow_QualityDone</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:parallelGateway id="Gateway_Collect_Join" name="All measurements collected">
+      <bpmn:incoming>Flow_AvailabilityDone</bpmn:incoming>
+      <bpmn:incoming>Flow_PerformanceDone</bpmn:incoming>
+      <bpmn:incoming>Flow_QualityDone</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToCalculate</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_CalculateOEE" name="Calculate OEE">
+      <bpmn:incoming>Flow_ToCalculate</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToThreshold</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Threshold" name="OEE below threshold?" default="Flow_OEEAcceptable">
+      <bpmn:incoming>Flow_ToThreshold</bpmn:incoming>
+      <bpmn:outgoing>Flow_BelowThreshold</bpmn:outgoing>
+      <bpmn:outgoing>Flow_OEEAcceptable</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:parallelGateway id="Gateway_Stop_Split" name="Stop and alert">
+      <bpmn:incoming>Flow_BelowThreshold</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToStopMachine</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToEmail</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sendTask id="Task_StopMachine" name="Stop machine" messageRef="Message_StopMachine">
+      <bpmn:incoming>Flow_ToStopMachine</bpmn:incoming>
+      <bpmn:outgoing>Flow_StopDone</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Task_SendEmail" name="Send email to engineer" messageRef="Message_OEEAlert">
+      <bpmn:incoming>Flow_ToEmail</bpmn:incoming>
+      <bpmn:outgoing>Flow_EmailDone</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:parallelGateway id="Gateway_Stop_Join" name="Machine stopped and engineer alerted">
+      <bpmn:incoming>Flow_StopDone</bpmn:incoming>
+      <bpmn:incoming>Flow_EmailDone</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToRestartWait</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:intermediateCatchEvent id="Event_MachineRestarted" name="Machine restarted">
+      <bpmn:incoming>Flow_ToRestartWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_RestartLoop</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Restarted" messageRef="Message_MachineRestarted"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_Start" sourceRef="StartEvent_Begin" targetRef="Gateway_Loop_Merge"/>
+    <bpmn:sequenceFlow id="Flow_ToConnectionCheck" sourceRef="Gateway_Loop_Merge" targetRef="Gateway_Connected"/>
+    <bpmn:sequenceFlow id="Flow_Connected" name="Connected" sourceRef="Gateway_Connected" targetRef="Gateway_Collect_Split"/>
+    <bpmn:sequenceFlow id="Flow_Disconnected" name="Disconnected" sourceRef="Gateway_Connected" targetRef="EndEvent_ProcessStopped">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${machineConnected == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ToAvailability" sourceRef="Gateway_Collect_Split" targetRef="Task_CollectAvailability"/>
+    <bpmn:sequenceFlow id="Flow_ToPerformance" sourceRef="Gateway_Collect_Split" targetRef="Task_CollectPerformance"/>
+    <bpmn:sequenceFlow id="Flow_ToQuality" sourceRef="Gateway_Collect_Split" targetRef="Task_CollectQuality"/>
+    <bpmn:sequenceFlow id="Flow_AvailabilityDone" sourceRef="Task_CollectAvailability" targetRef="Gateway_Collect_Join"/>
+    <bpmn:sequenceFlow id="Flow_PerformanceDone" sourceRef="Task_CollectPerformance" targetRef="Gateway_Collect_Join"/>
+    <bpmn:sequenceFlow id="Flow_QualityDone" sourceRef="Task_CollectQuality" targetRef="Gateway_Collect_Join"/>
+    <bpmn:sequenceFlow id="Flow_ToCalculate" sourceRef="Gateway_Collect_Join" targetRef="Task_CalculateOEE"/>
+    <bpmn:sequenceFlow id="Flow_ToThreshold" sourceRef="Task_CalculateOEE" targetRef="Gateway_Threshold"/>
+    <bpmn:sequenceFlow id="Flow_BelowThreshold" name="OEE below threshold" sourceRef="Gateway_Threshold" targetRef="Gateway_Stop_Split">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${oee &lt; oeeThreshold}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_OEEAcceptable" name="OEE acceptable" sourceRef="Gateway_Threshold" targetRef="Gateway_Loop_Merge"/>
+    <bpmn:sequenceFlow id="Flow_ToStopMachine" sourceRef="Gateway_Stop_Split" targetRef="Task_StopMachine"/>
+    <bpmn:sequenceFlow id="Flow_ToEmail" sourceRef="Gateway_Stop_Split" targetRef="Task_SendEmail"/>
+    <bpmn:sequenceFlow id="Flow_StopDone" sourceRef="Task_StopMachine" targetRef="Gateway_Stop_Join"/>
+    <bpmn:sequenceFlow id="Flow_EmailDone" sourceRef="Task_SendEmail" targetRef="Gateway_Stop_Join"/>
+    <bpmn:sequenceFlow id="Flow_ToRestartWait" sourceRef="Gateway_Stop_Join" targetRef="Event_MachineRestarted"/>
+    <bpmn:sequenceFlow id="Flow_RestartLoop" name="Machine restarted" sourceRef="Event_MachineRestarted" targetRef="Gateway_Loop_Merge"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,90 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Inventory_Restock" targetNamespace="http://example.com/bpmn/inventory-restock">
+  <bpmn:process id="Process_Inventory_Restock" name="Inventory Restock" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Monitoring_Begins" name="Inventory monitoring begins">
+      <bpmn:outgoing>Flow_Start_To_Monitor</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Monitor_Inventory" name="Monitor inventory levels against threshold">
+      <bpmn:incoming>Flow_Start_To_Monitor</bpmn:incoming>
+      <bpmn:outgoing>Flow_Monitor_To_Reorder_Split</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Reorder_Split" name="Reorder signal type">
+      <bpmn:incoming>Flow_Monitor_To_Reorder_Split</bpmn:incoming>
+      <bpmn:outgoing>Flow_Split_To_Automated_Alert</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Split_To_Manual_Check</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Automated_Alert" name="Generate automated reorder alert">
+      <bpmn:incoming>Flow_Split_To_Automated_Alert</bpmn:incoming>
+      <bpmn:outgoing>Flow_Automated_Alert_To_Reorder_Merge</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_Manual_Check" name="Perform manual stock check">
+      <bpmn:incoming>Flow_Split_To_Manual_Check</bpmn:incoming>
+      <bpmn:outgoing>Flow_Manual_Check_To_Reorder_Merge</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Reorder_Merge" name="Reorder needed">
+      <bpmn:incoming>Flow_Automated_Alert_To_Reorder_Merge</bpmn:incoming>
+      <bpmn:incoming>Flow_Manual_Check_To_Reorder_Merge</bpmn:incoming>
+      <bpmn:outgoing>Flow_Reorder_Merge_To_Place_Order</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Place_Order" name="Place order with supplier considering cost, delivery time and reliability">
+      <bpmn:incoming>Flow_Reorder_Merge_To_Place_Order</bpmn:incoming>
+      <bpmn:outgoing>Flow_Place_Order_To_Update_Delivery</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_Update_Expected_Delivery" name="Update inventory system with expected delivery dates">
+      <bpmn:incoming>Flow_Place_Order_To_Update_Delivery</bpmn:incoming>
+      <bpmn:outgoing>Flow_Update_Delivery_To_Receive</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:manualTask id="Task_Receive_Stock" name="Receive stock delivery">
+      <bpmn:incoming>Flow_Update_Delivery_To_Receive</bpmn:incoming>
+      <bpmn:outgoing>Flow_Receive_To_Stock_Split</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:parallelGateway id="Gateway_Stock_Split" name="Received stock processing split">
+      <bpmn:incoming>Flow_Receive_To_Stock_Split</bpmn:incoming>
+      <bpmn:outgoing>Flow_Stock_Split_To_Inspect</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Stock_Split_To_Record</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Stock_Split_To_Shelve</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Task_Inspect_Quality" name="Inspect stock quality">
+      <bpmn:incoming>Flow_Stock_Split_To_Inspect</bpmn:incoming>
+      <bpmn:outgoing>Flow_Inspect_To_Stock_Join</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_Record_Stock" name="Record received stock in system">
+      <bpmn:incoming>Flow_Stock_Split_To_Record</bpmn:incoming>
+      <bpmn:outgoing>Flow_Record_To_Stock_Join</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:manualTask id="Task_Shelve_Stock" name="Place stock on shelves or in storage">
+      <bpmn:incoming>Flow_Stock_Split_To_Shelve</bpmn:incoming>
+      <bpmn:outgoing>Flow_Shelve_To_Stock_Join</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:parallelGateway id="Gateway_Stock_Join" name="Stock handling complete">
+      <bpmn:incoming>Flow_Inspect_To_Stock_Join</bpmn:incoming>
+      <bpmn:incoming>Flow_Record_To_Stock_Join</bpmn:incoming>
+      <bpmn:incoming>Flow_Shelve_To_Stock_Join</bpmn:incoming>
+      <bpmn:outgoing>Flow_Stock_Join_To_Update_Levels</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_Update_Inventory_Levels" name="Update inventory levels after restock">
+      <bpmn:incoming>Flow_Stock_Join_To_Update_Levels</bpmn:incoming>
+      <bpmn:outgoing>Flow_Update_Levels_To_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_Restock_Complete" name="Restock complete, inventory levels updated">
+      <bpmn:incoming>Flow_Update_Levels_To_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_To_Monitor" sourceRef="StartEvent_Monitoring_Begins" targetRef="Task_Monitor_Inventory" />
+    <bpmn:sequenceFlow id="Flow_Monitor_To_Reorder_Split" sourceRef="Task_Monitor_Inventory" targetRef="Gateway_Reorder_Split" />
+    <bpmn:sequenceFlow id="Flow_Split_To_Automated_Alert" name="Automated alert" sourceRef="Gateway_Reorder_Split" targetRef="Task_Automated_Alert" />
+    <bpmn:sequenceFlow id="Flow_Split_To_Manual_Check" name="Manual check" sourceRef="Gateway_Reorder_Split" targetRef="Task_Manual_Check" />
+    <bpmn:sequenceFlow id="Flow_Automated_Alert_To_Reorder_Merge" sourceRef="Task_Automated_Alert" targetRef="Gateway_Reorder_Merge" />
+    <bpmn:sequenceFlow id="Flow_Manual_Check_To_Reorder_Merge" sourceRef="Task_Manual_Check" targetRef="Gateway_Reorder_Merge" />
+    <bpmn:sequenceFlow id="Flow_Reorder_Merge_To_Place_Order" sourceRef="Gateway_Reorder_Merge" targetRef="Task_Place_Order" />
+    <bpmn:sequenceFlow id="Flow_Place_Order_To_Update_Delivery" sourceRef="Task_Place_Order" targetRef="Task_Update_Expected_Delivery" />
+    <bpmn:sequenceFlow id="Flow_Update_Delivery_To_Receive" sourceRef="Task_Update_Expected_Delivery" targetRef="Task_Receive_Stock" />
+    <bpmn:sequenceFlow id="Flow_Receive_To_Stock_Split" sourceRef="Task_Receive_Stock" targetRef="Gateway_Stock_Split" />
+    <bpmn:sequenceFlow id="Flow_Stock_Split_To_Inspect" sourceRef="Gateway_Stock_Split" targetRef="Task_Inspect_Quality" />
+    <bpmn:sequenceFlow id="Flow_Stock_Split_To_Record" sourceRef="Gateway_Stock_Split" targetRef="Task_Record_Stock" />
+    <bpmn:sequenceFlow id="Flow_Stock_Split_To_Shelve" sourceRef="Gateway_Stock_Split" targetRef="Task_Shelve_Stock" />
+    <bpmn:sequenceFlow id="Flow_Inspect_To_Stock_Join" sourceRef="Task_Inspect_Quality" targetRef="Gateway_Stock_Join" />
+    <bpmn:sequenceFlow id="Flow_Record_To_Stock_Join" sourceRef="Task_Record_Stock" targetRef="Gateway_Stock_Join" />
+    <bpmn:sequenceFlow id="Flow_Shelve_To_Stock_Join" sourceRef="Task_Shelve_Stock" targetRef="Gateway_Stock_Join" />
+    <bpmn:sequenceFlow id="Flow_Stock_Join_To_Update_Levels" sourceRef="Gateway_Stock_Join" targetRef="Task_Update_Inventory_Levels" />
+    <bpmn:sequenceFlow id="Flow_Update_Levels_To_End" sourceRef="Task_Update_Inventory_Levels" targetRef="EndEvent_Restock_Complete" />
+  </bpmn:process>
+</bpmn:definitions>

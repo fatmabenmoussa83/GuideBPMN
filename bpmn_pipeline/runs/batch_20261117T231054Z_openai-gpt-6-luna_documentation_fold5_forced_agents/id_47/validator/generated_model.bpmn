@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/bpmn/usi-course-registration">
+  <bpmn:process id="Process_USICourseRegistration" name="New Application for Registering for an USI course" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Registration">
+      <bpmn:lane id="Lane_Applicant" name="Applicant">
+        <bpmn:flowNodeRef>StartEvent_Registration</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SelectCourse</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CheckAccount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AccountExists</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CheckUniversity</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_EligibleUniversity</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RegisterAccount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RequestActivation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_WaitActivationResponse</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AccountReadyMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_LogIn</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TweetChoice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TweetFriends</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TweetMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CompleteRegistration</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ProvidePaymentInformation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReceiveCourseTicket</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_RegistrationComplete</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_SportsInstituteSystem" name="Sports institute system">
+        <bpmn:flowNodeRef>Task_DisplayAvailableCourses</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_Registration" name="Course registration desired"/>
+    <bpmn:serviceTask id="Task_DisplayAvailableCourses" name="Display courses and dates with free slots"/>
+    <bpmn:userTask id="Task_SelectCourse" name="Select a course"/>
+    <bpmn:userTask id="Task_CheckAccount" name="Check whether an account exists"/>
+    <bpmn:exclusiveGateway id="Gateway_AccountExists" name="Does an account already exist?" default="Flow_AccountNo"/>
+    <bpmn:userTask id="Task_CheckUniversity" name="Check registration at an eligible university"/>
+    <bpmn:exclusiveGateway id="Gateway_EligibleUniversity" name="Are you registered at an eligible university?" default="Flow_UniversityNo"/>
+    <bpmn:userTask id="Task_RegisterAccount" name="Register account"/>
+    <bpmn:userTask id="Task_RequestActivation" name="Request activation"/>
+    <bpmn:task id="Task_WaitActivationResponse" name="Wait for activation response"/>
+    <bpmn:exclusiveGateway id="Gateway_AccountReadyMerge" name="Account paths merge"/>
+    <bpmn:userTask id="Task_LogIn" name="Log into account"/>
+    <bpmn:exclusiveGateway id="Gateway_TweetChoice" name="Tweet to friends who might want to join?" default="Flow_TweetNo"/>
+    <bpmn:userTask id="Task_TweetFriends" name="Tweet to friends who might want to join"/>
+    <bpmn:exclusiveGateway id="Gateway_TweetMerge" name="Tweet paths merge"/>
+    <bpmn:userTask id="Task_CompleteRegistration" name="Complete course registration"/>
+    <bpmn:userTask id="Task_ProvidePaymentInformation" name="Provide payment information"/>
+    <bpmn:userTask id="Task_ReceiveCourseTicket" name="Receive course ticket"/>
+    <bpmn:endEvent id="EndEvent_RegistrationComplete" name="Registration complete"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_DisplayCourses" sourceRef="StartEvent_Registration" targetRef="Task_DisplayAvailableCourses"/>
+    <bpmn:sequenceFlow id="Flow_DisplayCourses_Select" sourceRef="Task_DisplayAvailableCourses" targetRef="Task_SelectCourse"/>
+    <bpmn:sequenceFlow id="Flow_Select_CheckAccount" sourceRef="Task_SelectCourse" targetRef="Task_CheckAccount"/>
+    <bpmn:sequenceFlow id="Flow_CheckAccount_Gateway" sourceRef="Task_CheckAccount" targetRef="Gateway_AccountExists"/>
+    <bpmn:sequenceFlow id="Flow_AccountYes" name="Yes" sourceRef="Gateway_AccountExists" targetRef="Gateway_AccountReadyMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${accountExists}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_AccountNo" name="No" sourceRef="Gateway_AccountExists" targetRef="Task_CheckUniversity"/>
+    <bpmn:sequenceFlow id="Flow_CheckUniversity_Gateway" sourceRef="Task_CheckUniversity" targetRef="Gateway_EligibleUniversity"/>
+    <bpmn:sequenceFlow id="Flow_UniversityYes" name="Yes" sourceRef="Gateway_EligibleUniversity" targetRef="Task_RegisterAccount">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${eligibleUniversity}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_UniversityNo" name="No" sourceRef="Gateway_EligibleUniversity" targetRef="Task_RequestActivation"/>
+    <bpmn:sequenceFlow id="Flow_RegisterAccount_Merge" sourceRef="Task_RegisterAccount" targetRef="Gateway_AccountReadyMerge"/>
+    <bpmn:sequenceFlow id="Flow_RequestActivation_Wait" sourceRef="Task_RequestActivation" targetRef="Task_WaitActivationResponse"/>
+    <bpmn:sequenceFlow id="Flow_Wait_Merge" sourceRef="Task_WaitActivationResponse" targetRef="Gateway_AccountReadyMerge"/>
+    <bpmn:sequenceFlow id="Flow_AccountMerge_Login" sourceRef="Gateway_AccountReadyMerge" targetRef="Task_LogIn"/>
+    <bpmn:sequenceFlow id="Flow_Login_TweetChoice" sourceRef="Task_LogIn" targetRef="Gateway_TweetChoice"/>
+    <bpmn:sequenceFlow id="Flow_TweetYes" name="Yes" sourceRef="Gateway_TweetChoice" targetRef="Task_TweetFriends">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${tweetFriends}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_TweetNo" name="No" sourceRef="Gateway_TweetChoice" targetRef="Gateway_TweetMerge"/>
+    <bpmn:sequenceFlow id="Flow_Tweet_Merge" sourceRef="Task_TweetFriends" targetRef="Gateway_TweetMerge"/>
+    <bpmn:sequenceFlow id="Flow_TweetMerge_Complete" sourceRef="Gateway_TweetMerge" targetRef="Task_CompleteRegistration"/>
+    <bpmn:sequenceFlow id="Flow_Complete_ProvidePayment" sourceRef="Task_CompleteRegistration" targetRef="Task_ProvidePaymentInformation"/>
+    <bpmn:sequenceFlow id="Flow_Payment_ReceiveTicket" sourceRef="Task_ProvidePaymentInformation" targetRef="Task_ReceiveCourseTicket"/>
+    <bpmn:sequenceFlow id="Flow_ReceiveTicket_End" sourceRef="Task_ReceiveCourseTicket" targetRef="EndEvent_RegistrationComplete"/>
+  </bpmn:process>
+</bpmn:definitions>

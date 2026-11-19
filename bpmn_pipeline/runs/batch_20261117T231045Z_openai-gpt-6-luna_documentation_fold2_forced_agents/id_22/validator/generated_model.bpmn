@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" targetNamespace="http://example.com/insurant-recourse">
+  <bpmn:collaboration id="Collaboration_Recourse">
+    <bpmn:participant id="Participant_Narrator" name="I" processRef="Process_Recourse"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Recourse" name="Handle possible recourse" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_InformationReceived" name="Information about possible subrogation received">
+      <bpmn:outgoing>Flow_Start_Check</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CheckCase" name="Check case">
+      <bpmn:incoming>Flow_Start_Check</bpmn:incoming>
+      <bpmn:outgoing>Flow_Check_Possibility</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_RecoursePossible" name="Is recourse possible?">
+      <bpmn:incoming>Flow_Check_Possibility</bpmn:incoming>
+      <bpmn:outgoing>Flow_Possible</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotPossible</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_SendPaymentRequest" name="Send request for payment">
+      <bpmn:incoming>Flow_Possible</bpmn:incoming>
+      <bpmn:outgoing>Flow_Request_Reminder</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:task id="Task_MakeReminder" name="Make reminder">
+      <bpmn:incoming>Flow_Request_Reminder</bpmn:incoming>
+      <bpmn:outgoing>Flow_Reminder_Wait</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:eventBasedGateway id="Gateway_WaitForOutcome" name="Wait for payment, disagreement, or deadline" eventGatewayType="Exclusive">
+      <bpmn:incoming>Flow_Reminder_Wait</bpmn:incoming>
+      <bpmn:outgoing>Flow_Wait_Payment</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Wait_Disagreement</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Wait_Deadline</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="Event_PaymentReceived" name="Money received">
+      <bpmn:incoming>Flow_Wait_Payment</bpmn:incoming>
+      <bpmn:outgoing>Flow_Payment_BookingMerge</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_PaymentReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_DisagreementReceived" name="Disagreement received">
+      <bpmn:incoming>Flow_Wait_Disagreement</bpmn:incoming>
+      <bpmn:outgoing>Flow_Disagreement_CheckReasoning</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_DisagreementReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_DisagreementDeadline" name="Deadline for disagreement reached">
+      <bpmn:incoming>Flow_Wait_Deadline</bpmn:incoming>
+      <bpmn:outgoing>Flow_Deadline_CheckMoney</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDefinition_DisagreementDeadline"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_MoneyReceivedByDeadline" name="Has money been received by the deadline?">
+      <bpmn:incoming>Flow_Deadline_CheckMoney</bpmn:incoming>
+      <bpmn:outgoing>Flow_Deadline_MoneyReceived</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Deadline_NoMoney</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_BookingMerge" name="Merge money-received paths">
+      <bpmn:incoming>Flow_Payment_BookingMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_Deadline_MoneyReceived</bpmn:incoming>
+      <bpmn:outgoing>Flow_BookingMerge_Booking</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_MakeBooking" name="Make booking">
+      <bpmn:incoming>Flow_BookingMerge_Booking</bpmn:incoming>
+      <bpmn:outgoing>Flow_Booking_CloseMerge</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CheckReasoning" name="Check reasoning">
+      <bpmn:incoming>Flow_Disagreement_CheckReasoning</bpmn:incoming>
+      <bpmn:outgoing>Flow_Reasoning_Result</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_InsurantRight" name="Is the insurant right?">
+      <bpmn:incoming>Flow_Reasoning_Result</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReasoningRight</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ReasoningWrong</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_CloseCaseMerge" name="Merge case-closing paths">
+      <bpmn:incoming>Flow_NotPossible</bpmn:incoming>
+      <bpmn:incoming>Flow_Booking_CloseMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_ReasoningRight</bpmn:incoming>
+      <bpmn:outgoing>Flow_CloseMerge_Close</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_CloseCase" name="Close case">
+      <bpmn:incoming>Flow_CloseMerge_Close</bpmn:incoming>
+      <bpmn:outgoing>Flow_Close_End</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_CaseClosed" name="Case closed">
+      <bpmn:incoming>Flow_Close_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="Gateway_ForwardCaseMerge" name="Merge forwarding paths">
+      <bpmn:incoming>Flow_ReasoningWrong</bpmn:incoming>
+      <bpmn:incoming>Flow_Deadline_NoMoney</bpmn:incoming>
+      <bpmn:outgoing>Flow_ForwardMerge_Forward</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_ForwardCase" name="Forward case to collection agency">
+      <bpmn:incoming>Flow_ForwardMerge_Forward</bpmn:incoming>
+      <bpmn:outgoing>Flow_Forward_End</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_CaseForwarded" name="Case forwarded to collection agency">
+      <bpmn:incoming>Flow_Forward_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_Check" sourceRef="StartEvent_InformationReceived" targetRef="Task_CheckCase"/>
+    <bpmn:sequenceFlow id="Flow_Check_Possibility" sourceRef="Task_CheckCase" targetRef="Gateway_RecoursePossible"/>
+    <bpmn:sequenceFlow id="Flow_Possible" name="Yes" sourceRef="Gateway_RecoursePossible" targetRef="Task_SendPaymentRequest">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">recoursePossible</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotPossible" name="No" sourceRef="Gateway_RecoursePossible" targetRef="Gateway_CloseCaseMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not recoursePossible</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Request_Reminder" sourceRef="Task_SendPaymentRequest" targetRef="Task_MakeReminder"/>
+    <bpmn:sequenceFlow id="Flow_Reminder_Wait" sourceRef="Task_MakeReminder" targetRef="Gateway_WaitForOutcome"/>
+    <bpmn:sequenceFlow id="Flow_Wait_Payment" sourceRef="Gateway_WaitForOutcome" targetRef="Event_PaymentReceived"/>
+    <bpmn:sequenceFlow id="Flow_Wait_Disagreement" sourceRef="Gateway_WaitForOutcome" targetRef="Event_DisagreementReceived"/>
+    <bpmn:sequenceFlow id="Flow_Wait_Deadline" sourceRef="Gateway_WaitForOutcome" targetRef="Event_DisagreementDeadline"/>
+    <bpmn:sequenceFlow id="Flow_Payment_BookingMerge" sourceRef="Event_PaymentReceived" targetRef="Gateway_BookingMerge"/>
+    <bpmn:sequenceFlow id="Flow_Disagreement_CheckReasoning" sourceRef="Event_DisagreementReceived" targetRef="Task_CheckReasoning"/>
+    <bpmn:sequenceFlow id="Flow_Deadline_CheckMoney" sourceRef="Event_DisagreementDeadline" targetRef="Gateway_MoneyReceivedByDeadline"/>
+    <bpmn:sequenceFlow id="Flow_Deadline_MoneyReceived" name="Yes" sourceRef="Gateway_MoneyReceivedByDeadline" targetRef="Gateway_BookingMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">moneyReceived</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Deadline_NoMoney" name="No" sourceRef="Gateway_MoneyReceivedByDeadline" targetRef="Gateway_ForwardCaseMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not moneyReceived</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_BookingMerge_Booking" sourceRef="Gateway_BookingMerge" targetRef="Task_MakeBooking"/>
+    <bpmn:sequenceFlow id="Flow_Booking_CloseMerge" sourceRef="Task_MakeBooking" targetRef="Gateway_CloseCaseMerge"/>
+    <bpmn:sequenceFlow id="Flow_Reasoning_Result" sourceRef="Task_CheckReasoning" targetRef="Gateway_InsurantRight"/>
+    <bpmn:sequenceFlow id="Flow_ReasoningRight" name="Yes" sourceRef="Gateway_InsurantRight" targetRef="Gateway_CloseCaseMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">insurantIsRight</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ReasoningWrong" name="No" sourceRef="Gateway_InsurantRight" targetRef="Gateway_ForwardCaseMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not insurantIsRight</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_CloseMerge_Close" sourceRef="Gateway_CloseCaseMerge" targetRef="Task_CloseCase"/>
+    <bpmn:sequenceFlow id="Flow_Close_End" sourceRef="Task_CloseCase" targetRef="EndEvent_CaseClosed"/>
+    <bpmn:sequenceFlow id="Flow_ForwardMerge_Forward" sourceRef="Gateway_ForwardCaseMerge" targetRef="Task_ForwardCase"/>
+    <bpmn:sequenceFlow id="Flow_Forward_End" sourceRef="Task_ForwardCase" targetRef="EndEvent_CaseForwarded"/>
+  </bpmn:process>
+</bpmn:definitions>

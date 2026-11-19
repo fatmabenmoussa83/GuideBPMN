@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="Definitions_OEE" targetNamespace="http://example.com/bpmn/oee">
+  <bpmn:process id="Process_OEE" name="OEE" isExecutable="false">
+    <bpmn:startEvent id="Start_Measurement" name="Start measurement">
+      <bpmn:outgoing>Flow_Start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_Measure_Merge" name="Measurement merge">
+      <bpmn:incoming>Flow_Start</bpmn:incoming>
+      <bpmn:incoming>Flow_Resume_Measuring</bpmn:incoming>
+      <bpmn:incoming>Flow_Above_Threshold</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Availability</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Retrieve_Availability" name="Retrieve availability data">
+      <bpmn:incoming>Flow_To_Availability</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Performance</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Retrieve_Performance" name="Retrieve performance data">
+      <bpmn:incoming>Flow_To_Performance</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Quality</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Retrieve_Quality" name="Retrieve quality data">
+      <bpmn:incoming>Flow_To_Quality</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Calculate</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Calculate_OEE" name="Calculate OEE">
+      <bpmn:incoming>Flow_To_Calculate</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Check</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_OEE_Check" name="OEE below threshold?" default="Flow_Above_Threshold">
+      <bpmn:incoming>Flow_To_Check</bpmn:incoming>
+      <bpmn:outgoing>Flow_Below_Threshold</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Above_Threshold</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Stop_Machine" name="Stop machine">
+      <bpmn:incoming>Flow_Below_Threshold</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Email</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="Task_Send_Email" name="Send email to engineer">
+      <bpmn:incoming>Flow_To_Email</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Restart</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:manualTask id="Task_Restart_Machine" name="Restart machine">
+      <bpmn:incoming>Flow_To_Restart</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Resume</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:task id="Task_Resume_Measuring" name="Continue measuring">
+      <bpmn:incoming>Flow_To_Resume</bpmn:incoming>
+      <bpmn:outgoing>Flow_Resume_Measuring</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:subProcess id="Sub_Machine_Disconnected" name="Machine disconnected" triggeredByEvent="true">
+      <bpmn:startEvent id="Start_Disconnected" name="Machine disconnected" isInterrupting="true">
+        <bpmn:outgoing>Flow_Disconnect_Stop</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="MED_Disconnected"/>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="End_Process_Stopped" name="Process stopped">
+        <bpmn:incoming>Flow_Disconnect_Stop</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_Disconnect_Stop" sourceRef="Start_Disconnected" targetRef="End_Process_Stopped"/>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="Flow_Start" sourceRef="Start_Measurement" targetRef="Gateway_Measure_Merge"/>
+    <bpmn:sequenceFlow id="Flow_To_Availability" sourceRef="Gateway_Measure_Merge" targetRef="Task_Retrieve_Availability"/>
+    <bpmn:sequenceFlow id="Flow_To_Performance" sourceRef="Task_Retrieve_Availability" targetRef="Task_Retrieve_Performance"/>
+    <bpmn:sequenceFlow id="Flow_To_Quality" sourceRef="Task_Retrieve_Performance" targetRef="Task_Retrieve_Quality"/>
+    <bpmn:sequenceFlow id="Flow_To_Calculate" sourceRef="Task_Retrieve_Quality" targetRef="Task_Calculate_OEE"/>
+    <bpmn:sequenceFlow id="Flow_To_Check" sourceRef="Task_Calculate_OEE" targetRef="Gateway_OEE_Check"/>
+    <bpmn:sequenceFlow id="Flow_Below_Threshold" name="OEE below threshold" sourceRef="Gateway_OEE_Check" targetRef="Task_Stop_Machine">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${oeeBelowThreshold}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Above_Threshold" name="Continue measuring" sourceRef="Gateway_OEE_Check" targetRef="Gateway_Measure_Merge"/>
+    <bpmn:sequenceFlow id="Flow_To_Email" sourceRef="Task_Stop_Machine" targetRef="Task_Send_Email"/>
+    <bpmn:sequenceFlow id="Flow_To_Restart" sourceRef="Task_Send_Email" targetRef="Task_Restart_Machine"/>
+    <bpmn:sequenceFlow id="Flow_To_Resume" sourceRef="Task_Restart_Machine" targetRef="Task_Resume_Measuring"/>
+    <bpmn:sequenceFlow id="Flow_Resume_Measuring" sourceRef="Task_Resume_Measuring" targetRef="Gateway_Measure_Merge"/>
+  </bpmn:process>
+</bpmn:definitions>

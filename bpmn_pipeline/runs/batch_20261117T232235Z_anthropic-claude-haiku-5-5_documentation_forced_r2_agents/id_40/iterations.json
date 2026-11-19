@@ -1,0 +1,841 @@
+{
+ "id": "40",
+ "kept_round": 2,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": false,
+   "failed_levels": [
+    "L1",
+    "L3"
+   ],
+   "seconds": 56.4,
+   "validator_levels": {
+    "L1": {
+     "result": false,
+     "correct": 40,
+     "incorrect": 1,
+     "accuracy": 0.9756,
+     "incorrect_elements": [
+      {
+       "id": "Diagram_OEE",
+       "tag": "BPMNDiagram",
+       "line": 77,
+       "reason": null
+      }
+     ]
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": false,
+     "correct": 11,
+     "incorrect": 1,
+     "accuracy": 0.9167,
+     "incorrect_elements": [
+      {
+       "id": "process:Process_OEE",
+       "tag": "process",
+       "line": 18,
+       "reason": "no endEvent found in process:Process_OEE (GuideBPMN requires explicit start and end events; BPMN allows implicit ones in some cases)"
+      }
+     ]
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.211491,
+    "workflow_order_similarity": 0.125,
+    "connection_f1": 0.176471,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.25,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.146417,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_OEE\" targetNamespace=\"http://example.com/bpmn/oee\">\n  <bpmn:message id=\"Message_MachineData\" name=\"Machine data\"/>\n  <bpmn:message id=\"Message_StopMachine\" name=\"Stop machine\"/>\n  <bpmn:message id=\"Message_OEEAlert\" name=\"OEE below threshold alert\"/>\n  <bpmn:message id=\"Message_MachineRestarted\" name=\"Machine restarted\"/>\n  <bpmn:message id=\"Message_MachineDisconnected\" name=\"Machine disconnected\"/>\n  <bpmn:collaboration id=\"Collaboration_OEE\">\n    <bpmn:participant id=\"Participant_OEE\" name=\"OEE Process\" processRef=\"Process_OEE\"/>\n    <bpmn:participant id=\"Participant_Machine\" name=\"Machine\"/>\n    <bpmn:participant id=\"Participant_Engineer\" name=\"Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineData\" name=\"Machine data\" messageRef=\"Message_MachineData\" sourceRef=\"Participant_Machine\" targetRef=\"Task_CollectData\"/>\n    <bpmn:messageFlow id=\"MessageFlow_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\" sourceRef=\"Task_StopMachine\" targetRef=\"Participant_Machine\"/>\n    <bpmn:messageFlow id=\"MessageFlow_OEEAlert\" name=\"OEE alert\" messageRef=\"Message_OEEAlert\" sourceRef=\"Task_SendEmail\" targetRef=\"Participant_Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineRestarted\" name=\"Machine restarted\" messageRef=\"Message_MachineRestarted\" sourceRef=\"Participant_Machine\" targetRef=\"Event_MachineRestarted\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineDisconnected\" name=\"Machine disconnected\" messageRef=\"Message_MachineDisconnected\" sourceRef=\"Participant_Machine\" targetRef=\"StartEvent_Disconnected\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_OEE\" name=\"OEE\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Begin\" name=\"Start measuring\">\n      <bpmn:outgoing>Flow_Start</bpmn:outgoing>\n    </bpmn:startEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_Loop_Merge\" name=\"Measuring cycle\">\n      <bpmn:incoming>Flow_Start</bpmn:incoming>\n      <bpmn:incoming>Flow_Continue</bpmn:incoming>\n      <bpmn:incoming>Flow_RestartLoop</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToCollect</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:serviceTask id=\"Task_CollectData\" name=\"Collect machine data\">\n      <bpmn:incoming>Flow_ToCollect</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToCalculate</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:serviceTask id=\"Task_CalculateOEE\" name=\"Calculate OEE\">\n      <bpmn:incoming>Flow_ToCalculate</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToThreshold</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:exclusiveGateway id=\"Gateway_Threshold\" name=\"OEE below threshold?\" default=\"Flow_Continue\">\n      <bpmn:incoming>Flow_ToThreshold</bpmn:incoming>\n      <bpmn:outgoing>Flow_BelowThreshold</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Continue</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:sendTask id=\"Task_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\">\n      <bpmn:incoming>Flow_BelowThreshold</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToEmail</bpmn:outgoing>\n    </bpmn:sendTask>\n    <bpmn:sendTask id=\"Task_SendEmail\" name=\"Send email to engineer\" messageRef=\"Message_OEEAlert\">\n      <bpmn:incoming>Flow_ToEmail</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToRestartWait</bpmn:outgoing>\n    </bpmn:sendTask>\n    <bpmn:intermediateCatchEvent id=\"Event_MachineRestarted\" name=\"Machine restarted\">\n      <bpmn:incoming>Flow_ToRestartWait</bpmn:incoming>\n      <bpmn:outgoing>Flow_RestartLoop</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Restarted\" messageRef=\"Message_MachineRestarted\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:subProcess id=\"SubProcess_Disconnected\" name=\"Machine disconnected\" triggeredByEvent=\"true\">\n      <bpmn:startEvent id=\"StartEvent_Disconnected\" name=\"Machine disconnected\" isInterrupting=\"true\">\n        <bpmn:outgoing>Flow_Disconnected</bpmn:outgoing>\n        <bpmn:messageEventDefinition id=\"MessageEventDefinition_Disconnected\" messageRef=\"Message_MachineDisconnected\"/>\n      </bpmn:startEvent>\n      <bpmn:endEvent id=\"EndEvent_StopProcess\" name=\"Stop process\">\n        <bpmn:incoming>Flow_Disconnected</bpmn:incoming>\n        <bpmn:terminateEventDefinition id=\"TerminateEventDefinition_Stop\"/>\n      </bpmn:endEvent>\n      <bpmn:sequenceFlow id=\"Flow_Disconnected\" sourceRef=\"StartEvent_Disconnected\" targetRef=\"EndEvent_StopProcess\"/>\n    </bpmn:subProcess>\n    <bpmn:sequenceFlow id=\"Flow_Start\" sourceRef=\"StartEvent_Begin\" targetRef=\"Gateway_Loop_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToCollect\" sourceRef=\"Gateway_Loop_Merge\" targetRef=\"Task_CollectData\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToCalculate\" sourceRef=\"Task_CollectData\" targetRef=\"Task_CalculateOEE\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToThreshold\" sourceRef=\"Task_CalculateOEE\" targetRef=\"Gateway_Threshold\"/>\n    <bpmn:sequenceFlow id=\"Flow_BelowThreshold\" name=\"OEE below threshold\" sourceRef=\"Gateway_Threshold\" targetRef=\"Task_StopMachine\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${oee &lt; oeeThreshold}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Continue\" name=\"OEE acceptable\" sourceRef=\"Gateway_Threshold\" targetRef=\"Gateway_Loop_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToEmail\" sourceRef=\"Task_StopMachine\" targetRef=\"Task_SendEmail\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToRestartWait\" sourceRef=\"Task_SendEmail\" targetRef=\"Event_MachineRestarted\"/>\n    <bpmn:sequenceFlow id=\"Flow_RestartLoop\" sourceRef=\"Event_MachineRestarted\" targetRef=\"Gateway_Loop_Merge\"/>\n  </bpmn:process>\n  <bpmndi:BPMNDiagram xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" id=\"Diagram_OEE\"/>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 580.4,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 42,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 12,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.407604,
+    "workflow_order_similarity": 0.20625,
+    "connection_f1": 0.216216,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.45,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.260866,
+    "activity_semantic_similarity": 0.564518,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.75
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_OEE\" targetNamespace=\"http://example.com/bpmn/oee\">\n  <bpmn:message id=\"Message_MachineData\" name=\"Machine data\"/>\n  <bpmn:message id=\"Message_StopMachine\" name=\"Stop machine\"/>\n  <bpmn:message id=\"Message_OEEAlert\" name=\"OEE below threshold alert\"/>\n  <bpmn:message id=\"Message_MachineRestarted\" name=\"Machine restarted\"/>\n  <bpmn:collaboration id=\"Collaboration_OEE\">\n    <bpmn:participant id=\"Participant_OEE\" name=\"OEE Process\" processRef=\"Process_OEE\"/>\n    <bpmn:participant id=\"Participant_Machine\" name=\"Machine\"/>\n    <bpmn:participant id=\"Participant_Engineer\" name=\"Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_AvailabilityData\" name=\"Machine data\" messageRef=\"Message_MachineData\" sourceRef=\"Participant_Machine\" targetRef=\"Task_CollectAvailability\"/>\n    <bpmn:messageFlow id=\"MessageFlow_PerformanceData\" name=\"Machine data\" messageRef=\"Message_MachineData\" sourceRef=\"Participant_Machine\" targetRef=\"Task_CollectPerformance\"/>\n    <bpmn:messageFlow id=\"MessageFlow_QualityData\" name=\"Machine data\" messageRef=\"Message_MachineData\" sourceRef=\"Participant_Machine\" targetRef=\"Task_CollectQuality\"/>\n    <bpmn:messageFlow id=\"MessageFlow_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\" sourceRef=\"Task_StopMachine\" targetRef=\"Participant_Machine\"/>\n    <bpmn:messageFlow id=\"MessageFlow_OEEAlert\" name=\"OEE alert\" messageRef=\"Message_OEEAlert\" sourceRef=\"Task_SendEmail\" targetRef=\"Participant_Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineRestarted\" name=\"Machine restarted\" messageRef=\"Message_MachineRestarted\" sourceRef=\"Participant_Machine\" targetRef=\"Event_MachineRestarted\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_OEE\" name=\"OEE\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Begin\" name=\"Start measuring\">\n      <bpmn:outgoing>Flow_Start</bpmn:outgoing>\n    </bpmn:startEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_Loop_Merge\" name=\"Measuring cycle\">\n      <bpmn:incoming>Flow_Start</bpmn:incoming>\n      <bpmn:incoming>Flow_OEEAcceptable</bpmn:incoming>\n      <bpmn:incoming>Flow_RestartLoop</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToConnectionCheck</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:exclusiveGateway id=\"Gateway_Connected\" name=\"Machine connected?\" default=\"Flow_Connected\">\n      <bpmn:incoming>Flow_ToConnectionCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_Connected</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Disconnected</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:endEvent id=\"EndEvent_ProcessStopped\" name=\"Process stopped\">\n      <bpmn:incoming>Flow_Disconnected</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:serviceTask id=\"Task_CollectAvailability\" name=\"Collect availability data\">\n      <bpmn:incoming>Flow_Connected</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToPerformance</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:serviceTask id=\"Task_CollectPerformance\" name=\"Collect performance data\">\n      <bpmn:incoming>Flow_ToPerformance</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToQuality</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:serviceTask id=\"Task_CollectQuality\" name=\"Collect quality data\">\n      <bpmn:incoming>Flow_ToQuality</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToCalculate</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:serviceTask id=\"Task_CalculateOEE\" name=\"Calculate OEE\">\n      <bpmn:incoming>Flow_ToCalculate</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToThreshold</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:exclusiveGateway id=\"Gateway_Threshold\" name=\"OEE below threshold?\" default=\"Flow_OEEAcceptable\">\n      <bpmn:incoming>Flow_ToThreshold</bpmn:incoming>\n      <bpmn:outgoing>Flow_BelowThreshold</bpmn:outgoing>\n      <bpmn:outgoing>Flow_OEEAcceptable</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:sendTask id=\"Task_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\">\n      <bpmn:incoming>Flow_BelowThreshold</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToEmail</bpmn:outgoing>\n    </bpmn:sendTask>\n    <bpmn:sendTask id=\"Task_SendEmail\" name=\"Send email to engineer\" messageRef=\"Message_OEEAlert\">\n      <bpmn:incoming>Flow_ToEmail</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToRestartWait</bpmn:outgoing>\n    </bpmn:sendTask>\n    <bpmn:intermediateCatchEvent id=\"Event_MachineRestarted\" name=\"Machine restarted\">\n      <bpmn:incoming>Flow_ToRestartWait</bpmn:incoming>\n      <bpmn:outgoing>Flow_RestartLoop</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Restarted\" messageRef=\"Message_MachineRestarted\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:sequenceFlow id=\"Flow_Start\" sourceRef=\"StartEvent_Begin\" targetRef=\"Gateway_Loop_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToConnectionCheck\" sourceRef=\"Gateway_Loop_Merge\" targetRef=\"Gateway_Connected\"/>\n    <bpmn:sequenceFlow id=\"Flow_Connected\" name=\"Connected\" sourceRef=\"Gateway_Connected\" targetRef=\"Task_CollectAvailability\"/>\n    <bpmn:sequenceFlow id=\"Flow_Disconnected\" name=\"Disconnected\" sourceRef=\"Gateway_Connected\" targetRef=\"EndEvent_ProcessStopped\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${machineConnected == false}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ToPerformance\" sourceRef=\"Task_CollectAvailability\" targetRef=\"Task_CollectPerformance\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToQuality\" sourceRef=\"Task_CollectPerformance\" targetRef=\"Task_CollectQuality\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToCalculate\" sourceRef=\"Task_CollectQuality\" targetRef=\"Task_CalculateOEE\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToThreshold\" sourceRef=\"Task_CalculateOEE\" targetRef=\"Gateway_Threshold\"/>\n    <bpmn:sequenceFlow id=\"Flow_BelowThreshold\" name=\"OEE below threshold\" sourceRef=\"Gateway_Threshold\" targetRef=\"Task_StopMachine\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${oee &lt; oeeThreshold}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OEEAcceptable\" name=\"OEE acceptable\" sourceRef=\"Gateway_Threshold\" targetRef=\"Gateway_Loop_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToEmail\" sourceRef=\"Task_StopMachine\" targetRef=\"Task_SendEmail\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToRestartWait\" sourceRef=\"Task_SendEmail\" targetRef=\"Event_MachineRestarted\"/>\n    <bpmn:sequenceFlow id=\"Flow_RestartLoop\" name=\"Machine restarted\" sourceRef=\"Event_MachineRestarted\" targetRef=\"Gateway_Loop_Merge\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1183.0,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 53,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 16,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.326083,
+    "workflow_order_similarity": 0.26,
+    "connection_f1": 0.409091,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.55,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.224885,
+    "activity_semantic_similarity": 0.564518,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.75
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_OEE\" targetNamespace=\"http://example.com/bpmn/oee\">\n  <bpmn:message id=\"Message_MachineData\" name=\"Machine data\"/>\n  <bpmn:message id=\"Message_StopMachine\" name=\"Stop machine\"/>\n  <bpmn:message id=\"Message_OEEAlert\" name=\"OEE below threshold alert\"/>\n  <bpmn:message id=\"Message_MachineRestarted\" name=\"Machine restarted\"/>\n  <bpmn:collaboration id=\"Collaboration_OEE\">\n    <bpmn:participant id=\"Participant_OEE\" name=\"OEE Process\" processRef=\"Process_OEE\"/>\n    <bpmn:participant id=\"Participant_Machine\" name=\"Machine\"/>\n    <bpmn:participant id=\"Participant_Engineer\" name=\"Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_AvailabilityData\" name=\"Machine data\" messageRef=\"Message_MachineData\" sourceRef=\"Participant_Machine\" targetRef=\"Task_CollectAvailability\"/>\n    <bpmn:messageFlow id=\"MessageFlow_PerformanceData\" name=\"Machine data\" messageRef=\"Message_MachineData\" sourceRef=\"Participant_Machine\" targetRef=\"Task_CollectPerformance\"/>\n    <bpmn:messageFlow id=\"MessageFlow_QualityData\" name=\"Machine data\" messageRef=\"Message_MachineData\" sourceRef=\"Participant_Machine\" targetRef=\"Task_CollectQuality\"/>\n    <bpmn:messageFlow id=\"MessageFlow_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\" sourceRef=\"Task_StopMachine\" targetRef=\"Participant_Machine\"/>\n    <bpmn:messageFlow id=\"MessageFlow_OEEAlert\" name=\"OEE alert\" messageRef=\"Message_OEEAlert\" sourceRef=\"Task_SendEmail\" targetRef=\"Participant_Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineRestarted\" name=\"Machine restarted\" messageRef=\"Message_MachineRestarted\" sourceRef=\"Participant_Machine\" targetRef=\"Event_MachineRestarted\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_OEE\" name=\"OEE\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Begin\" name=\"Start measuring\">\n      <bpmn:outgoing>Flow_Start</bpmn:outgoing>\n    </bpmn:startEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_Loop_Merge\" name=\"Measuring cycle\">\n      <bpmn:incoming>Flow_Start</bpmn:incoming>\n      <bpmn:incoming>Flow_OEEAcceptable</bpmn:incoming>\n      <bpmn:incoming>Flow_RestartLoop</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToConnectionCheck</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:exclusiveGateway id=\"Gateway_Connected\" name=\"Machine connected?\" default=\"Flow_Connected\">\n      <bpmn:incoming>Flow_ToConnectionCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_Connected</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Disconnected</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:endEvent id=\"EndEvent_ProcessStopped\" name=\"Process stopped\">\n      <bpmn:incoming>Flow_Disconnected</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:parallelGateway id=\"Gateway_Collect_Split\" name=\"Collect measurements\">\n      <bpmn:incoming>Flow_Connected</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToAvailability</bpmn:outgoing>\n      <bpmn:outgoing>Flow_ToPerformance</bpmn:outgoing>\n      <bpmn:outgoing>Flow_ToQuality</bpmn:outgoing>\n    </bpmn:parallelGateway>\n    <bpmn:serviceTask id=\"Task_CollectAvailability\" name=\"Collect availability data\">\n      <bpmn:incoming>Flow_ToAvailability</bpmn:incoming>\n      <bpmn:outgoing>Flow_AvailabilityDone</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:serviceTask id=\"Task_CollectPerformance\" name=\"Collect performance data\">\n      <bpmn:incoming>Flow_ToPerformance</bpmn:incoming>\n      <bpmn:outgoing>Flow_PerformanceDone</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:serviceTask id=\"Task_CollectQuality\" name=\"Collect quality data\">\n      <bpmn:incoming>Flow_ToQuality</bpmn:incoming>\n      <bpmn:outgoing>Flow_QualityDone</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:parallelGateway id=\"Gateway_Collect_Join\" name=\"All measurements collected\">\n      <bpmn:incoming>Flow_AvailabilityDone</bpmn:incoming>\n      <bpmn:incoming>Flow_PerformanceDone</bpmn:incoming>\n      <bpmn:incoming>Flow_QualityDone</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToCalculate</bpmn:outgoing>\n    </bpmn:parallelGateway>\n    <bpmn:serviceTask id=\"Task_CalculateOEE\" name=\"Calculate OEE\">\n      <bpmn:incoming>Flow_ToCalculate</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToThreshold</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:exclusiveGateway id=\"Gateway_Threshold\" name=\"OEE below threshold?\" default=\"Flow_OEEAcceptable\">\n      <bpmn:incoming>Flow_ToThreshold</bpmn:incoming>\n      <bpmn:outgoing>Flow_BelowThreshold</bpmn:outgoing>\n      <bpmn:outgoing>Flow_OEEAcceptable</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:parallelGateway id=\"Gateway_Stop_Split\" name=\"Stop and alert\">\n      <bpmn:incoming>Flow_BelowThreshold</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToStopMachine</bpmn:outgoing>\n      <bpmn:outgoing>Flow_ToEmail</bpmn:outgoing>\n    </bpmn:parallelGateway>\n    <bpmn:sendTask id=\"Task_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\">\n      <bpmn:incoming>Flow_ToStopMachine</bpmn:incoming>\n      <bpmn:outgoing>Flow_StopDone</bpmn:outgoing>\n    </bpmn:sendTask>\n    <bpmn:sendTask id=\"Task_SendEmail\" name=\"Send email to engineer\" messageRef=\"Message_OEEAlert\">\n      <bpmn:incoming>Flow_ToEmail</bpmn:incoming>\n      <bpmn:outgoing>Flow_EmailDone</bpmn:outgoing>\n    </bpmn:sendTask>\n    <bpmn:parallelGateway id=\"Gateway_Stop_Join\" name=\"Machine stopped and engineer alerted\">\n      <bpmn:incoming>Flow_StopDone</bpmn:incoming>\n      <bpmn:incoming>Flow_EmailDone</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToRestartWait</bpmn:outgoing>\n    </bpmn:parallelGateway>\n    <bpmn:intermediateCatchEvent id=\"Event_MachineRestarted\" name=\"Machine restarted\">\n      <bpmn:incoming>Flow_ToRestartWait</bpmn:incoming>\n      <bpmn:outgoing>Flow_RestartLoop</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Restarted\" messageRef=\"Message_MachineRestarted\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:sequenceFlow id=\"Flow_Start\" sourceRef=\"StartEvent_Begin\" targetRef=\"Gateway_Loop_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToConnectionCheck\" sourceRef=\"Gateway_Loop_Merge\" targetRef=\"Gateway_Connected\"/>\n    <bpmn:sequenceFlow id=\"Flow_Connected\" name=\"Connected\" sourceRef=\"Gateway_Connected\" targetRef=\"Gateway_Collect_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Disconnected\" name=\"Disconnected\" sourceRef=\"Gateway_Connected\" targetRef=\"EndEvent_ProcessStopped\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${machineConnected == false}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ToAvailability\" sourceRef=\"Gateway_Collect_Split\" targetRef=\"Task_CollectAvailability\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToPerformance\" sourceRef=\"Gateway_Collect_Split\" targetRef=\"Task_CollectPerformance\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToQuality\" sourceRef=\"Gateway_Collect_Split\" targetRef=\"Task_CollectQuality\"/>\n    <bpmn:sequenceFlow id=\"Flow_AvailabilityDone\" sourceRef=\"Task_CollectAvailability\" targetRef=\"Gateway_Collect_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_PerformanceDone\" sourceRef=\"Task_CollectPerformance\" targetRef=\"Gateway_Collect_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_QualityDone\" sourceRef=\"Task_CollectQuality\" targetRef=\"Gateway_Collect_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToCalculate\" sourceRef=\"Gateway_Collect_Join\" targetRef=\"Task_CalculateOEE\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToThreshold\" sourceRef=\"Task_CalculateOEE\" targetRef=\"Gateway_Threshold\"/>\n    <bpmn:sequenceFlow id=\"Flow_BelowThreshold\" name=\"OEE below threshold\" sourceRef=\"Gateway_Threshold\" targetRef=\"Gateway_Stop_Split\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${oee &lt; oeeThreshold}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OEEAcceptable\" name=\"OEE acceptable\" sourceRef=\"Gateway_Threshold\" targetRef=\"Gateway_Loop_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToStopMachine\" sourceRef=\"Gateway_Stop_Split\" targetRef=\"Task_StopMachine\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToEmail\" sourceRef=\"Gateway_Stop_Split\" targetRef=\"Task_SendEmail\"/>\n    <bpmn:sequenceFlow id=\"Flow_StopDone\" sourceRef=\"Task_StopMachine\" targetRef=\"Gateway_Stop_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_EmailDone\" sourceRef=\"Task_SendEmail\" targetRef=\"Gateway_Stop_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToRestartWait\" sourceRef=\"Gateway_Stop_Join\" targetRef=\"Event_MachineRestarted\"/>\n    <bpmn:sequenceFlow id=\"Flow_RestartLoop\" name=\"Machine restarted\" sourceRef=\"Event_MachineRestarted\" targetRef=\"Gateway_Loop_Merge\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1698.9,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 52,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 17,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.393878,
+    "workflow_order_similarity": 0.286364,
+    "connection_f1": 0.4,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.6,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.277173,
+    "activity_semantic_similarity": 0.66072,
+    "activity_label_precision": 0.875,
+    "activity_label_recall": 0.7,
+    "activity_label_f1": 0.777778
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_OEE\" targetNamespace=\"http://example.com/bpmn/oee\">\n  <bpmn:message id=\"Message_MachineData\" name=\"Machine data\"/>\n  <bpmn:message id=\"Message_StopMachine\" name=\"Stop machine\"/>\n  <bpmn:message id=\"Message_OEEAlert\" name=\"OEE below threshold alert\"/>\n  <bpmn:collaboration id=\"Collaboration_OEE\">\n    <bpmn:participant id=\"Participant_OEE\" name=\"OEE Process\" processRef=\"Process_OEE\"/>\n    <bpmn:participant id=\"Participant_Machine\" name=\"Machine\"/>\n    <bpmn:participant id=\"Participant_Engineer\" name=\"Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_AvailabilityData\" name=\"Machine data\" messageRef=\"Message_MachineData\" sourceRef=\"Participant_Machine\" targetRef=\"Task_CollectAvailability\"/>\n    <bpmn:messageFlow id=\"MessageFlow_PerformanceData\" name=\"Machine data\" messageRef=\"Message_MachineData\" sourceRef=\"Participant_Machine\" targetRef=\"Task_CollectPerformance\"/>\n    <bpmn:messageFlow id=\"MessageFlow_QualityData\" name=\"Machine data\" messageRef=\"Message_MachineData\" sourceRef=\"Participant_Machine\" targetRef=\"Task_CollectQuality\"/>\n    <bpmn:messageFlow id=\"MessageFlow_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\" sourceRef=\"Task_StopMachine\" targetRef=\"Participant_Machine\"/>\n    <bpmn:messageFlow id=\"MessageFlow_OEEAlert\" name=\"OEE alert\" messageRef=\"Message_OEEAlert\" sourceRef=\"Task_SendEmail\" targetRef=\"Participant_Engineer\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_OEE\" name=\"OEE\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Begin\" name=\"Start measuring\">\n      <bpmn:outgoing>Flow_Start</bpmn:outgoing>\n    </bpmn:startEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_Loop_Merge\" name=\"Measuring cycle\">\n      <bpmn:incoming>Flow_Start</bpmn:incoming>\n      <bpmn:incoming>Flow_OEEAcceptable</bpmn:incoming>\n      <bpmn:incoming>Flow_ResumeMeasuring</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToConnectionCheck</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:exclusiveGateway id=\"Gateway_Connected\" name=\"Machine connected?\" default=\"Flow_Connected\">\n      <bpmn:incoming>Flow_ToConnectionCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_Connected</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Disconnected</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:endEvent id=\"EndEvent_ProcessStopped\" name=\"Process stopped\">\n      <bpmn:incoming>Flow_Disconnected</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:parallelGateway id=\"Gateway_Collect_Split\" name=\"Collect measurements\">\n      <bpmn:incoming>Flow_Connected</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToAvailability</bpmn:outgoing>\n      <bpmn:outgoing>Flow_ToPerformance</bpmn:outgoing>\n      <bpmn:outgoing>Flow_ToQuality</bpmn:outgoing>\n    </bpmn:parallelGateway>\n    <bpmn:serviceTask id=\"Task_CollectAvailability\" name=\"Collect availability data\">\n      <bpmn:incoming>Flow_ToAvailability</bpmn:incoming>\n      <bpmn:outgoing>Flow_AvailabilityDone</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:serviceTask id=\"Task_CollectPerformance\" name=\"Collect performance data\">\n      <bpmn:incoming>Flow_ToPerformance</bpmn:incoming>\n      <bpmn:outgoing>Flow_PerformanceDone</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:serviceTask id=\"Task_CollectQuality\" name=\"Collect quality data\">\n      <bpmn:incoming>Flow_ToQuality</bpmn:incoming>\n      <bpmn:outgoing>Flow_QualityDone</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:parallelGateway id=\"Gateway_Collect_Join\" name=\"All measurements collected\">\n      <bpmn:incoming>Flow_AvailabilityDone</bpmn:incoming>\n      <bpmn:incoming>Flow_PerformanceDone</bpmn:incoming>\n      <bpmn:incoming>Flow_QualityDone</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToCalculate</bpmn:outgoing>\n    </bpmn:parallelGateway>\n    <bpmn:serviceTask id=\"Task_CalculateOEE\" name=\"Calculate OEE\">\n      <bpmn:incoming>Flow_ToCalculate</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToThreshold</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:exclusiveGateway id=\"Gateway_Threshold\" name=\"OEE below threshold?\" default=\"Flow_OEEAcceptable\">\n      <bpmn:incoming>Flow_ToThreshold</bpmn:incoming>\n      <bpmn:outgoing>Flow_BelowThreshold</bpmn:outgoing>\n      <bpmn:outgoing>Flow_OEEAcceptable</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:parallelGateway id=\"Gateway_Stop_Split\" name=\"Stop and alert\">\n      <bpmn:incoming>Flow_BelowThreshold</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToStopMachine</bpmn:outgoing>\n      <bpmn:outgoing>Flow_ToEmail</bpmn:outgoing>\n    </bpmn:parallelGateway>\n    <bpmn:sendTask id=\"Task_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\">\n      <bpmn:incoming>Flow_ToStopMachine</bpmn:incoming>\n      <bpmn:outgoing>Flow_StopDone</bpmn:outgoing>\n    </bpmn:sendTask>\n    <bpmn:sendTask id=\"Task_SendEmail\" name=\"Send email to engineer\" messageRef=\"Message_OEEAlert\">\n      <bpmn:incoming>Flow_ToEmail</bpmn:incoming>\n      <bpmn:outgoing>Flow_EmailDone</bpmn:outgoing>\n    </bpmn:sendTask>\n    <bpmn:parallelGateway id=\"Gateway_Stop_Join\" name=\"Machine stopped and engineer alerted\">\n      <bpmn:incoming>Flow_StopDone</bpmn:incoming>\n      <bpmn:incoming>Flow_EmailDone</bpmn:incoming>\n      <bpmn:outgoing>Flow_ToRestart</bpmn:outgoing>\n    </bpmn:parallelGateway>\n    <bpmn:manualTask id=\"Task_RestartMachine\" name=\"Restart machine\">\n      <bpmn:incoming>Flow_ToRestart</bpmn:incoming>\n      <bpmn:outgoing>Flow_RestartDone</bpmn:outgoing>\n    </bpmn:manualTask>\n    <bpmn:serviceTask id=\"Task_ResumeMeasuring\" name=\"Resume measuring\">\n      <bpmn:incoming>Flow_RestartDone</bpmn:incoming>\n      <bpmn:outgoing>Flow_ResumeMeasuring</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:sequenceFlow id=\"Flow_Start\" sourceRef=\"StartEvent_Begin\" targetRef=\"Gateway_Loop_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToConnectionCheck\" sourceRef=\"Gateway_Loop_Merge\" targetRef=\"Gateway_Connected\"/>\n    <bpmn:sequenceFlow id=\"Flow_Connected\" name=\"Connected\" sourceRef=\"Gateway_Connected\" targetRef=\"Gateway_Collect_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Disconnected\" name=\"Disconnected\" sourceRef=\"Gateway_Connected\" targetRef=\"EndEvent_ProcessStopped\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${machineConnected == false}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ToAvailability\" sourceRef=\"Gateway_Collect_Split\" targetRef=\"Task_CollectAvailability\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToPerformance\" sourceRef=\"Gateway_Collect_Split\" targetRef=\"Task_CollectPerformance\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToQuality\" sourceRef=\"Gateway_Collect_Split\" targetRef=\"Task_CollectQuality\"/>\n    <bpmn:sequenceFlow id=\"Flow_AvailabilityDone\" sourceRef=\"Task_CollectAvailability\" targetRef=\"Gateway_Collect_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_PerformanceDone\" sourceRef=\"Task_CollectPerformance\" targetRef=\"Gateway_Collect_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_QualityDone\" sourceRef=\"Task_CollectQuality\" targetRef=\"Gateway_Collect_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToCalculate\" sourceRef=\"Gateway_Collect_Join\" targetRef=\"Task_CalculateOEE\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToThreshold\" sourceRef=\"Task_CalculateOEE\" targetRef=\"Gateway_Threshold\"/>\n    <bpmn:sequenceFlow id=\"Flow_BelowThreshold\" name=\"OEE below threshold\" sourceRef=\"Gateway_Threshold\" targetRef=\"Gateway_Stop_Split\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${oee &lt; oeeThreshold}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OEEAcceptable\" name=\"OEE acceptable\" sourceRef=\"Gateway_Threshold\" targetRef=\"Gateway_Loop_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToStopMachine\" sourceRef=\"Gateway_Stop_Split\" targetRef=\"Task_StopMachine\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToEmail\" sourceRef=\"Gateway_Stop_Split\" targetRef=\"Task_SendEmail\"/>\n    <bpmn:sequenceFlow id=\"Flow_StopDone\" sourceRef=\"Task_StopMachine\" targetRef=\"Gateway_Stop_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_EmailDone\" sourceRef=\"Task_SendEmail\" targetRef=\"Gateway_Stop_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_ToRestart\" sourceRef=\"Gateway_Stop_Join\" targetRef=\"Task_RestartMachine\"/>\n    <bpmn:sequenceFlow id=\"Flow_RestartDone\" sourceRef=\"Task_RestartMachine\" targetRef=\"Task_ResumeMeasuring\"/>\n    <bpmn:sequenceFlow id=\"Flow_ResumeMeasuring\" sourceRef=\"Task_ResumeMeasuring\" targetRef=\"Gateway_Loop_Merge\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": false,
+  "failed_levels": [
+   "L1",
+   "L3"
+  ],
+  "metrics": {
+   "semantic_similarity": 0.211491,
+   "activity_semantic_similarity": 0.293037,
+   "activity_label_precision": 0.75,
+   "activity_label_recall": 0.3,
+   "activity_label_f1": 0.428571,
+   "activity_matched": 3,
+   "activity_reference": 10,
+   "activity_generated": 4,
+   "alignment_coverage": 0.25,
+   "connection_precision": 0.3,
+   "connection_recall": 0.125,
+   "connection_f1": 0.176471,
+   "connection_tp": 3,
+   "connection_fp": 7,
+   "connection_fn": 21,
+   "workflow_order_similarity": 0.125,
+   "order_consistency": 0.5,
+   "order_coverage": 0.25,
+   "order_tp": 10,
+   "order_fp": 10,
+   "order_fn": 0,
+   "collaboration_similarity": null,
+   "collaboration_applicable": false,
+   "collaboration_tp": 0,
+   "collaboration_fp": 0,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 0.7273,
+   "type_recall_diagnostic": 0.4,
+   "type_f1_diagnostic": 0.5161,
+   "counts": {
+    "gold_nodes": 20,
+    "generated_nodes": 11,
+    "gold_flows": 24,
+    "generated_flows": 10
+   },
+   "collaboration_ignored": true,
+   "semantic_similarity_strict": 0.146417,
+   "activity_semantic_similarity_strict": 0.293037,
+   "alignment_coverage_strict": 0.25,
+   "connection_precision_strict": 0.3,
+   "connection_recall_strict": 0.125,
+   "connection_f1_strict": 0.176471,
+   "workflow_order_similarity_strict": 0.125,
+   "collaboration_similarity_strict": 0.0,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T1",
+   "T3",
+   "T5",
+   "T6"
+  ],
+  "error_counts": {
+   "T1": 1,
+   "T3": 1,
+   "T5": 28,
+   "T6": 8
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-113",
+    "instruction": "When the description asks for a complete BPMN model that includes a diagram layout, so the output must carry a diagram interchange section with shapes and edges: Model every bpmndi:BPMNDiagram with exactly one bpmndi:BPMNPlane as its child, and reference the process or collaboration from that plane through its bpmnElement attribute. Place all shapes and edges for the model inside that plane. Never leave a BPMNDiagram without its BPMNPlane, because the BPMN20.xsd schema requires the plane as a child element.",
+    "situation": "the description asks for a complete BPMN model that includes a diagram layout, so the output must carry a diagram interchange section with shapes and edges",
+    "source": "learned guideline (refines XML-06)",
+    "failure_type": "T1"
+   },
+   {
+    "rule_id": "EXS-095",
+    "instruction": "When the description states that a condition ends the operation, such as a measured efficiency figure falling under a set limit or a connected resource being lost, and that otherwise the operation keeps running: Model each such ending condition as a branch of an exclusive gateway that leads to its own explicit end event. Before that end event, model any action the description assigns to that branch, such as shutting down equipment or notifying a person. Ensure the process has at least one explicit end event, and do not leave any ending branch without a successor.",
+    "situation": "the description states that a condition ends the operation, such as a measured efficiency figure falling under a set limit or a connected resource being lost, and that otherwise the operation keeps running",
+    "source": "example-specific guideline",
+    "failure_type": "T3"
+   },
+   {
+    "rule_id": "LRN-114",
+    "instruction": "When the description asks to compute a composite indicator from several component measures, and the component measures are not described as one single data-collection step: Model one service task per component measure that the composite indicator depends on, placed before the calculation task. Do not collapse all component acquisitions into one generic data-collection task, and keep the calculation task after all of them so the dependency is visible.",
+    "situation": "the description asks to compute a composite indicator from several component measures, and the component measures are not described as one single data-collection step",
+    "source": "learned guideline (refines FID-02)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-115",
+    "instruction": "When the description says that several separate activities must all be performed, each handled as its own step with its own target or source, and a later step can only proceed once all of them are done: Model each separate activity as its own task in a parallel branch that starts at one parallel gateway (split), and join all branches with a matching parallel gateway before the next step, so that step runs only after every branch completes. Do not merge the separate activities into one generic task, do not chain them in sequence, and do not use an exclusive gateway, because every activity is required.",
+    "situation": "the description says that several separate activities must all be performed, each handled as its own step with its own target or source, and a later step can only proceed once all of them are done",
+    "source": "learned guideline (refines GW-05), generalized from EXS-084",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "EXS-096",
+    "instruction": "When the description states that a person physically performs an action on equipment (for example, restarting or repairing it) as a step the process depends on, and the steps that follow continue from that action: Model the physical action as a manual task placed at the point where it is performed, and connect it to the subsequent steps with a sequence flow. Use an intermediate catch event only for an occurrence that the process detects or receives as a signal or notification, not for an action a person carries out.",
+    "situation": "the description states that a person physically performs an action on equipment (for example, restarting or repairing it) as a step the process depends on, and the steps that follow continue from that action",
+    "source": "example-specific guideline",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-116",
+    "instruction": "When the description states that after a wait for an external state change ends, the process must perform a named activity again before continuing its cycle (for example, an activity that is resumed rather than simply rejoined): After the intermediate catch event that ends the wait, model the resumed activity as an explicit task (not as a bare sequence flow) and then route the flow into the cycle's join or decision gateway, so that the resumed work is visible in the model.",
+    "situation": "the description states that after a wait for an external state change ends, the process must perform a named activity again before continuing its cycle (for example, an activity that is resumed rather than simply rejoined)",
+    "source": "learned guideline (refines EVT-03)",
+    "failure_type": "T6"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-113",
+    "EXS-095",
+    "LRN-114"
+   ],
+   "before": {
+    "semantic_similarity": 0.211491,
+    "workflow_order_similarity": 0.125,
+    "connection_f1": 0.176471,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.25,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.146417,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571
+   },
+   "valid_before": false,
+   "errors_before": {
+    "T1": 1,
+    "T3": 1,
+    "T5": 28,
+    "T6": 8
+   },
+   "after": {
+    "semantic_similarity": 0.407604,
+    "workflow_order_similarity": 0.20625,
+    "connection_f1": 0.216216,
+    "alignment_coverage": 0.45
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.196113,
+    "workflow_order_similarity": 0.08125,
+    "connection_f1": 0.039745,
+    "alignment_coverage": 0.2
+   },
+   "mean_change": 0.129277,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 29,
+    "T6": 4
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.407604,
+    "activity_semantic_similarity": 0.564518,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.75,
+    "activity_matched": 6,
+    "activity_reference": 10,
+    "activity_generated": 6,
+    "alignment_coverage": 0.45,
+    "connection_precision": 0.307692,
+    "connection_recall": 0.166667,
+    "connection_f1": 0.216216,
+    "connection_tp": 4,
+    "connection_fp": 9,
+    "connection_fn": 20,
+    "workflow_order_similarity": 0.20625,
+    "order_consistency": 0.458333,
+    "order_coverage": 0.45,
+    "order_tp": 33,
+    "order_fp": 39,
+    "order_fn": 0,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.9167,
+    "type_recall_diagnostic": 0.55,
+    "type_f1_diagnostic": 0.6875,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 12,
+     "gold_flows": 24,
+     "generated_flows": 13
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.260866,
+    "activity_semantic_similarity_strict": 0.564518,
+    "alignment_coverage_strict": 0.45,
+    "connection_precision_strict": 0.307692,
+    "connection_recall_strict": 0.166667,
+    "connection_f1_strict": 0.216216,
+    "workflow_order_similarity_strict": 0.20625,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 42,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 12,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-113": {
+     "failure_type": "T1",
+     "errors_before": 1,
+     "errors_after": 0,
+     "removed": 1
+    },
+    "EXS-095": {
+     "failure_type": "T3",
+     "errors_before": 1,
+     "errors_after": 0,
+     "removed": 1
+    },
+    "LRN-114": {
+     "failure_type": "T6",
+     "errors_before": 8,
+     "errors_after": 4,
+     "removed": 4
+    }
+   },
+   "confirmed": true,
+   "promoted": [
+    {
+     "specific_id": "EXS-095",
+     "status": "not_promoted",
+     "detail": "still tied to its process by: below, value"
+    }
+   ],
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "LRN-115"
+   ],
+   "before": {
+    "semantic_similarity": 0.407604,
+    "workflow_order_similarity": 0.20625,
+    "connection_f1": 0.216216,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.45,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.260866,
+    "activity_semantic_similarity": 0.564518,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.75
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 29,
+    "T6": 4
+   },
+   "after": {
+    "semantic_similarity": 0.326083,
+    "workflow_order_similarity": 0.26,
+    "connection_f1": 0.409091,
+    "alignment_coverage": 0.55
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": -0.081521,
+    "workflow_order_similarity": 0.05375,
+    "connection_f1": 0.192875,
+    "alignment_coverage": 0.1
+   },
+   "mean_change": 0.066276,
+   "kept_round": 2,
+   "errors_after": {
+    "T5": 26,
+    "T6": 4
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.326083,
+    "activity_semantic_similarity": 0.564518,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.75,
+    "activity_matched": 6,
+    "activity_reference": 10,
+    "activity_generated": 6,
+    "alignment_coverage": 0.55,
+    "connection_precision": 0.45,
+    "connection_recall": 0.375,
+    "connection_f1": 0.409091,
+    "connection_tp": 9,
+    "connection_fp": 11,
+    "connection_fn": 15,
+    "workflow_order_similarity": 0.26,
+    "order_consistency": 0.472727,
+    "order_coverage": 0.55,
+    "order_tp": 52,
+    "order_fp": 58,
+    "order_fn": 0,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.8125,
+    "type_recall_diagnostic": 0.65,
+    "type_f1_diagnostic": 0.7222,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 16,
+     "gold_flows": 24,
+     "generated_flows": 20
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.224885,
+    "activity_semantic_similarity_strict": 0.564518,
+    "alignment_coverage_strict": 0.55,
+    "connection_precision_strict": 0.45,
+    "connection_recall_strict": 0.375,
+    "connection_f1_strict": 0.409091,
+    "workflow_order_similarity_strict": 0.26,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 53,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 16,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-115": {
+     "failure_type": "T5",
+     "errors_before": 29,
+     "errors_after": 26,
+     "removed": 3
+    }
+   },
+   "confirmed": true,
+   "promoted": [],
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [
+    "EXS-096",
+    "LRN-116"
+   ],
+   "before": {
+    "semantic_similarity": 0.326083,
+    "workflow_order_similarity": 0.26,
+    "connection_f1": 0.409091,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.55,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.224885,
+    "activity_semantic_similarity": 0.564518,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.75
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 26,
+    "T6": 4
+   },
+   "reverted": {
+    "draft": 3,
+    "errors": {
+     "T5": 27,
+     "T6": 4
+    },
+    "errors_before": {
+     "T5": 26,
+     "T6": 4
+    },
+    "mean_change": 0.033767
+   },
+   "after": {
+    "semantic_similarity": 0.326083,
+    "workflow_order_similarity": 0.26,
+    "connection_f1": 0.409091,
+    "alignment_coverage": 0.55
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 2,
+   "errors_after": {
+    "T5": 26,
+    "T6": 4
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.326083,
+    "activity_semantic_similarity": 0.564518,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.75,
+    "activity_matched": 6,
+    "activity_reference": 10,
+    "activity_generated": 6,
+    "alignment_coverage": 0.55,
+    "connection_precision": 0.45,
+    "connection_recall": 0.375,
+    "connection_f1": 0.409091,
+    "connection_tp": 9,
+    "connection_fp": 11,
+    "connection_fn": 15,
+    "workflow_order_similarity": 0.26,
+    "order_consistency": 0.472727,
+    "order_coverage": 0.55,
+    "order_tp": 52,
+    "order_fp": 58,
+    "order_fn": 0,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.8125,
+    "type_recall_diagnostic": 0.65,
+    "type_f1_diagnostic": 0.7222,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 16,
+     "gold_flows": 24,
+     "generated_flows": 20
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.224885,
+    "activity_semantic_similarity_strict": 0.564518,
+    "alignment_coverage_strict": 0.55,
+    "connection_precision_strict": 0.45,
+    "connection_recall_strict": 0.375,
+    "connection_f1_strict": 0.409091,
+    "workflow_order_similarity_strict": 0.26,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 53,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 16,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "EXS-096": {
+     "failure_type": "T5",
+     "errors_before": 26,
+     "errors_after": 26,
+     "removed": 0
+    },
+    "LRN-116": {
+     "failure_type": "T6",
+     "errors_before": 4,
+     "errors_after": 4,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.326083,
+  "activity_semantic_similarity": 0.564518,
+  "activity_label_precision": 1.0,
+  "activity_label_recall": 0.6,
+  "activity_label_f1": 0.75,
+  "activity_matched": 6,
+  "activity_reference": 10,
+  "activity_generated": 6,
+  "alignment_coverage": 0.55,
+  "connection_precision": 0.45,
+  "connection_recall": 0.375,
+  "connection_f1": 0.409091,
+  "connection_tp": 9,
+  "connection_fp": 11,
+  "connection_fn": 15,
+  "workflow_order_similarity": 0.26,
+  "order_consistency": 0.472727,
+  "order_coverage": 0.55,
+  "order_tp": 52,
+  "order_fp": 58,
+  "order_fn": 0,
+  "collaboration_similarity": null,
+  "collaboration_applicable": false,
+  "collaboration_tp": 0,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 0.8125,
+  "type_recall_diagnostic": 0.65,
+  "type_f1_diagnostic": 0.7222,
+  "counts": {
+   "gold_nodes": 20,
+   "generated_nodes": 16,
+   "gold_flows": 24,
+   "generated_flows": 20
+  },
+  "collaboration_ignored": true,
+  "semantic_similarity_strict": 0.224885,
+  "activity_semantic_similarity_strict": 0.564518,
+  "alignment_coverage_strict": 0.55,
+  "connection_precision_strict": 0.45,
+  "connection_recall_strict": 0.375,
+  "connection_f1_strict": 0.409091,
+  "workflow_order_similarity_strict": 0.26,
+  "collaboration_similarity_strict": 0.0,
+  "collaboration_applicable_strict": true
+ }
+}

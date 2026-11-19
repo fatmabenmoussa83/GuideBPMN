@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_VacationRequest" targetNamespace="http://example.org/bpmn/vacation-request">
+  <bpmn:process id="Process_VacationRequest" name="Vacations Request" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_VacationRequest">
+      <bpmn:lane id="Lane_Employee" name="Employee">
+        <bpmn:flowNodeRef>StartEvent_RequestSubmitted</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RegisterRequest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UserTask_ReviewRejectionReasons</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_RequestRejected</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_ImmediateSupervisor" name="Immediate Supervisor">
+        <bpmn:flowNodeRef>Task_ReceiveRequest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UserTask_ApproveOrRejectRequest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ApprovalDecision_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReturnRejectedRequest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SendTask_NotifyHR</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_HRRepresentative" name="Human Resources Representative">
+        <bpmn:flowNodeRef>UserTask_CompleteManagementProcedures</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_RequestProcessed</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_RequestSubmitted" name="Vacation request submitted">
+      <bpmn:outgoing>Flow_SubmittedToRegister</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_RegisterRequest" name="Register vacation request">
+      <bpmn:incoming>Flow_SubmittedToRegister</bpmn:incoming>
+      <bpmn:outgoing>Flow_RegisterToReceive</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ReceiveRequest" name="Receive vacation request">
+      <bpmn:incoming>Flow_RegisterToReceive</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReceiveToDecision</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:userTask id="UserTask_ApproveOrRejectRequest" name="Approve or reject request">
+      <bpmn:incoming>Flow_ReceiveToDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_DecisionToSplit</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_ApprovalDecision_Split" name="Request approved?">
+      <bpmn:incoming>Flow_DecisionToSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Approved</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_ReturnRejectedRequest" name="Return rejected application to employee">
+      <bpmn:incoming>Flow_Rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReturnToReview</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:userTask id="UserTask_ReviewRejectionReasons" name="Review rejection reasons">
+      <bpmn:incoming>Flow_ReturnToReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReviewToRejectedEnd</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="EndEvent_RequestRejected" name="Request rejected">
+      <bpmn:incoming>Flow_ReviewToRejectedEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sendTask id="SendTask_NotifyHR" name="Generate notification to HR representative">
+      <bpmn:incoming>Flow_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifyToComplete</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:userTask id="UserTask_CompleteManagementProcedures" name="Complete vacation management procedures">
+      <bpmn:incoming>Flow_NotifyToComplete</bpmn:incoming>
+      <bpmn:outgoing>Flow_CompleteToEnd</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="EndEvent_RequestProcessed" name="Vacation request processed">
+      <bpmn:incoming>Flow_CompleteToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_SubmittedToRegister" sourceRef="StartEvent_RequestSubmitted" targetRef="Task_RegisterRequest"/>
+    <bpmn:sequenceFlow id="Flow_RegisterToReceive" sourceRef="Task_RegisterRequest" targetRef="Task_ReceiveRequest"/>
+    <bpmn:sequenceFlow id="Flow_ReceiveToDecision" sourceRef="Task_ReceiveRequest" targetRef="UserTask_ApproveOrRejectRequest"/>
+    <bpmn:sequenceFlow id="Flow_DecisionToSplit" sourceRef="UserTask_ApproveOrRejectRequest" targetRef="Gateway_ApprovalDecision_Split"/>
+    <bpmn:sequenceFlow id="Flow_Rejected" name="Rejected" sourceRef="Gateway_ApprovalDecision_Split" targetRef="Task_ReturnRejectedRequest"/>
+    <bpmn:sequenceFlow id="Flow_ReturnToReview" sourceRef="Task_ReturnRejectedRequest" targetRef="UserTask_ReviewRejectionReasons"/>
+    <bpmn:sequenceFlow id="Flow_ReviewToRejectedEnd" sourceRef="UserTask_ReviewRejectionReasons" targetRef="EndEvent_RequestRejected"/>
+    <bpmn:sequenceFlow id="Flow_Approved" name="Approved" sourceRef="Gateway_ApprovalDecision_Split" targetRef="SendTask_NotifyHR"/>
+    <bpmn:sequenceFlow id="Flow_NotifyToComplete" sourceRef="SendTask_NotifyHR" targetRef="UserTask_CompleteManagementProcedures"/>
+    <bpmn:sequenceFlow id="Flow_CompleteToEnd" sourceRef="UserTask_CompleteManagementProcedures" targetRef="EndEvent_RequestProcessed"/>
+  </bpmn:process>
+</bpmn:definitions>

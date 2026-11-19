@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Dismissal"
+                  targetNamespace="http://example.com/bpmn/dismissal">
+  <bpmn:message id="Message_Dismissal" name="Dismissal"/>
+  <bpmn:collaboration id="Collaboration_Dismissal">
+    <bpmn:participant id="Participant_MPON" name="MPON" processRef="Process_MPON"/>
+    <bpmn:participant id="Participant_MPOO" name="MPOO" processRef="Process_MPOO"/>
+    <bpmn:messageFlow id="MessageFlow_Dismissal"
+                      name="Dismissal"
+                      sourceRef="Task_SendDismissal"
+                      targetRef="StartEvent_DismissalReceived"
+                      messageRef="Message_Dismissal"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_MPON" name="MPON sends dismissal" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_MPON"/>
+    <bpmn:sendTask id="Task_SendDismissal" name="Send dismissal to MPOO" messageRef="Message_Dismissal">
+      <bpmn:incoming>Flow_MPON_StartToSend</bpmn:incoming>
+      <bpmn:outgoing>Flow_MPON_SendToEnd</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_MPON">
+      <bpmn:incoming>Flow_MPON_SendToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_MPON_StartToSend" sourceRef="StartEvent_MPON" targetRef="Task_SendDismissal"/>
+    <bpmn:sequenceFlow id="Flow_MPON_SendToEnd" sourceRef="Task_SendDismissal" targetRef="EndEvent_MPON"/>
+  </bpmn:process>
+  <bpmn:process id="Process_MPOO" name="MPOO reviews dismissal" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_DismissalReceived" name="Dismissal received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Dismissal" messageRef="Message_Dismissal"/>
+      <bpmn:outgoing>Flow_MPOO_StartToReview</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_ReviewDismissal" name="Review dismissal">
+      <bpmn:incoming>Flow_MPOO_StartToReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_MPOO_ReviewToDecision</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_MPOODecision" name="MPOO decision">
+      <bpmn:incoming>Flow_MPOO_ReviewToDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_MPOO_Opposes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_MPOO_Confirms</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_OpposeDismissal" name="Oppose dismissal of MPON">
+      <bpmn:incoming>Flow_MPOO_Opposes</bpmn:incoming>
+      <bpmn:outgoing>Flow_MPOO_OpposeToMerge</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ConfirmDismissal" name="Confirm dismissal of MPON">
+      <bpmn:incoming>Flow_MPOO_Confirms</bpmn:incoming>
+      <bpmn:outgoing>Flow_MPOO_ConfirmToMerge</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_MPOOOutcomeMerge" name="Dismissal decision completed">
+      <bpmn:incoming>Flow_MPOO_OpposeToMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_MPOO_ConfirmToMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_MPOO_MergeToEnd</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_MPOO">
+      <bpmn:incoming>Flow_MPOO_MergeToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_MPOO_StartToReview" sourceRef="StartEvent_DismissalReceived" targetRef="Task_ReviewDismissal"/>
+    <bpmn:sequenceFlow id="Flow_MPOO_ReviewToDecision" sourceRef="Task_ReviewDismissal" targetRef="Gateway_MPOODecision"/>
+    <bpmn:sequenceFlow id="Flow_MPOO_Opposes" name="Opposes dismissal" sourceRef="Gateway_MPOODecision" targetRef="Task_OpposeDismissal"/>
+    <bpmn:sequenceFlow id="Flow_MPOO_Confirms" name="Confirms dismissal" sourceRef="Gateway_MPOODecision" targetRef="Task_ConfirmDismissal"/>
+    <bpmn:sequenceFlow id="Flow_MPOO_OpposeToMerge" sourceRef="Task_OpposeDismissal" targetRef="Gateway_MPOOOutcomeMerge"/>
+    <bpmn:sequenceFlow id="Flow_MPOO_ConfirmToMerge" sourceRef="Task_ConfirmDismissal" targetRef="Gateway_MPOOOutcomeMerge"/>
+    <bpmn:sequenceFlow id="Flow_MPOO_MergeToEnd" sourceRef="Gateway_MPOOOutcomeMerge" targetRef="EndEvent_MPOO"/>
+  </bpmn:process>
+</bpmn:definitions>

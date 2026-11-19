@@ -1,0 +1,841 @@
+{
+ "id": "40",
+ "kept_round": 0,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": false,
+   "failed_levels": [
+    "L3"
+   ],
+   "seconds": 71.9,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 37,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 1,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": false,
+     "correct": 10,
+     "incorrect": 1,
+     "accuracy": 0.9091,
+     "incorrect_elements": [
+      {
+       "id": "process:Process_OEE",
+       "tag": "process",
+       "line": 12,
+       "reason": "no endEvent found in process:Process_OEE (GuideBPMN requires explicit start and end events; BPMN allows implicit ones in some cases)"
+      }
+     ]
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.205441,
+    "workflow_order_similarity": 0.1,
+    "connection_f1": 0.181818,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.2,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.142228,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_OEE\"\n                  targetNamespace=\"http://example.com/bpmn/oee\">\n  <bpmn:message id=\"Message_MachineInformation\" name=\"Machine information\"/>\n  <bpmn:message id=\"Message_StopMachine\" name=\"Stop machine command\"/>\n  <bpmn:message id=\"Message_EngineerEmail\" name=\"OEE alert email\"/>\n  <bpmn:message id=\"Message_MachineRestarted\" name=\"Machine restarted\"/>\n  <bpmn:message id=\"Message_MachineDisconnected\" name=\"Machine disconnected\"/>\n\n  <bpmn:process id=\"Process_OEE\" name=\"OEE\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_OEE\" name=\"Start measuring\"/>\n    <bpmn:receiveTask id=\"ReceiveTask_MachineInformation\" name=\"Collect machine information\" messageRef=\"Message_MachineInformation\"/>\n    <bpmn:task id=\"Task_CalculateOEE\" name=\"Calculate OEE\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OEEThreshold\" name=\"Check OEE threshold\" default=\"Flow_OEE_NotBelowThreshold\"/>\n    <bpmn:sendTask id=\"SendTask_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\"/>\n    <bpmn:sendTask id=\"SendTask_EngineerEmail\" name=\"Send email to engineer\" messageRef=\"Message_EngineerEmail\"/>\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_MachineRestarted\" name=\"Machine restarted\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_MachineRestarted\" messageRef=\"Message_MachineRestarted\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:subProcess id=\"EventSubProcess_MachineDisconnected\" name=\"Handle machine disconnection\" triggeredByEvent=\"true\">\n      <bpmn:startEvent id=\"StartEvent_MachineDisconnected\" name=\"Machine disconnected\" isInterrupting=\"true\">\n        <bpmn:messageEventDefinition id=\"MessageEventDefinition_MachineDisconnected\" messageRef=\"Message_MachineDisconnected\"/>\n      </bpmn:startEvent>\n      <bpmn:endEvent id=\"EndEvent_ProcessStopped\" name=\"Process stopped\"/>\n      <bpmn:sequenceFlow id=\"Flow_Disconnected_To_Stopped\" sourceRef=\"StartEvent_MachineDisconnected\" targetRef=\"EndEvent_ProcessStopped\"/>\n    </bpmn:subProcess>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_To_Collect\" sourceRef=\"StartEvent_OEE\" targetRef=\"ReceiveTask_MachineInformation\"/>\n    <bpmn:sequenceFlow id=\"Flow_Collect_To_Calculate\" sourceRef=\"ReceiveTask_MachineInformation\" targetRef=\"Task_CalculateOEE\"/>\n    <bpmn:sequenceFlow id=\"Flow_Calculate_To_Check\" sourceRef=\"Task_CalculateOEE\" targetRef=\"Gateway_OEEThreshold\"/>\n    <bpmn:sequenceFlow id=\"Flow_OEE_BelowThreshold\" name=\"OEE below threshold\" sourceRef=\"Gateway_OEEThreshold\" targetRef=\"SendTask_StopMachine\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">OEE &lt; threshold</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OEE_NotBelowThreshold\" name=\"OEE not below threshold\" sourceRef=\"Gateway_OEEThreshold\" targetRef=\"ReceiveTask_MachineInformation\"/>\n    <bpmn:sequenceFlow id=\"Flow_Stop_To_Email\" sourceRef=\"SendTask_StopMachine\" targetRef=\"SendTask_EngineerEmail\"/>\n    <bpmn:sequenceFlow id=\"Flow_Email_To_Restart\" sourceRef=\"SendTask_EngineerEmail\" targetRef=\"CatchEvent_MachineRestarted\"/>\n    <bpmn:sequenceFlow id=\"Flow_Restart_To_Collect\" sourceRef=\"CatchEvent_MachineRestarted\" targetRef=\"ReceiveTask_MachineInformation\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_OEE\">\n    <bpmn:participant id=\"Participant_OEE\" name=\"OEE process\" processRef=\"Process_OEE\"/>\n    <bpmn:participant id=\"Participant_Machine\" name=\"Machine\"/>\n    <bpmn:participant id=\"Participant_Engineer\" name=\"Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineInformation\" name=\"Machine information\" sourceRef=\"Participant_Machine\" targetRef=\"ReceiveTask_MachineInformation\" messageRef=\"Message_MachineInformation\"/>\n    <bpmn:messageFlow id=\"MessageFlow_StopMachine\" name=\"Stop machine command\" sourceRef=\"SendTask_StopMachine\" targetRef=\"Participant_Machine\" messageRef=\"Message_StopMachine\"/>\n    <bpmn:messageFlow id=\"MessageFlow_EngineerEmail\" name=\"OEE alert email\" sourceRef=\"SendTask_EngineerEmail\" targetRef=\"Participant_Engineer\" messageRef=\"Message_EngineerEmail\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineRestarted\" name=\"Machine restarted\" sourceRef=\"Participant_Machine\" targetRef=\"CatchEvent_MachineRestarted\" messageRef=\"Message_MachineRestarted\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineDisconnected\" name=\"Machine disconnected\" sourceRef=\"Participant_Machine\" targetRef=\"StartEvent_MachineDisconnected\" messageRef=\"Message_MachineDisconnected\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 711.7,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 46,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 12,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.184897,
+    "workflow_order_similarity": 0.1,
+    "connection_f1": 0.157895,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.2,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.127515,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_OEE\"\n                  targetNamespace=\"http://example.com/bpmn/oee\">\n  <bpmn:message id=\"Message_MachineInformation\" name=\"Machine information\"/>\n  <bpmn:message id=\"Message_StopMachine\" name=\"Stop machine command\"/>\n  <bpmn:message id=\"Message_EngineerEmail\" name=\"OEE alert email\"/>\n  <bpmn:message id=\"Message_MachineRestarted\" name=\"Machine restarted\"/>\n  <bpmn:message id=\"Message_MachineDisconnected\" name=\"Machine disconnected\"/>\n\n  <bpmn:process id=\"Process_OEE\" name=\"OEE\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_OEE\" name=\"Start measuring\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForMachine\" name=\"Wait for machine information or disconnection\" eventGatewayType=\"Exclusive\"/>\n    <bpmn:receiveTask id=\"ReceiveTask_MachineInformation\" name=\"Collect machine information\" messageRef=\"Message_MachineInformation\"/>\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_MachineDisconnected\" name=\"Machine disconnected\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_MachineDisconnected\" messageRef=\"Message_MachineDisconnected\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_CalculateOEE\" name=\"Calculate OEE\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OEEThreshold\" name=\"Check OEE threshold\" default=\"Flow_OEE_NotBelowThreshold\"/>\n    <bpmn:sendTask id=\"SendTask_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\"/>\n    <bpmn:sendTask id=\"SendTask_EngineerEmail\" name=\"Send email to engineer\" messageRef=\"Message_EngineerEmail\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForRestartOrDisconnection\" name=\"Wait for machine restart or disconnection\" eventGatewayType=\"Exclusive\"/>\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_MachineRestarted\" name=\"Machine restarted\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_MachineRestarted\" messageRef=\"Message_MachineRestarted\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_DisconnectedAfterAlert\" name=\"Machine disconnected\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_DisconnectedAfterAlert\" messageRef=\"Message_MachineDisconnected\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:endEvent id=\"EndEvent_ProcessStopped\" name=\"Process stopped\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_To_Wait\" sourceRef=\"StartEvent_OEE\" targetRef=\"Gateway_WaitForMachine\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_To_Information\" sourceRef=\"Gateway_WaitForMachine\" targetRef=\"ReceiveTask_MachineInformation\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_To_Disconnected\" sourceRef=\"Gateway_WaitForMachine\" targetRef=\"CatchEvent_MachineDisconnected\"/>\n    <bpmn:sequenceFlow id=\"Flow_Information_To_Calculate\" sourceRef=\"ReceiveTask_MachineInformation\" targetRef=\"Task_CalculateOEE\"/>\n    <bpmn:sequenceFlow id=\"Flow_Disconnected_To_End\" sourceRef=\"CatchEvent_MachineDisconnected\" targetRef=\"EndEvent_ProcessStopped\"/>\n    <bpmn:sequenceFlow id=\"Flow_Calculate_To_Check\" sourceRef=\"Task_CalculateOEE\" targetRef=\"Gateway_OEEThreshold\"/>\n    <bpmn:sequenceFlow id=\"Flow_OEE_BelowThreshold\" name=\"OEE below threshold\" sourceRef=\"Gateway_OEEThreshold\" targetRef=\"SendTask_StopMachine\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">OEE &lt; threshold</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OEE_NotBelowThreshold\" name=\"OEE not below threshold\" sourceRef=\"Gateway_OEEThreshold\" targetRef=\"Gateway_WaitForMachine\"/>\n    <bpmn:sequenceFlow id=\"Flow_Stop_To_Email\" sourceRef=\"SendTask_StopMachine\" targetRef=\"SendTask_EngineerEmail\"/>\n    <bpmn:sequenceFlow id=\"Flow_Email_To_Wait\" sourceRef=\"SendTask_EngineerEmail\" targetRef=\"Gateway_WaitForRestartOrDisconnection\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_To_Restart\" sourceRef=\"Gateway_WaitForRestartOrDisconnection\" targetRef=\"CatchEvent_MachineRestarted\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_To_DisconnectedAfterAlert\" sourceRef=\"Gateway_WaitForRestartOrDisconnection\" targetRef=\"CatchEvent_DisconnectedAfterAlert\"/>\n    <bpmn:sequenceFlow id=\"Flow_Restart_To_WaitForMachine\" sourceRef=\"CatchEvent_MachineRestarted\" targetRef=\"Gateway_WaitForMachine\"/>\n    <bpmn:sequenceFlow id=\"Flow_DisconnectedAfterAlert_To_End\" sourceRef=\"CatchEvent_DisconnectedAfterAlert\" targetRef=\"EndEvent_ProcessStopped\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_OEE\">\n    <bpmn:participant id=\"Participant_OEE\" name=\"OEE process\" processRef=\"Process_OEE\"/>\n    <bpmn:participant id=\"Participant_Machine\" name=\"Machine\"/>\n    <bpmn:participant id=\"Participant_Engineer\" name=\"Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineInformation\" name=\"Machine information\" sourceRef=\"Participant_Machine\" targetRef=\"ReceiveTask_MachineInformation\" messageRef=\"Message_MachineInformation\"/>\n    <bpmn:messageFlow id=\"MessageFlow_StopMachine\" name=\"Stop machine command\" sourceRef=\"SendTask_StopMachine\" targetRef=\"Participant_Machine\" messageRef=\"Message_StopMachine\"/>\n    <bpmn:messageFlow id=\"MessageFlow_EngineerEmail\" name=\"OEE alert email\" sourceRef=\"SendTask_EngineerEmail\" targetRef=\"Participant_Engineer\" messageRef=\"Message_EngineerEmail\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineRestarted\" name=\"Machine restarted\" sourceRef=\"Participant_Machine\" targetRef=\"CatchEvent_MachineRestarted\" messageRef=\"Message_MachineRestarted\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineDisconnected\" name=\"Machine disconnected\" sourceRef=\"Participant_Machine\" targetRef=\"CatchEvent_MachineDisconnected\" messageRef=\"Message_MachineDisconnected\"/>\n    <bpmn:messageFlow id=\"MessageFlow_DisconnectedAfterAlert\" name=\"Machine disconnected\" sourceRef=\"Participant_Machine\" targetRef=\"CatchEvent_DisconnectedAfterAlert\" messageRef=\"Message_MachineDisconnected\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1487.0,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 46,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 12,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.186159,
+    "workflow_order_similarity": 0.1,
+    "connection_f1": 0.157895,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.2,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.128386,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_OEE\"\n                  targetNamespace=\"http://example.com/bpmn/oee\">\n  <bpmn:message id=\"Message_MachineInformation\" name=\"Machine information\"/>\n  <bpmn:message id=\"Message_StopMachine\" name=\"Stop machine command\"/>\n  <bpmn:message id=\"Message_EngineerEmail\" name=\"OEE alert email\"/>\n  <bpmn:message id=\"Message_MachineRestarted\" name=\"Machine restarted\"/>\n  <bpmn:message id=\"Message_MachineDisconnected\" name=\"Machine disconnected\"/>\n\n  <bpmn:process id=\"Process_OEE\" name=\"OEE\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_OEE\" name=\"Start measuring\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForMachineData\" name=\"Wait for machine data or disconnection\" eventGatewayType=\"Exclusive\" instantiate=\"false\"/>\n    <bpmn:receiveTask id=\"ReceiveTask_MachineInformation\" name=\"Collect machine information\" messageRef=\"Message_MachineInformation\"/>\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_MachineDisconnectedDuringMeasurement\" name=\"Machine disconnected\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_DisconnectedDuringMeasurement\" messageRef=\"Message_MachineDisconnected\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_CalculateOEE\" name=\"Calculate OEE\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OEEThreshold\" name=\"Check whether OEE falls below the threshold\" default=\"Flow_OEE_NotBelowThreshold\"/>\n    <bpmn:sendTask id=\"SendTask_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\"/>\n    <bpmn:sendTask id=\"SendTask_EngineerEmail\" name=\"Send email to engineer\" messageRef=\"Message_EngineerEmail\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForRestart\" name=\"Wait for restart or disconnection\" eventGatewayType=\"Exclusive\" instantiate=\"false\"/>\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_MachineRestarted\" name=\"Machine restarted\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_MachineRestarted\" messageRef=\"Message_MachineRestarted\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_MachineDisconnectedAfterAlert\" name=\"Machine disconnected\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_DisconnectedAfterAlert\" messageRef=\"Message_MachineDisconnected\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:endEvent id=\"EndEvent_ProcessStopped\" name=\"Process stopped\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_To_WaitForMachineData\" sourceRef=\"StartEvent_OEE\" targetRef=\"Gateway_WaitForMachineData\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForMachineData_To_Collect\" sourceRef=\"Gateway_WaitForMachineData\" targetRef=\"ReceiveTask_MachineInformation\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForMachineData_To_Disconnected\" sourceRef=\"Gateway_WaitForMachineData\" targetRef=\"CatchEvent_MachineDisconnectedDuringMeasurement\"/>\n    <bpmn:sequenceFlow id=\"Flow_Collect_To_Calculate\" sourceRef=\"ReceiveTask_MachineInformation\" targetRef=\"Task_CalculateOEE\"/>\n    <bpmn:sequenceFlow id=\"Flow_DisconnectedDuringMeasurement_To_End\" sourceRef=\"CatchEvent_MachineDisconnectedDuringMeasurement\" targetRef=\"EndEvent_ProcessStopped\"/>\n    <bpmn:sequenceFlow id=\"Flow_Calculate_To_Check\" sourceRef=\"Task_CalculateOEE\" targetRef=\"Gateway_OEEThreshold\"/>\n    <bpmn:sequenceFlow id=\"Flow_OEE_BelowThreshold\" name=\"OEE below threshold\" sourceRef=\"Gateway_OEEThreshold\" targetRef=\"SendTask_StopMachine\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">OEE &lt; threshold</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OEE_NotBelowThreshold\" name=\"OEE not below threshold\" sourceRef=\"Gateway_OEEThreshold\" targetRef=\"Gateway_WaitForMachineData\"/>\n    <bpmn:sequenceFlow id=\"Flow_StopMachine_To_Email\" sourceRef=\"SendTask_StopMachine\" targetRef=\"SendTask_EngineerEmail\"/>\n    <bpmn:sequenceFlow id=\"Flow_Email_To_WaitForRestart\" sourceRef=\"SendTask_EngineerEmail\" targetRef=\"Gateway_WaitForRestart\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForRestart_To_Restarted\" sourceRef=\"Gateway_WaitForRestart\" targetRef=\"CatchEvent_MachineRestarted\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForRestart_To_Disconnected\" sourceRef=\"Gateway_WaitForRestart\" targetRef=\"CatchEvent_MachineDisconnectedAfterAlert\"/>\n    <bpmn:sequenceFlow id=\"Flow_Restarted_To_WaitForMachineData\" sourceRef=\"CatchEvent_MachineRestarted\" targetRef=\"Gateway_WaitForMachineData\"/>\n    <bpmn:sequenceFlow id=\"Flow_DisconnectedAfterAlert_To_End\" sourceRef=\"CatchEvent_MachineDisconnectedAfterAlert\" targetRef=\"EndEvent_ProcessStopped\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_OEE\">\n    <bpmn:participant id=\"Participant_OEE\" name=\"OEE process\" processRef=\"Process_OEE\"/>\n    <bpmn:participant id=\"Participant_Machine\" name=\"Machine\"/>\n    <bpmn:participant id=\"Participant_Engineer\" name=\"Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineInformation\" name=\"Machine information\" sourceRef=\"Participant_Machine\" targetRef=\"ReceiveTask_MachineInformation\" messageRef=\"Message_MachineInformation\"/>\n    <bpmn:messageFlow id=\"MessageFlow_StopMachine\" name=\"Stop machine command\" sourceRef=\"SendTask_StopMachine\" targetRef=\"Participant_Machine\" messageRef=\"Message_StopMachine\"/>\n    <bpmn:messageFlow id=\"MessageFlow_EngineerEmail\" name=\"OEE alert email\" sourceRef=\"SendTask_EngineerEmail\" targetRef=\"Participant_Engineer\" messageRef=\"Message_EngineerEmail\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineRestarted\" name=\"Machine restarted\" sourceRef=\"Participant_Machine\" targetRef=\"CatchEvent_MachineRestarted\" messageRef=\"Message_MachineRestarted\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineDisconnectedDuringMeasurement\" name=\"Machine disconnected\" sourceRef=\"Participant_Machine\" targetRef=\"CatchEvent_MachineDisconnectedDuringMeasurement\" messageRef=\"Message_MachineDisconnected\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineDisconnectedAfterAlert\" name=\"Machine disconnected\" sourceRef=\"Participant_Machine\" targetRef=\"CatchEvent_MachineDisconnectedAfterAlert\" messageRef=\"Message_MachineDisconnected\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 2154.1,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 46,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 12,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.185868,
+    "workflow_order_similarity": 0.1,
+    "connection_f1": 0.157895,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.2,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.128185,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_OEE\"\n                  targetNamespace=\"http://example.com/bpmn/oee\">\n  <bpmn:message id=\"Message_MachineInformation\" name=\"Machine information\"/>\n  <bpmn:message id=\"Message_StopMachine\" name=\"Stop machine command\"/>\n  <bpmn:message id=\"Message_EngineerEmail\" name=\"OEE alert email\"/>\n  <bpmn:message id=\"Message_MachineRestarted\" name=\"Machine restarted\"/>\n  <bpmn:message id=\"Message_MachineDisconnected\" name=\"Machine disconnected\"/>\n\n  <bpmn:process id=\"Process_OEE\" name=\"OEE\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_OEE\" name=\"Start measuring\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForMachineActivity\" name=\"Wait for machine information or disconnection\"/>\n    <bpmn:receiveTask id=\"ReceiveTask_MachineInformation\" name=\"Collect machine information\" messageRef=\"Message_MachineInformation\"/>\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_MachineDisconnectedDuringMeasurement\" name=\"Machine disconnected\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_DisconnectedDuringMeasurement\" messageRef=\"Message_MachineDisconnected\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_CalculateOEE\" name=\"Calculate OEE\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OEEThreshold\" name=\"Check whether OEE is below the threshold\" default=\"Flow_OEE_NotBelowThreshold\"/>\n    <bpmn:sendTask id=\"SendTask_StopMachine\" name=\"Stop machine\" messageRef=\"Message_StopMachine\"/>\n    <bpmn:sendTask id=\"SendTask_EngineerEmail\" name=\"Send email to engineer\" messageRef=\"Message_EngineerEmail\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForRestartOrDisconnection\" name=\"Wait for machine restart or disconnection\"/>\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_MachineRestarted\" name=\"Machine restarted\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_MachineRestarted\" messageRef=\"Message_MachineRestarted\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_MachineDisconnectedAfterStop\" name=\"Machine disconnected\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_DisconnectedAfterStop\" messageRef=\"Message_MachineDisconnected\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:endEvent id=\"EndEvent_ProcessStopped\" name=\"Process stopped\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_To_WaitForMachine\" sourceRef=\"StartEvent_OEE\" targetRef=\"Gateway_WaitForMachineActivity\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForMachine_To_Collect\" sourceRef=\"Gateway_WaitForMachineActivity\" targetRef=\"ReceiveTask_MachineInformation\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForMachine_To_Disconnected\" sourceRef=\"Gateway_WaitForMachineActivity\" targetRef=\"CatchEvent_MachineDisconnectedDuringMeasurement\"/>\n    <bpmn:sequenceFlow id=\"Flow_Collect_To_Calculate\" sourceRef=\"ReceiveTask_MachineInformation\" targetRef=\"Task_CalculateOEE\"/>\n    <bpmn:sequenceFlow id=\"Flow_DisconnectedDuringMeasurement_To_End\" sourceRef=\"CatchEvent_MachineDisconnectedDuringMeasurement\" targetRef=\"EndEvent_ProcessStopped\"/>\n    <bpmn:sequenceFlow id=\"Flow_Calculate_To_CheckThreshold\" sourceRef=\"Task_CalculateOEE\" targetRef=\"Gateway_OEEThreshold\"/>\n    <bpmn:sequenceFlow id=\"Flow_OEE_BelowThreshold\" name=\"OEE below threshold\" sourceRef=\"Gateway_OEEThreshold\" targetRef=\"SendTask_StopMachine\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">OEE &lt; threshold</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OEE_NotBelowThreshold\" name=\"OEE not below threshold\" sourceRef=\"Gateway_OEEThreshold\" targetRef=\"Gateway_WaitForMachineActivity\"/>\n    <bpmn:sequenceFlow id=\"Flow_StopMachine_To_Email\" sourceRef=\"SendTask_StopMachine\" targetRef=\"SendTask_EngineerEmail\"/>\n    <bpmn:sequenceFlow id=\"Flow_Email_To_WaitForRestart\" sourceRef=\"SendTask_EngineerEmail\" targetRef=\"Gateway_WaitForRestartOrDisconnection\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForRestart_To_Restarted\" sourceRef=\"Gateway_WaitForRestartOrDisconnection\" targetRef=\"CatchEvent_MachineRestarted\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForRestart_To_Disconnected\" sourceRef=\"Gateway_WaitForRestartOrDisconnection\" targetRef=\"CatchEvent_MachineDisconnectedAfterStop\"/>\n    <bpmn:sequenceFlow id=\"Flow_Restarted_To_WaitForMachine\" sourceRef=\"CatchEvent_MachineRestarted\" targetRef=\"Gateway_WaitForMachineActivity\"/>\n    <bpmn:sequenceFlow id=\"Flow_DisconnectedAfterStop_To_End\" sourceRef=\"CatchEvent_MachineDisconnectedAfterStop\" targetRef=\"EndEvent_ProcessStopped\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_OEE\">\n    <bpmn:participant id=\"Participant_OEE\" name=\"OEE process\" processRef=\"Process_OEE\"/>\n    <bpmn:participant id=\"Participant_Machine\" name=\"Machine\"/>\n    <bpmn:participant id=\"Participant_Engineer\" name=\"Engineer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineInformation\" name=\"Machine information\" sourceRef=\"Participant_Machine\" targetRef=\"ReceiveTask_MachineInformation\" messageRef=\"Message_MachineInformation\"/>\n    <bpmn:messageFlow id=\"MessageFlow_StopMachine\" name=\"Stop machine command\" sourceRef=\"SendTask_StopMachine\" targetRef=\"Participant_Machine\" messageRef=\"Message_StopMachine\"/>\n    <bpmn:messageFlow id=\"MessageFlow_EngineerEmail\" name=\"OEE alert email\" sourceRef=\"SendTask_EngineerEmail\" targetRef=\"Participant_Engineer\" messageRef=\"Message_EngineerEmail\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineRestarted\" name=\"Machine restarted\" sourceRef=\"Participant_Machine\" targetRef=\"CatchEvent_MachineRestarted\" messageRef=\"Message_MachineRestarted\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineDisconnectedDuringMeasurement\" name=\"Machine disconnected\" sourceRef=\"Participant_Machine\" targetRef=\"CatchEvent_MachineDisconnectedDuringMeasurement\" messageRef=\"Message_MachineDisconnected\"/>\n    <bpmn:messageFlow id=\"MessageFlow_MachineDisconnectedAfterStop\" name=\"Machine disconnected\" sourceRef=\"Participant_Machine\" targetRef=\"CatchEvent_MachineDisconnectedAfterStop\" messageRef=\"Message_MachineDisconnected\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": false,
+  "failed_levels": [
+   "L3"
+  ],
+  "metrics": {
+   "semantic_similarity": 0.205441,
+   "activity_semantic_similarity": 0.293037,
+   "activity_label_precision": 0.75,
+   "activity_label_recall": 0.3,
+   "activity_label_f1": 0.428571,
+   "activity_matched": 3,
+   "activity_reference": 10,
+   "activity_generated": 4,
+   "alignment_coverage": 0.2,
+   "connection_precision": 0.333333,
+   "connection_recall": 0.125,
+   "connection_f1": 0.181818,
+   "connection_tp": 3,
+   "connection_fp": 6,
+   "connection_fn": 21,
+   "workflow_order_similarity": 0.1,
+   "order_consistency": 0.5,
+   "order_coverage": 0.2,
+   "order_tp": 6,
+   "order_fp": 6,
+   "order_fn": 0,
+   "collaboration_similarity": null,
+   "collaboration_applicable": false,
+   "collaboration_tp": 0,
+   "collaboration_fp": 0,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 0.7,
+   "type_recall_diagnostic": 0.35,
+   "type_f1_diagnostic": 0.4667,
+   "counts": {
+    "gold_nodes": 20,
+    "generated_nodes": 10,
+    "gold_flows": 24,
+    "generated_flows": 9
+   },
+   "collaboration_ignored": true,
+   "semantic_similarity_strict": 0.142228,
+   "activity_semantic_similarity_strict": 0.293037,
+   "alignment_coverage_strict": 0.2,
+   "connection_precision_strict": 0.333333,
+   "connection_recall_strict": 0.125,
+   "connection_f1_strict": 0.181818,
+   "workflow_order_similarity_strict": 0.1,
+   "collaboration_similarity_strict": 0.0,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T3",
+   "T5",
+   "T6"
+  ],
+  "error_counts": {
+   "T3": 1,
+   "T5": 27,
+   "T6": 8
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "PROC-05",
+    "instruction": "Give every process and every expanded subProcess its own explicit start event and end event. A trigger that occurs after the main flow (for example later feedback or a return) is joined to the main flow by a gateway, or modeled as an event subprocess or a separate process.",
+    "situation": "the description states that the process terminates when a specified condition occurs",
+    "source": "documentation rule not applied",
+    "failure_type": "T3"
+   },
+   {
+    "rule_id": "LRN-065",
+    "instruction": "When the description says that work in an ongoing process resumes after a later trigger: model the trigger within the existing process and represent the stated continuation as an activity, rather than as a new process start",
+    "situation": "the description says that work in an ongoing process resumes after a later trigger",
+    "source": "learned guideline (refines PROC-05)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "EVT-02",
+    "instruction": "Use end events for terminal outcomes. An end event has no outgoing sequence flow and is not the target of a message flow.",
+    "situation": "the description states a condition or event that terminates the process",
+    "source": "documentation rule not applied",
+    "failure_type": "T3"
+   },
+   {
+    "rule_id": "LRN-066",
+    "instruction": "When the description specifies a threshold-based condition but does not state its numeric cutoff: Label the corresponding gateway with the stated condition without adding an unsupported numeric cutoff.",
+    "situation": "the description specifies a threshold-based condition but does not state its numeric cutoff",
+    "source": "learned guideline (refines FID-04)",
+    "failure_type": "T6"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "PROC-05",
+    "LRN-065"
+   ],
+   "before": {
+    "semantic_similarity": 0.205441,
+    "workflow_order_similarity": 0.1,
+    "connection_f1": 0.181818,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.2,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.142228,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571
+   },
+   "valid_before": false,
+   "errors_before": {
+    "T3": 1,
+    "T5": 27,
+    "T6": 8
+   },
+   "reverted": {
+    "draft": 1,
+    "errors": {
+     "T5": 32,
+     "T6": 8
+    },
+    "errors_before": {
+     "T3": 1,
+     "T5": 27,
+     "T6": 8
+    },
+    "mean_change": -0.011117
+   },
+   "after": {
+    "semantic_similarity": 0.205441,
+    "workflow_order_similarity": 0.1,
+    "connection_f1": 0.181818,
+    "alignment_coverage": 0.2
+   },
+   "valid_after": false,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 0,
+   "errors_after": {
+    "T5": 27,
+    "T6": 8,
+    "T3": 1
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.205441,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571,
+    "activity_matched": 3,
+    "activity_reference": 10,
+    "activity_generated": 4,
+    "alignment_coverage": 0.2,
+    "connection_precision": 0.333333,
+    "connection_recall": 0.125,
+    "connection_f1": 0.181818,
+    "connection_tp": 3,
+    "connection_fp": 6,
+    "connection_fn": 21,
+    "workflow_order_similarity": 0.1,
+    "order_consistency": 0.5,
+    "order_coverage": 0.2,
+    "order_tp": 6,
+    "order_fp": 6,
+    "order_fn": 0,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.7,
+    "type_recall_diagnostic": 0.35,
+    "type_f1_diagnostic": 0.4667,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 10,
+     "gold_flows": 24,
+     "generated_flows": 9
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.142228,
+    "activity_semantic_similarity_strict": 0.293037,
+    "alignment_coverage_strict": 0.2,
+    "connection_precision_strict": 0.333333,
+    "connection_recall_strict": 0.125,
+    "connection_f1_strict": 0.181818,
+    "workflow_order_similarity_strict": 0.1,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 37,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 1,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": false,
+     "correct": 10,
+     "incorrect": 1,
+     "accuracy": 0.9091,
+     "incorrect_elements": [
+      {
+       "id": "process:Process_OEE",
+       "tag": "process",
+       "line": 12,
+       "reason": "no endEvent found in process:Process_OEE (GuideBPMN requires explicit start and end events; BPMN allows implicit ones in some cases)"
+      }
+     ]
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": false,
+   "failed_levels_kept": [
+    "L3"
+   ],
+   "type_results": {
+    "LRN-065": {
+     "failure_type": "T5",
+     "errors_before": 27,
+     "errors_after": 27,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T3",
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "EVT-02",
+    "LRN-066"
+   ],
+   "before": {
+    "semantic_similarity": 0.205441,
+    "workflow_order_similarity": 0.1,
+    "connection_f1": 0.181818,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.2,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.142228,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571
+   },
+   "valid_before": false,
+   "errors_before": {
+    "T3": 1,
+    "T5": 27,
+    "T6": 8
+   },
+   "reverted": {
+    "draft": 2,
+    "errors": {
+     "T5": 32,
+     "T6": 8
+    },
+    "errors_before": {
+     "T3": 1,
+     "T5": 27,
+     "T6": 8
+    },
+    "mean_change": -0.010801
+   },
+   "after": {
+    "semantic_similarity": 0.205441,
+    "workflow_order_similarity": 0.1,
+    "connection_f1": 0.181818,
+    "alignment_coverage": 0.2
+   },
+   "valid_after": false,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 0,
+   "errors_after": {
+    "T5": 27,
+    "T6": 8,
+    "T3": 1
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.205441,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571,
+    "activity_matched": 3,
+    "activity_reference": 10,
+    "activity_generated": 4,
+    "alignment_coverage": 0.2,
+    "connection_precision": 0.333333,
+    "connection_recall": 0.125,
+    "connection_f1": 0.181818,
+    "connection_tp": 3,
+    "connection_fp": 6,
+    "connection_fn": 21,
+    "workflow_order_similarity": 0.1,
+    "order_consistency": 0.5,
+    "order_coverage": 0.2,
+    "order_tp": 6,
+    "order_fp": 6,
+    "order_fn": 0,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.7,
+    "type_recall_diagnostic": 0.35,
+    "type_f1_diagnostic": 0.4667,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 10,
+     "gold_flows": 24,
+     "generated_flows": 9
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.142228,
+    "activity_semantic_similarity_strict": 0.293037,
+    "alignment_coverage_strict": 0.2,
+    "connection_precision_strict": 0.333333,
+    "connection_recall_strict": 0.125,
+    "connection_f1_strict": 0.181818,
+    "workflow_order_similarity_strict": 0.1,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 37,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 1,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": false,
+     "correct": 10,
+     "incorrect": 1,
+     "accuracy": 0.9091,
+     "incorrect_elements": [
+      {
+       "id": "process:Process_OEE",
+       "tag": "process",
+       "line": 12,
+       "reason": "no endEvent found in process:Process_OEE (GuideBPMN requires explicit start and end events; BPMN allows implicit ones in some cases)"
+      }
+     ]
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": false,
+   "failed_levels_kept": [
+    "L3"
+   ],
+   "type_results": {
+    "LRN-066": {
+     "failure_type": "T6",
+     "errors_before": 8,
+     "errors_after": 8,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T3",
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [],
+   "before": {
+    "semantic_similarity": 0.205441,
+    "workflow_order_similarity": 0.1,
+    "connection_f1": 0.181818,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.2,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.142228,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571
+   },
+   "valid_before": false,
+   "errors_before": {
+    "T3": 1,
+    "T5": 27,
+    "T6": 8
+   },
+   "reverted": {
+    "draft": 3,
+    "errors": {
+     "T5": 32,
+     "T6": 8
+    },
+    "errors_before": {
+     "T3": 1,
+     "T5": 27,
+     "T6": 8
+    },
+    "mean_change": -0.010874
+   },
+   "after": {
+    "semantic_similarity": 0.205441,
+    "workflow_order_similarity": 0.1,
+    "connection_f1": 0.181818,
+    "alignment_coverage": 0.2
+   },
+   "valid_after": false,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 0,
+   "errors_after": {
+    "T5": 27,
+    "T6": 8,
+    "T3": 1
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.205441,
+    "activity_semantic_similarity": 0.293037,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.3,
+    "activity_label_f1": 0.428571,
+    "activity_matched": 3,
+    "activity_reference": 10,
+    "activity_generated": 4,
+    "alignment_coverage": 0.2,
+    "connection_precision": 0.333333,
+    "connection_recall": 0.125,
+    "connection_f1": 0.181818,
+    "connection_tp": 3,
+    "connection_fp": 6,
+    "connection_fn": 21,
+    "workflow_order_similarity": 0.1,
+    "order_consistency": 0.5,
+    "order_coverage": 0.2,
+    "order_tp": 6,
+    "order_fp": 6,
+    "order_fn": 0,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.7,
+    "type_recall_diagnostic": 0.35,
+    "type_f1_diagnostic": 0.4667,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 10,
+     "gold_flows": 24,
+     "generated_flows": 9
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.142228,
+    "activity_semantic_similarity_strict": 0.293037,
+    "alignment_coverage_strict": 0.2,
+    "connection_precision_strict": 0.333333,
+    "connection_recall_strict": 0.125,
+    "connection_f1_strict": 0.181818,
+    "workflow_order_similarity_strict": 0.1,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 37,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 1,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": false,
+     "correct": 10,
+     "incorrect": 1,
+     "accuracy": 0.9091,
+     "incorrect_elements": [
+      {
+       "id": "process:Process_OEE",
+       "tag": "process",
+       "line": 12,
+       "reason": "no endEvent found in process:Process_OEE (GuideBPMN requires explicit start and end events; BPMN allows implicit ones in some cases)"
+      }
+     ]
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": false,
+   "failed_levels_kept": [
+    "L3"
+   ],
+   "type_results": {},
+   "confirmed": false,
+   "detected_after": [
+    "T3",
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.205441,
+  "activity_semantic_similarity": 0.293037,
+  "activity_label_precision": 0.75,
+  "activity_label_recall": 0.3,
+  "activity_label_f1": 0.428571,
+  "activity_matched": 3,
+  "activity_reference": 10,
+  "activity_generated": 4,
+  "alignment_coverage": 0.2,
+  "connection_precision": 0.333333,
+  "connection_recall": 0.125,
+  "connection_f1": 0.181818,
+  "connection_tp": 3,
+  "connection_fp": 6,
+  "connection_fn": 21,
+  "workflow_order_similarity": 0.1,
+  "order_consistency": 0.5,
+  "order_coverage": 0.2,
+  "order_tp": 6,
+  "order_fp": 6,
+  "order_fn": 0,
+  "collaboration_similarity": null,
+  "collaboration_applicable": false,
+  "collaboration_tp": 0,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 0.7,
+  "type_recall_diagnostic": 0.35,
+  "type_f1_diagnostic": 0.4667,
+  "counts": {
+   "gold_nodes": 20,
+   "generated_nodes": 10,
+   "gold_flows": 24,
+   "generated_flows": 9
+  },
+  "collaboration_ignored": true,
+  "semantic_similarity_strict": 0.142228,
+  "activity_semantic_similarity_strict": 0.293037,
+  "alignment_coverage_strict": 0.2,
+  "connection_precision_strict": 0.333333,
+  "connection_recall_strict": 0.125,
+  "connection_f1_strict": 0.181818,
+  "workflow_order_similarity_strict": 0.1,
+  "collaboration_similarity_strict": 0.0,
+  "collaboration_applicable_strict": true
+ }
+}

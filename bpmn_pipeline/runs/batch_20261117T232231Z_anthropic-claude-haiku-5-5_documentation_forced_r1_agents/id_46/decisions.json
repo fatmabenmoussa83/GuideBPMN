@@ -1,0 +1,319 @@
+{
+ "id": "46",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 8,
+  "T6": 1
+ },
+ "first_pass_error_counts": {
+  "T5": 19,
+  "T6": 1
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-045 (The reference places an exclusive gateway after the waiting task to test the duration, routes the exceeded case to the follow-up action, and converges both branches before the next step. The generated model instead attached a boundary event to the waiting task and wired the wait task directly to the next step, which skipped the gateway and the merge (M1, M2, F2, F3, F6, F9, X1, G4). The guideline )",
+   "guideline_id": "LRN-045",
+   "ref": "LRN-045",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-002 (The reference splits the flow after the wait with an exclusive gateway ('Arrived after more than ten days?') and rejoins it before registration, while the generated model uses a boundary event 'Waited more than 10 days' that leads to a separate end event 'Delivery delay penalty demanded', so the process never continues from the penalty branch. The description (S5) says the penalty is demanded only)",
+   "guideline_id": "LRN-002",
+   "ref": "LRN-002",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-069 (The missing flows F1, F4 and F5 all concern the re-entry point of the repeated part: the entry flow from reading the order and the loop-back from the shipment-readiness decision should meet at one exclusive merge gateway before the stock check, and the description (S9) states the restart explicitly. LRN-069 already prescribes this loop with a merge gateway, so the guideline restates it with the en)",
+   "guideline_id": "LRN-069",
+   "ref": "LRN-069",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "new guideline (The description states the selection step explicitly (S9), and the generator modeled it as a task (X1), but the reference omits it. Its effect is to make the repetition over the collection visible. The closest documented guidelines (FLOW-01, SUB-05, GW-07) cover sequence flows, repetition characteristics and event-based gateways, not a selection task before a loop back, so this guideline is new an)",
+   "guideline_id": "LRN-127",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines GW-03 (The generated model joins the withdrawal and the registration paths through an exclusive gateway labeled 'Product available', which reads as a new decision and adds flows (G1, G2, G3) that the reference does not have. The reference connects both paths to the following activity (F1, F2 missing). The description states no decision at that point. GW-03 already requires an exclusive merge for alternat)",
+   "guideline_id": "LRN-128",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "new guideline (The description says that after a failed stock check the next product is selected and the check starts again. The generated model adds a second gateway, \"Product available\", that tests the same condition again, and its label departs from the description's \"in stock\" term (X1). The next-item selection task (X2) is supported by S9, so it is not the error. The fix is to loop back into the existing ch)",
+   "guideline_id": "LRN-129",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-045",
+   "instruction": "When the description says a participant must complete an action within a time limit, and it states a different consequence for the case where the action is not completed in time, without saying that the process waits for the time limit to pass: Model the action as a task performed by that participant. Place an exclusive gateway after the task: one branch continues the normal path when the action is completed, and the other branch leads to the stated consequence. Do not model the completed action as an intermediate catch event, and do not add a timer or deadline catch event unless the description says the process waits for the time to pass.",
+   "situation": "the description states that an optional follow-up action must be carried out only if a preceding waiting activity lasted longer than a stated duration, and the normal process continues after the wait in either case",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-002",
+   "instruction": "When the description states that a later activity happens only if a condition holds (an 'if ...' clause that follows an earlier activity), and the description does not say that the activity is always performed: Place an exclusive gateway directly after the activity that precedes the conditional clause. Give it one outgoing sequence flow to the conditional activity, labeled with the condition from the description. Give it a second outgoing flow for the other outcome, leading to the next step the description names, or to its own end event if the description says the process stops there. Do not place the conditional activity in sequence without a gateway.",
+   "situation": "the description states that a waiting step for an external event is followed by a consequence step that is performed only if the wait exceeds a stated time limit, and the process then continues with the following steps regardless of that outcome",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-069",
+   "instruction": "When the description says that a part of the process is repeated until a check is made, and that the check either sends the flow back to repeat that part or moves on to a later step or ends the process: Model the repeated part as a loop. Place an exclusive merge gateway before the first element of the repeated part, so that the entry flow and the return flow both join there. Place the check after the repeated part as an exclusive decision gateway. One outgoing flow of the decision returns to the merge gateway for another pass, and the other leads to the next step the description names or to an end event if the description says the process stops there. Ensure every merge gateway inside the cycle has a path to an end event. Do not connect the check directly back into the repeated part without a merge gateway, and do not run the repeated part once and move on without the loop.",
+   "situation": "the description says that when a later check fails, the process starts again with an earlier check, so the steps between them are repeated and the flow returns to that earlier check",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-127",
+   "instruction": "When the description says that when a check for one element of a collection fails, the next element of that collection is taken and the same check starts again for it: Model the selection of the next element as an explicit task placed on the path after the failed check, and connect it with a sequence flow back to the start of the repeated check, so the loop is visible in the diagram.",
+   "situation": "the description says that when a check for one element of a collection fails, the next element of that collection is taken and the same check starts again for it",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-128",
+   "instruction": "When the description describes alternative branches (one path or the other) that each end in an activity, and both then continue into the same following activity, while the description states no new decision at the point where they reunite: Join the alternative branches with an exclusive merge gateway. Connect the last activity of each branch to that merge, and connect the merge to the following activity. Leave the merge unnamed or give it a neutral label, and put no conditions on its flows. Do not name the merge as a question or decision, and do not reuse a decision gateway from an earlier check as the merge.",
+   "situation": "the description describes alternative branches (one path or the other) that each end in an activity, and both then continue into the same following activity, while the description states no new decision at the point where they reunite",
+   "source": "learned guideline (refines GW-03)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-129",
+   "instruction": "When the description states a yes/no check on whether a condition holds for the current item, and says that when the check fails the next item is selected and the process starts again with the same check: Model the restart as a sequence flow from the failing branch, after the next-item selection task, back into the existing decision gateway for that check. Label the gateway as a question that uses the condition's term from the description. Do not add a second decision gateway that tests the same condition again.",
+   "situation": "the description states a yes/no check on whether a condition holds for the current item, and says that when the check fails the next item is selected and the process starts again with the same check",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

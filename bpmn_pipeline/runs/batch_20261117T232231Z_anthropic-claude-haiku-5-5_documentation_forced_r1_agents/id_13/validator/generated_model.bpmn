@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Complaint" targetNamespace="http://example.com/bpmn/complaint-handling">
+  <bpmn:message id="Msg_ComplaintFiled" name="Complaint filed"/>
+  <bpmn:message id="Msg_DecisionApproved" name="Refund approved notification"/>
+  <bpmn:message id="Msg_DecisionRejected" name="Refund rejected notification"/>
+  <bpmn:message id="Msg_RefundSent" name="Refund sent"/>
+  <bpmn:message id="Msg_Feedback" name="Satisfaction feedback"/>
+  <bpmn:collaboration id="Collaboration_Complaint">
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_Complaint"/>
+    <bpmn:messageFlow id="MessageFlow_ComplaintFiled" name="Complaint filed" messageRef="Msg_ComplaintFiled" sourceRef="Participant_Customer" targetRef="StartEvent_ComplaintFiled"/>
+    <bpmn:messageFlow id="MessageFlow_DecisionApproved" name="Refund approved notification" messageRef="Msg_DecisionApproved" sourceRef="SendTask_NotifyApproval" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MessageFlow_DecisionRejected" name="Refund rejected notification" messageRef="Msg_DecisionRejected" sourceRef="SendTask_NotifyRejection" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MessageFlow_RefundSent" name="Refund sent" messageRef="Msg_RefundSent" sourceRef="SendTask_SendRefund" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MessageFlow_Feedback" name="Satisfaction feedback" messageRef="Msg_Feedback" sourceRef="Participant_Customer" targetRef="IntermediateCatchEvent_Feedback"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Complaint" name="Complaint Handling" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Complaint">
+      <bpmn:lane id="Lane_CustomerService" name="Customer Service">
+        <bpmn:flowNodeRef>StartEvent_ComplaintFiled</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_LogComplaint</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AssignDepartment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ResolvedMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MarkResolved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_FeedbackDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>IntermediateCatchEvent_Feedback</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_FeedbackMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Resolved</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_RelevantDepartment" name="Relevant Department">
+        <bpmn:flowNodeRef>Task_Investigate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_RefundDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SendTask_NotifyApproval</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SendTask_NotifyRejection</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_FinancialTeam" name="Financial Team">
+        <bpmn:flowNodeRef>Task_ProcessRefund</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SendTask_SendRefund</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_ComplaintFiled" name="Complaint filed">
+      <bpmn:outgoing>Flow_Start_Logged</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_ComplaintFiled" messageRef="Msg_ComplaintFiled"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_LogComplaint" name="Log complaint">
+      <bpmn:incoming>Flow_Start_Logged</bpmn:incoming>
+      <bpmn:outgoing>Flow_Logged_Assigned</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_AssignDepartment" name="Assign complaint to relevant department">
+      <bpmn:incoming>Flow_Logged_Assigned</bpmn:incoming>
+      <bpmn:outgoing>Flow_Assigned_Investigate</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Investigate" name="Review details and determine validity and refund justification">
+      <bpmn:incoming>Flow_Assigned_Investigate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Investigate_Decision</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_RefundDecision" name="Refund approved?" default="Flow_RefundRejected">
+      <bpmn:incoming>Flow_Investigate_Decision</bpmn:incoming>
+      <bpmn:outgoing>Flow_RefundApproved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RefundRejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="SendTask_NotifyApproval" name="Notify customer of refund approval" messageRef="Msg_DecisionApproved">
+      <bpmn:incoming>Flow_RefundApproved</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approval_Process</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="Task_ProcessRefund" name="Process reimbursement">
+      <bpmn:incoming>Flow_Approval_Process</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_Send</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="SendTask_SendRefund" name="Send refund to customer" messageRef="Msg_RefundSent">
+      <bpmn:incoming>Flow_Process_Send</bpmn:incoming>
+      <bpmn:outgoing>Flow_Send_ResolvedMerge</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="SendTask_NotifyRejection" name="Notify customer of refund rejection" messageRef="Msg_DecisionRejected">
+      <bpmn:incoming>Flow_RefundRejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_Rejection_ResolvedMerge</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="Gateway_ResolvedMerge" name="Case concluded">
+      <bpmn:incoming>Flow_Send_ResolvedMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_Rejection_ResolvedMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_ResolvedMerge_Resolved</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_MarkResolved" name="Mark complaint as resolved">
+      <bpmn:incoming>Flow_ResolvedMerge_Resolved</bpmn:incoming>
+      <bpmn:outgoing>Flow_Resolved_FeedbackDecision</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_FeedbackDecision" name="Feedback provided?" default="Flow_NoFeedback">
+      <bpmn:incoming>Flow_Resolved_FeedbackDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_FeedbackGiven</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoFeedback</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:intermediateCatchEvent id="IntermediateCatchEvent_Feedback" name="Customer satisfaction feedback received">
+      <bpmn:incoming>Flow_FeedbackGiven</bpmn:incoming>
+      <bpmn:outgoing>Flow_Feedback_FeedbackMerge</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Feedback" messageRef="Msg_Feedback"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_FeedbackMerge" name="Feedback step concluded">
+      <bpmn:incoming>Flow_Feedback_FeedbackMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_NoFeedback</bpmn:incoming>
+      <bpmn:outgoing>Flow_FeedbackMerge_End</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_Resolved" name="Complaint resolved">
+      <bpmn:incoming>Flow_FeedbackMerge_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Logged" sourceRef="StartEvent_ComplaintFiled" targetRef="Task_LogComplaint"/>
+    <bpmn:sequenceFlow id="Flow_Logged_Assigned" sourceRef="Task_LogComplaint" targetRef="Task_AssignDepartment"/>
+    <bpmn:sequenceFlow id="Flow_Assigned_Investigate" sourceRef="Task_AssignDepartment" targetRef="Task_Investigate"/>
+    <bpmn:sequenceFlow id="Flow_Investigate_Decision" sourceRef="Task_Investigate" targetRef="Gateway_RefundDecision"/>
+    <bpmn:sequenceFlow id="Flow_RefundApproved" name="Yes" sourceRef="Gateway_RefundDecision" targetRef="SendTask_NotifyApproval">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${refundApproved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_RefundRejected" name="No" sourceRef="Gateway_RefundDecision" targetRef="SendTask_NotifyRejection"/>
+    <bpmn:sequenceFlow id="Flow_Approval_Process" sourceRef="SendTask_NotifyApproval" targetRef="Task_ProcessRefund"/>
+    <bpmn:sequenceFlow id="Flow_Process_Send" sourceRef="Task_ProcessRefund" targetRef="SendTask_SendRefund"/>
+    <bpmn:sequenceFlow id="Flow_Send_ResolvedMerge" sourceRef="SendTask_SendRefund" targetRef="Gateway_ResolvedMerge"/>
+    <bpmn:sequenceFlow id="Flow_Rejection_ResolvedMerge" sourceRef="SendTask_NotifyRejection" targetRef="Gateway_ResolvedMerge"/>
+    <bpmn:sequenceFlow id="Flow_ResolvedMerge_Resolved" sourceRef="Gateway_ResolvedMerge" targetRef="Task_MarkResolved"/>
+    <bpmn:sequenceFlow id="Flow_Resolved_FeedbackDecision" sourceRef="Task_MarkResolved" targetRef="Gateway_FeedbackDecision"/>
+    <bpmn:sequenceFlow id="Flow_FeedbackGiven" name="Yes" sourceRef="Gateway_FeedbackDecision" targetRef="IntermediateCatchEvent_Feedback">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${feedbackGiven == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoFeedback" name="No" sourceRef="Gateway_FeedbackDecision" targetRef="Gateway_FeedbackMerge"/>
+    <bpmn:sequenceFlow id="Flow_Feedback_FeedbackMerge" sourceRef="IntermediateCatchEvent_Feedback" targetRef="Gateway_FeedbackMerge"/>
+    <bpmn:sequenceFlow id="Flow_FeedbackMerge_End" sourceRef="Gateway_FeedbackMerge" targetRef="EndEvent_Resolved"/>
+  </bpmn:process>
+</bpmn:definitions>

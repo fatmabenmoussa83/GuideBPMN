@@ -1,0 +1,164 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_ComputerRepair" targetNamespace="http://example.com/bpmn/computer-repair">
+  <bpmn:process id="Process_ComputerRepair" name="Computer repair" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Repair">
+      <bpmn:lane id="Lane_Customer" name="Customer">
+        <bpmn:flowNodeRef>StartEvent_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ManualTask_BringIn</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_CostAcceptance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ManualTask_TakeHome</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_TakenHome</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_CRS" name="Computer Repair Service (CRS)">
+        <bpmn:flowNodeRef>Task_CheckDefect</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ManualTask_HandOutCost</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_RepairSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RepairHardware</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TestHardware</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ConfigureSoftware</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TestSoftware</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_RepairJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ErrorMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ErrorCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_RepairCompleted</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_RetryChoice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RetryRepairHardware</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RetryTestHardware</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RetryConfigureSoftware</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RetryTestSoftware</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_Start" name="Start">
+      <bpmn:outgoing>Flow_Start_BringIn</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:manualTask id="ManualTask_BringIn" name="Bring in defective computer">
+      <bpmn:incoming>Flow_Start_BringIn</bpmn:incoming>
+      <bpmn:outgoing>Flow_BringIn_CheckDefect</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:task id="Task_CheckDefect" name="Check defect">
+      <bpmn:incoming>Flow_BringIn_CheckDefect</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckDefect_HandOut</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:manualTask id="ManualTask_HandOutCost" name="Hand out repair cost calculation">
+      <bpmn:incoming>Flow_CheckDefect_HandOut</bpmn:incoming>
+      <bpmn:outgoing>Flow_HandOut_CostAcceptance</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:exclusiveGateway id="Gateway_CostAcceptance" name="Customer accepts costs?" gatewayDirection="Diverging">
+      <bpmn:incoming>Flow_HandOut_CostAcceptance</bpmn:incoming>
+      <bpmn:outgoing>Flow_Accepted_RepairSplit</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotAccepted_TakeHome</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:manualTask id="ManualTask_TakeHome" name="Take computer home unrepaired">
+      <bpmn:incoming>Flow_NotAccepted_TakeHome</bpmn:incoming>
+      <bpmn:outgoing>Flow_TakeHome_End</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:endEvent id="EndEvent_TakenHome" name="Computer taken home unrepaired">
+      <bpmn:incoming>Flow_TakeHome_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:parallelGateway id="Gateway_RepairSplit" name="Split repair activities" gatewayDirection="Diverging">
+      <bpmn:incoming>Flow_Accepted_RepairSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_Split_RepairHardware</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Split_ConfigureSoftware</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:task id="Task_RepairHardware" name="Check and repair hardware">
+      <bpmn:incoming>Flow_Split_RepairHardware</bpmn:incoming>
+      <bpmn:outgoing>Flow_RepairHardware_TestHardware</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_TestHardware" name="Test hardware functionality">
+      <bpmn:incoming>Flow_RepairHardware_TestHardware</bpmn:incoming>
+      <bpmn:outgoing>Flow_TestHardware_Join</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ConfigureSoftware" name="Check and configure software">
+      <bpmn:incoming>Flow_Split_ConfigureSoftware</bpmn:incoming>
+      <bpmn:outgoing>Flow_ConfigureSoftware_TestSoftware</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_TestSoftware" name="Test software functionality">
+      <bpmn:incoming>Flow_ConfigureSoftware_TestSoftware</bpmn:incoming>
+      <bpmn:outgoing>Flow_TestSoftware_Join</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="Gateway_RepairJoin" name="Join repair activities" gatewayDirection="Converging">
+      <bpmn:incoming>Flow_TestHardware_Join</bpmn:incoming>
+      <bpmn:incoming>Flow_TestSoftware_Join</bpmn:incoming>
+      <bpmn:outgoing>Flow_Join_ErrorMerge</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:exclusiveGateway id="Gateway_ErrorMerge" name="Merge after test" gatewayDirection="Converging">
+      <bpmn:incoming>Flow_Join_ErrorMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_RetryTestHardware_ErrorMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_RetryTestSoftware_ErrorMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_ErrorMerge_ErrorCheck</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:exclusiveGateway id="Gateway_ErrorCheck" name="Error detected?" gatewayDirection="Diverging">
+      <bpmn:incoming>Flow_ErrorMerge_ErrorCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_NoError_End</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Error_RetryChoice</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="EndEvent_RepairCompleted" name="Repair completed">
+      <bpmn:incoming>Flow_NoError_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:exclusiveGateway id="Gateway_RetryChoice" name="Select repair activity (arbitrary)" gatewayDirection="Diverging">
+      <bpmn:incoming>Flow_Error_RetryChoice</bpmn:incoming>
+      <bpmn:outgoing>Flow_RetryChoice_RepairHardware</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RetryChoice_ConfigureSoftware</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_RetryRepairHardware" name="Check and repair hardware">
+      <bpmn:incoming>Flow_RetryChoice_RepairHardware</bpmn:incoming>
+      <bpmn:outgoing>Flow_RetryRepairHardware_TestHardware</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_RetryTestHardware" name="Test hardware functionality">
+      <bpmn:incoming>Flow_RetryRepairHardware_TestHardware</bpmn:incoming>
+      <bpmn:outgoing>Flow_RetryTestHardware_ErrorMerge</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_RetryConfigureSoftware" name="Check and configure software">
+      <bpmn:incoming>Flow_RetryChoice_ConfigureSoftware</bpmn:incoming>
+      <bpmn:outgoing>Flow_RetryConfigureSoftware_TestSoftware</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_RetryTestSoftware" name="Test software functionality">
+      <bpmn:incoming>Flow_RetryConfigureSoftware_TestSoftware</bpmn:incoming>
+      <bpmn:outgoing>Flow_RetryTestSoftware_ErrorMerge</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:sequenceFlow id="Flow_Start_BringIn" sourceRef="StartEvent_Start" targetRef="ManualTask_BringIn"/>
+    <bpmn:sequenceFlow id="Flow_BringIn_CheckDefect" sourceRef="ManualTask_BringIn" targetRef="Task_CheckDefect"/>
+    <bpmn:sequenceFlow id="Flow_CheckDefect_HandOut" sourceRef="Task_CheckDefect" targetRef="ManualTask_HandOutCost"/>
+    <bpmn:sequenceFlow id="Flow_HandOut_CostAcceptance" sourceRef="ManualTask_HandOutCost" targetRef="Gateway_CostAcceptance"/>
+    <bpmn:sequenceFlow id="Flow_NotAccepted_TakeHome" name="No" sourceRef="Gateway_CostAcceptance" targetRef="ManualTask_TakeHome"/>
+    <bpmn:sequenceFlow id="Flow_TakeHome_End" sourceRef="ManualTask_TakeHome" targetRef="EndEvent_TakenHome"/>
+    <bpmn:sequenceFlow id="Flow_Accepted_RepairSplit" name="Yes" sourceRef="Gateway_CostAcceptance" targetRef="Gateway_RepairSplit"/>
+    <bpmn:sequenceFlow id="Flow_Split_RepairHardware" sourceRef="Gateway_RepairSplit" targetRef="Task_RepairHardware"/>
+    <bpmn:sequenceFlow id="Flow_RepairHardware_TestHardware" sourceRef="Task_RepairHardware" targetRef="Task_TestHardware"/>
+    <bpmn:sequenceFlow id="Flow_TestHardware_Join" sourceRef="Task_TestHardware" targetRef="Gateway_RepairJoin"/>
+    <bpmn:sequenceFlow id="Flow_Split_ConfigureSoftware" sourceRef="Gateway_RepairSplit" targetRef="Task_ConfigureSoftware"/>
+    <bpmn:sequenceFlow id="Flow_ConfigureSoftware_TestSoftware" sourceRef="Task_ConfigureSoftware" targetRef="Task_TestSoftware"/>
+    <bpmn:sequenceFlow id="Flow_TestSoftware_Join" sourceRef="Task_TestSoftware" targetRef="Gateway_RepairJoin"/>
+    <bpmn:sequenceFlow id="Flow_Join_ErrorMerge" sourceRef="Gateway_RepairJoin" targetRef="Gateway_ErrorMerge"/>
+    <bpmn:sequenceFlow id="Flow_ErrorMerge_ErrorCheck" sourceRef="Gateway_ErrorMerge" targetRef="Gateway_ErrorCheck"/>
+    <bpmn:sequenceFlow id="Flow_NoError_End" name="No" sourceRef="Gateway_ErrorCheck" targetRef="EndEvent_RepairCompleted"/>
+    <bpmn:sequenceFlow id="Flow_Error_RetryChoice" name="Yes" sourceRef="Gateway_ErrorCheck" targetRef="Gateway_RetryChoice"/>
+    <bpmn:sequenceFlow id="Flow_RetryChoice_RepairHardware" sourceRef="Gateway_RetryChoice" targetRef="Task_RetryRepairHardware"/>
+    <bpmn:sequenceFlow id="Flow_RetryRepairHardware_TestHardware" sourceRef="Task_RetryRepairHardware" targetRef="Task_RetryTestHardware"/>
+    <bpmn:sequenceFlow id="Flow_RetryTestHardware_ErrorMerge" sourceRef="Task_RetryTestHardware" targetRef="Gateway_ErrorMerge"/>
+    <bpmn:sequenceFlow id="Flow_RetryChoice_ConfigureSoftware" sourceRef="Gateway_RetryChoice" targetRef="Task_RetryConfigureSoftware"/>
+    <bpmn:sequenceFlow id="Flow_RetryConfigureSoftware_TestSoftware" sourceRef="Task_RetryConfigureSoftware" targetRef="Task_RetryTestSoftware"/>
+    <bpmn:sequenceFlow id="Flow_RetryTestSoftware_ErrorMerge" sourceRef="Task_RetryTestSoftware" targetRef="Gateway_ErrorMerge"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ComplianceAudit" targetNamespace="http://example.com/bpmn/compliance-audit">
+  <bpmn:message id="Msg_SubmitDocumentation" name="Documentation submitted"/>
+  <bpmn:message id="Msg_GapReport" name="Gap report"/>
+  <bpmn:message id="Msg_FinalAuditRequest" name="Final audit requested"/>
+
+  <bpmn:collaboration id="Collaboration_ComplianceAudit">
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_Company"/>
+    <bpmn:participant id="Participant_Auditor" name="External Auditor" processRef="Process_Auditor"/>
+    <bpmn:messageFlow id="MF_SubmitDocumentation" name="Submit documentation" sourceRef="Task_SubmitDocumentation" targetRef="StartEvent_DocumentationSubmitted"/>
+    <bpmn:messageFlow id="MF_GapReport" name="Send gap report" sourceRef="Task_SendGapReport" targetRef="Task_ReceiveGapReport"/>
+    <bpmn:messageFlow id="MF_FinalAuditRequest" name="Request final audit" sourceRef="Task_RequestFinalAudit" targetRef="CatchEvent_FinalAuditRequested"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Company" name="Company Compliance Audit" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_AuditStarted" name="Compliance audit process started"/>
+    <bpmn:task id="Task_ScheduleAudit" name="Schedule compliance audit"/>
+    <bpmn:parallelGateway id="Gateway_PrepSplit" name="Start internal preparation"/>
+    <bpmn:task id="Task_PrepareDocumentation" name="Prepare documentation"/>
+    <bpmn:task id="Task_GatherEvidence" name="Gather evidence"/>
+    <bpmn:task id="Task_SelfAssessment" name="Conduct self-assessment"/>
+    <bpmn:parallelGateway id="Gateway_PrepJoin" name="Internal preparation complete"/>
+    <bpmn:sendTask id="Task_SubmitDocumentation" name="Submit documentation to auditor" messageRef="Msg_SubmitDocumentation"/>
+    <bpmn:receiveTask id="Task_ReceiveGapReport" name="Receive gap report" messageRef="Msg_GapReport"/>
+    <bpmn:task id="Task_MakeCorrections" name="Make corrections and improvements"/>
+    <bpmn:sendTask id="Task_RequestFinalAudit" name="Request final audit" messageRef="Msg_FinalAuditRequest"/>
+    <bpmn:endEvent id="EndEvent_FinalAuditRequested" name="Final audit requested"/>
+
+    <bpmn:sequenceFlow id="Flow_C1" sourceRef="StartEvent_AuditStarted" targetRef="Task_ScheduleAudit"/>
+    <bpmn:sequenceFlow id="Flow_C2" sourceRef="Task_ScheduleAudit" targetRef="Gateway_PrepSplit"/>
+    <bpmn:sequenceFlow id="Flow_C3" sourceRef="Gateway_PrepSplit" targetRef="Task_PrepareDocumentation"/>
+    <bpmn:sequenceFlow id="Flow_C4" sourceRef="Gateway_PrepSplit" targetRef="Task_GatherEvidence"/>
+    <bpmn:sequenceFlow id="Flow_C5" sourceRef="Gateway_PrepSplit" targetRef="Task_SelfAssessment"/>
+    <bpmn:sequenceFlow id="Flow_C6" sourceRef="Task_PrepareDocumentation" targetRef="Gateway_PrepJoin"/>
+    <bpmn:sequenceFlow id="Flow_C7" sourceRef="Task_GatherEvidence" targetRef="Gateway_PrepJoin"/>
+    <bpmn:sequenceFlow id="Flow_C8" sourceRef="Task_SelfAssessment" targetRef="Gateway_PrepJoin"/>
+    <bpmn:sequenceFlow id="Flow_C9" sourceRef="Gateway_PrepJoin" targetRef="Task_SubmitDocumentation"/>
+    <bpmn:sequenceFlow id="Flow_C10" sourceRef="Task_SubmitDocumentation" targetRef="Task_ReceiveGapReport"/>
+    <bpmn:sequenceFlow id="Flow_C11" sourceRef="Task_ReceiveGapReport" targetRef="Task_MakeCorrections"/>
+    <bpmn:sequenceFlow id="Flow_C12" sourceRef="Task_MakeCorrections" targetRef="Task_RequestFinalAudit"/>
+    <bpmn:sequenceFlow id="Flow_C13" sourceRef="Task_RequestFinalAudit" targetRef="EndEvent_FinalAuditRequested"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Auditor" name="External Auditor Process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_DocumentationSubmitted" name="Documentation submitted">
+      <bpmn:messageEventDefinition id="MED_DocumentationSubmitted" messageRef="Msg_SubmitDocumentation"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_ReviewProcesses" name="Review company processes"/>
+    <bpmn:task id="Task_IdentifyGaps" name="Identify gaps and issues"/>
+    <bpmn:sendTask id="Task_SendGapReport" name="Send gap report" messageRef="Msg_GapReport"/>
+    <bpmn:intermediateCatchEvent id="CatchEvent_FinalAuditRequested" name="Final audit requested">
+      <bpmn:messageEventDefinition id="MED_FinalAuditRequested" messageRef="Msg_FinalAuditRequest"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_ConductFinalAudit" name="Conduct final audit"/>
+    <bpmn:exclusiveGateway id="Gateway_CriteriaMet" name="All criteria met?" default="Flow_A_NotMet"/>
+    <bpmn:task id="Task_AwardCertification" name="Award certification"/>
+    <bpmn:task id="Task_IssueOfficialDocuments" name="Issue official documents"/>
+    <bpmn:exclusiveGateway id="Gateway_OutcomeMerge" name="Audit outcome determined"/>
+    <bpmn:endEvent id="EndEvent_AuditConcluded" name="Audit process concluded"/>
+
+    <bpmn:sequenceFlow id="Flow_A1" sourceRef="StartEvent_DocumentationSubmitted" targetRef="Task_ReviewProcesses"/>
+    <bpmn:sequenceFlow id="Flow_A2" sourceRef="Task_ReviewProcesses" targetRef="Task_IdentifyGaps"/>
+    <bpmn:sequenceFlow id="Flow_A3" sourceRef="Task_IdentifyGaps" targetRef="Task_SendGapReport"/>
+    <bpmn:sequenceFlow id="Flow_A4" sourceRef="Task_SendGapReport" targetRef="CatchEvent_FinalAuditRequested"/>
+    <bpmn:sequenceFlow id="Flow_A5" sourceRef="CatchEvent_FinalAuditRequested" targetRef="Task_ConductFinalAudit"/>
+    <bpmn:sequenceFlow id="Flow_A6" sourceRef="Task_ConductFinalAudit" targetRef="Gateway_CriteriaMet"/>
+    <bpmn:sequenceFlow id="Flow_A7" name="Yes" sourceRef="Gateway_CriteriaMet" targetRef="Task_AwardCertification">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${allCriteriaMet}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_A_NotMet" name="No" sourceRef="Gateway_CriteriaMet" targetRef="Gateway_OutcomeMerge"/>
+    <bpmn:sequenceFlow id="Flow_A8" sourceRef="Task_AwardCertification" targetRef="Task_IssueOfficialDocuments"/>
+    <bpmn:sequenceFlow id="Flow_A9" sourceRef="Task_IssueOfficialDocuments" targetRef="Gateway_OutcomeMerge"/>
+    <bpmn:sequenceFlow id="Flow_A10" sourceRef="Gateway_OutcomeMerge" targetRef="EndEvent_AuditConcluded"/>
+  </bpmn:process>
+</bpmn:definitions>

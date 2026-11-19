@@ -1,0 +1,211 @@
+{
+ "id": "37",
+ "live": true,
+ "kept_round": 2,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 57.3,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 55,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 18,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.329645,
+    "workflow_order_similarity": 0.36862,
+    "connection_f1": 0.039216,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.521739,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.235461,
+    "activity_semantic_similarity": 0.45414,
+    "activity_label_precision": 0.545455,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.571429
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_Contract\" targetNamespace=\"http://example.org/bpmn/contract\">\n  <bpmn:message id=\"Msg_Query\" name=\"Parts query\"/>\n  <bpmn:message id=\"Msg_Offer\" name=\"Offer (quantity, price, delivery time)\"/>\n  <bpmn:message id=\"Msg_Order\" name=\"Parts order\"/>\n  <bpmn:message id=\"Msg_Batch\" name=\"Parts batch\"/>\n  <bpmn:collaboration id=\"Collaboration_Contract\">\n    <bpmn:participant id=\"Participant_Project\" name=\"Contract project\" processRef=\"Process_Contract\"/>\n    <bpmn:participant id=\"Participant_WebShops\" name=\"Web shops\"/>\n    <bpmn:messageFlow id=\"MF_Query\" name=\"Query parts\" sourceRef=\"Task_Query\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_Offers\" name=\"Offers\" sourceRef=\"Participant_WebShops\" targetRef=\"Task_ReceiveOffers\"/>\n    <bpmn:messageFlow id=\"MF_Order\" name=\"Orders\" sourceRef=\"Task_PlaceOrders\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_ReorderCheapest\" name=\"Reorder (cheapest)\" sourceRef=\"Task_ReorderCheapest\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_ReorderFastest\" name=\"Reorder (fastest)\" sourceRef=\"Task_ReorderFastest\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_Batch\" name=\"Parts batch arrives\" sourceRef=\"Participant_WebShops\" targetRef=\"Event_BatchArrives\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Contract\" name=\"Contract\" isExecutable=\"false\">\n    <bpmn:documentation>Parts are ordered from web shops and arrive in batches in random order (about +/- 2 days). Building starts when the first parts arrive. Stock thresholds trigger reorders; zero stock triggers a complaint mail.</bpmn:documentation>\n    <bpmn:startEvent id=\"Start_Project\" name=\"Contract project needs parts\"/>\n    <bpmn:sendTask id=\"Task_Query\" name=\"Query web shops for quantity, price and delivery time\" messageRef=\"Msg_Query\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveOffers\" name=\"Receive offers from web shops\" messageRef=\"Msg_Offer\"/>\n    <bpmn:task id=\"Task_Compare\" name=\"Compare offers\"/>\n    <bpmn:task id=\"Task_CreateList\" name=\"Create list of parts to order per shop\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_EnoughFromOne\" name=\"Enough parts from one shop?\" default=\"Flow_SeveralShops\"/>\n    <bpmn:task id=\"Task_SelectOneShop\" name=\"Select cheapest parts from one shop\"/>\n    <bpmn:task id=\"Task_SelectSeveralShops\" name=\"Select cheapest parts from several shops\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OrderMerge\" name=\"Parts selected\"/>\n    <bpmn:sendTask id=\"Task_PlaceOrders\" name=\"Place orders with web shops\" messageRef=\"Msg_Order\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ArrivalMerge\" name=\"Parts expected\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_BatchArrives\" name=\"Parts batch arrives\">\n      <bpmn:messageEventDefinition id=\"MED_Batch\" messageRef=\"Msg_Batch\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:manualTask id=\"Task_Build\" name=\"Build with arrived parts\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockLevel\" name=\"Stock level of a single part?\" default=\"Flow_StockOk\"/>\n    <bpmn:manualTask id=\"Task_ComplaintMail\" name=\"Write mail to friends complaining about web shops\"/>\n    <bpmn:sendTask id=\"Task_ReorderFastest\" name=\"Reorder parts (fastest)\" messageRef=\"Msg_Order\"/>\n    <bpmn:sendTask id=\"Task_ReorderCheapest\" name=\"Reorder parts (cheapest)\" messageRef=\"Msg_Order\"/>\n    <bpmn:endEvent id=\"End_Complaint\" name=\"Stock depleted, complaint sent\"/>\n    <bpmn:sequenceFlow id=\"Flow_Start\" sourceRef=\"Start_Project\" targetRef=\"Task_Query\"/>\n    <bpmn:sequenceFlow id=\"Flow_QueryToReceive\" sourceRef=\"Task_Query\" targetRef=\"Task_ReceiveOffers\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReceiveToCompare\" sourceRef=\"Task_ReceiveOffers\" targetRef=\"Task_Compare\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompareToList\" sourceRef=\"Task_Compare\" targetRef=\"Task_CreateList\"/>\n    <bpmn:sequenceFlow id=\"Flow_ListToGateway\" sourceRef=\"Task_CreateList\" targetRef=\"Gateway_EnoughFromOne\"/>\n    <bpmn:sequenceFlow id=\"Flow_OneShop\" name=\"Yes\" sourceRef=\"Gateway_EnoughFromOne\" targetRef=\"Task_SelectOneShop\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${enoughFromOneShop}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SeveralShops\" name=\"No\" sourceRef=\"Gateway_EnoughFromOne\" targetRef=\"Task_SelectSeveralShops\"/>\n    <bpmn:sequenceFlow id=\"Flow_OneToMerge\" sourceRef=\"Task_SelectOneShop\" targetRef=\"Gateway_OrderMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_SeveralToMerge\" sourceRef=\"Task_SelectSeveralShops\" targetRef=\"Gateway_OrderMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MergeToOrder\" sourceRef=\"Gateway_OrderMerge\" targetRef=\"Task_PlaceOrders\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderToArrival\" sourceRef=\"Task_PlaceOrders\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ArrivalToBatch\" sourceRef=\"Gateway_ArrivalMerge\" targetRef=\"Event_BatchArrives\"/>\n    <bpmn:sequenceFlow id=\"Flow_BatchToBuild\" sourceRef=\"Event_BatchArrives\" targetRef=\"Task_Build\"/>\n    <bpmn:sequenceFlow id=\"Flow_BuildToStock\" sourceRef=\"Task_Build\" targetRef=\"Gateway_StockLevel\"/>\n    <bpmn:sequenceFlow id=\"Flow_StockZero\" name=\"Zero\" sourceRef=\"Gateway_StockLevel\" targetRef=\"Task_ComplaintMail\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel == 0}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_StockFast\" name=\"Below 3\" sourceRef=\"Gateway_StockLevel\" targetRef=\"Task_ReorderFastest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel &gt; 0 &amp;&amp; stockLevel &lt; 3}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_StockCheap\" name=\"Below 5\" sourceRef=\"Gateway_StockLevel\" targetRef=\"Task_ReorderCheapest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel &gt;= 3 &amp;&amp; stockLevel &lt; 5}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_StockOk\" name=\"5 or more\" sourceRef=\"Gateway_StockLevel\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MailToEnd\" sourceRef=\"Task_ComplaintMail\" targetRef=\"End_Complaint\"/>\n    <bpmn:sequenceFlow id=\"Flow_FastToArrival\" sourceRef=\"Task_ReorderFastest\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheapToArrival\" sourceRef=\"Task_ReorderCheapest\" targetRef=\"Gateway_ArrivalMerge\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1148.2,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 59,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.350472,
+    "workflow_order_similarity": 0.379895,
+    "connection_f1": 0.150943,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.608696,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.25379,
+    "activity_semantic_similarity": 0.45414,
+    "activity_label_precision": 0.545455,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.571429
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_Contract\" targetNamespace=\"http://example.org/bpmn/contract\">\n  <bpmn:message id=\"Msg_Query\" name=\"Parts query\"/>\n  <bpmn:message id=\"Msg_Offer\" name=\"Offer (quantity, price, delivery time)\"/>\n  <bpmn:message id=\"Msg_Order\" name=\"Parts order\"/>\n  <bpmn:message id=\"Msg_Batch\" name=\"Parts batch\"/>\n  <bpmn:collaboration id=\"Collaboration_Contract\">\n    <bpmn:participant id=\"Participant_Project\" name=\"Contract project\" processRef=\"Process_Contract\"/>\n    <bpmn:participant id=\"Participant_WebShops\" name=\"Web shops\"/>\n    <bpmn:messageFlow id=\"MF_Query\" name=\"Query parts\" sourceRef=\"Task_Query\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_Offers\" name=\"Offers\" sourceRef=\"Participant_WebShops\" targetRef=\"Task_ReceiveOffers\"/>\n    <bpmn:messageFlow id=\"MF_Order\" name=\"Orders\" sourceRef=\"Task_PlaceOrders\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_ReorderCheapest\" name=\"Reorder (cheapest)\" sourceRef=\"Task_ReorderCheapest\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_ReorderFastest\" name=\"Reorder (fastest)\" sourceRef=\"Task_ReorderFastest\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_Batch\" name=\"Parts batch arrives\" sourceRef=\"Participant_WebShops\" targetRef=\"Event_BatchArrives\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Contract\" name=\"Contract\" isExecutable=\"false\">\n    <bpmn:documentation>Parts are ordered from web shops and arrive in batches in random order (about +/- 2 days). Building starts when the first parts arrive. If the stock of a single part falls below 5, the cheapest parts are reordered; if it falls below 3, the fastest parts are reordered; if it is zero, a complaint mail is written.</bpmn:documentation>\n    <bpmn:startEvent id=\"Start_Project\" name=\"Contract project needs parts\"/>\n    <bpmn:sendTask id=\"Task_Query\" name=\"Query web shops for quantity, price and delivery time\" messageRef=\"Msg_Query\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveOffers\" name=\"Receive offers from web shops\" messageRef=\"Msg_Offer\"/>\n    <bpmn:task id=\"Task_Compare\" name=\"Compare offers\"/>\n    <bpmn:task id=\"Task_CreateList\" name=\"Create list of parts to order per shop\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_EnoughFromOne\" name=\"Enough parts from one shop?\" default=\"Flow_SeveralShops\"/>\n    <bpmn:task id=\"Task_SelectOneShop\" name=\"Select cheapest parts from one shop\"/>\n    <bpmn:task id=\"Task_SelectSeveralShops\" name=\"Select cheapest parts from several shops\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OrderMerge\" name=\"Parts selected\"/>\n    <bpmn:sendTask id=\"Task_PlaceOrders\" name=\"Place orders with web shops\" messageRef=\"Msg_Order\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ArrivalMerge\" name=\"Parts expected\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_BatchArrives\" name=\"Parts batch arrives\">\n      <bpmn:messageEventDefinition id=\"MED_Batch\" messageRef=\"Msg_Batch\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:manualTask id=\"Task_Build\" name=\"Build with arrived parts\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockBelow5\" name=\"Stock of a single part below 5?\" default=\"Flow_Below5No\"/>\n    <bpmn:sendTask id=\"Task_ReorderCheapest\" name=\"Reorder parts (cheapest)\" messageRef=\"Msg_Order\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockBelow3\" name=\"Stock below 3?\" default=\"Flow_Below3No\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockZero\" name=\"Stock zero?\" default=\"Flow_ZeroNo\"/>\n    <bpmn:manualTask id=\"Task_ComplaintMail\" name=\"Write mail to friends complaining about web shops\"/>\n    <bpmn:sendTask id=\"Task_ReorderFastest\" name=\"Reorder parts (fastest)\" messageRef=\"Msg_Order\"/>\n    <bpmn:endEvent id=\"End_Complaint\" name=\"Stock depleted, complaint sent\"/>\n    <bpmn:sequenceFlow id=\"Flow_Start\" sourceRef=\"Start_Project\" targetRef=\"Task_Query\"/>\n    <bpmn:sequenceFlow id=\"Flow_QueryToReceive\" sourceRef=\"Task_Query\" targetRef=\"Task_ReceiveOffers\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReceiveToCompare\" sourceRef=\"Task_ReceiveOffers\" targetRef=\"Task_Compare\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompareToList\" sourceRef=\"Task_Compare\" targetRef=\"Task_CreateList\"/>\n    <bpmn:sequenceFlow id=\"Flow_ListToGateway\" sourceRef=\"Task_CreateList\" targetRef=\"Gateway_EnoughFromOne\"/>\n    <bpmn:sequenceFlow id=\"Flow_OneShop\" name=\"Yes\" sourceRef=\"Gateway_EnoughFromOne\" targetRef=\"Task_SelectOneShop\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${enoughFromOneShop}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SeveralShops\" name=\"No\" sourceRef=\"Gateway_EnoughFromOne\" targetRef=\"Task_SelectSeveralShops\"/>\n    <bpmn:sequenceFlow id=\"Flow_OneToMerge\" sourceRef=\"Task_SelectOneShop\" targetRef=\"Gateway_OrderMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_SeveralToMerge\" sourceRef=\"Task_SelectSeveralShops\" targetRef=\"Gateway_OrderMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MergeToOrder\" sourceRef=\"Gateway_OrderMerge\" targetRef=\"Task_PlaceOrders\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderToArrival\" sourceRef=\"Task_PlaceOrders\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ArrivalToBatch\" sourceRef=\"Gateway_ArrivalMerge\" targetRef=\"Event_BatchArrives\"/>\n    <bpmn:sequenceFlow id=\"Flow_BatchToBuild\" sourceRef=\"Event_BatchArrives\" targetRef=\"Task_Build\"/>\n    <bpmn:sequenceFlow id=\"Flow_BuildToStock\" sourceRef=\"Task_Build\" targetRef=\"Gateway_StockBelow5\"/>\n    <bpmn:sequenceFlow id=\"Flow_Below5Yes\" name=\"Yes\" sourceRef=\"Gateway_StockBelow5\" targetRef=\"Task_ReorderCheapest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel &lt; 5}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Below5No\" name=\"No\" sourceRef=\"Gateway_StockBelow5\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheapToBelow3\" sourceRef=\"Task_ReorderCheapest\" targetRef=\"Gateway_StockBelow3\"/>\n    <bpmn:sequenceFlow id=\"Flow_Below3Yes\" name=\"Yes\" sourceRef=\"Gateway_StockBelow3\" targetRef=\"Gateway_StockZero\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel &lt; 3}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Below3No\" name=\"No\" sourceRef=\"Gateway_StockBelow3\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ZeroYes\" name=\"Yes\" sourceRef=\"Gateway_StockZero\" targetRef=\"Task_ComplaintMail\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel == 0}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ZeroNo\" name=\"No\" sourceRef=\"Gateway_StockZero\" targetRef=\"Task_ReorderFastest\"/>\n    <bpmn:sequenceFlow id=\"Flow_MailToEnd\" sourceRef=\"Task_ComplaintMail\" targetRef=\"End_Complaint\"/>\n    <bpmn:sequenceFlow id=\"Flow_FastToArrival\" sourceRef=\"Task_ReorderFastest\" targetRef=\"Gateway_ArrivalMerge\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1929.4,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 56,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.395235,
+    "workflow_order_similarity": 0.347063,
+    "connection_f1": 0.150943,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.652174,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.296426,
+    "activity_semantic_similarity": 0.49463,
+    "activity_label_precision": 0.583333,
+    "activity_label_recall": 0.7,
+    "activity_label_f1": 0.636364
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_Contract\" targetNamespace=\"http://example.org/bpmn/contract\">\n  <bpmn:message id=\"Msg_Query\" name=\"Parts query\"/>\n  <bpmn:message id=\"Msg_Offer\" name=\"Offer (quantity, price, delivery time)\"/>\n  <bpmn:message id=\"Msg_Order\" name=\"Parts order\"/>\n  <bpmn:collaboration id=\"Collaboration_Contract\">\n    <bpmn:participant id=\"Participant_Project\" name=\"Contract project\" processRef=\"Process_Contract\"/>\n    <bpmn:participant id=\"Participant_WebShops\" name=\"Web shops\"/>\n    <bpmn:messageFlow id=\"MF_Query\" name=\"Query parts\" sourceRef=\"Task_Query\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_Offers\" name=\"Offers\" sourceRef=\"Participant_WebShops\" targetRef=\"Task_ReceiveOffers\"/>\n    <bpmn:messageFlow id=\"MF_Order\" name=\"Orders\" sourceRef=\"Task_PlaceOrders\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_ReorderCheapest\" name=\"Reorder (cheapest)\" sourceRef=\"Task_ReorderCheapest\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_ReorderFastest\" name=\"Reorder (fastest)\" sourceRef=\"Task_ReorderFastest\" targetRef=\"Participant_WebShops\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Contract\" name=\"Contract\" isExecutable=\"false\">\n    <bpmn:documentation>Parts are ordered from web shops and arrive in batches in random order (about +/- 2 days). Building starts when the first parts arrive. If the stock of a single part falls below 5, the cheapest parts are reordered; if it falls below 3, the fastest parts are reordered; if it is zero, a complaint mail is written.</bpmn:documentation>\n    <bpmn:startEvent id=\"Start_Project\" name=\"Contract project needs parts\"/>\n    <bpmn:sendTask id=\"Task_Query\" name=\"Query web shops for quantity, price and delivery time\" messageRef=\"Msg_Query\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveOffers\" name=\"Receive offers from web shops\" messageRef=\"Msg_Offer\"/>\n    <bpmn:task id=\"Task_Compare\" name=\"Compare offers\"/>\n    <bpmn:task id=\"Task_CreateList\" name=\"Create list of parts to order per shop\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_EnoughFromOne\" name=\"Enough parts from one shop?\" default=\"Flow_SeveralShops\"/>\n    <bpmn:task id=\"Task_SelectOneShop\" name=\"Select cheapest parts from one shop\"/>\n    <bpmn:task id=\"Task_SelectSeveralShops\" name=\"Select cheapest parts from several shops\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OrderMerge\" name=\"Parts selected\"/>\n    <bpmn:sendTask id=\"Task_PlaceOrders\" name=\"Place orders with web shops\" messageRef=\"Msg_Order\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ArrivalMerge\" name=\"Parts expected\"/>\n    <bpmn:manualTask id=\"Task_ReceiveBatch\" name=\"Receive parts batch\"/>\n    <bpmn:manualTask id=\"Task_Build\" name=\"Build with arrived parts\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockBelow5\" name=\"Stock of a single part below 5?\" default=\"Flow_Below5No\"/>\n    <bpmn:sendTask id=\"Task_ReorderCheapest\" name=\"Reorder parts (cheapest)\" messageRef=\"Msg_Order\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockBelow3\" name=\"Stock below 3?\" default=\"Flow_Below3No\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockZero\" name=\"Stock zero?\" default=\"Flow_ZeroNo\"/>\n    <bpmn:manualTask id=\"Task_ComplaintMail\" name=\"Write mail to friends complaining about web shops\"/>\n    <bpmn:sendTask id=\"Task_ReorderFastest\" name=\"Reorder parts (fastest)\" messageRef=\"Msg_Order\"/>\n    <bpmn:endEvent id=\"End_Complaint\" name=\"Stock depleted, complaint sent\"/>\n    <bpmn:sequenceFlow id=\"Flow_Start\" sourceRef=\"Start_Project\" targetRef=\"Task_Query\"/>\n    <bpmn:sequenceFlow id=\"Flow_QueryToReceive\" sourceRef=\"Task_Query\" targetRef=\"Task_ReceiveOffers\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReceiveToCompare\" sourceRef=\"Task_ReceiveOffers\" targetRef=\"Task_Compare\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompareToList\" sourceRef=\"Task_Compare\" targetRef=\"Task_CreateList\"/>\n    <bpmn:sequenceFlow id=\"Flow_ListToGateway\" sourceRef=\"Task_CreateList\" targetRef=\"Gateway_EnoughFromOne\"/>\n    <bpmn:sequenceFlow id=\"Flow_OneShop\" name=\"Yes\" sourceRef=\"Gateway_EnoughFromOne\" targetRef=\"Task_SelectOneShop\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${enoughFromOneShop}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SeveralShops\" name=\"No\" sourceRef=\"Gateway_EnoughFromOne\" targetRef=\"Task_SelectSeveralShops\"/>\n    <bpmn:sequenceFlow id=\"Flow_OneToMerge\" sourceRef=\"Task_SelectOneShop\" targetRef=\"Gateway_OrderMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_SeveralToMerge\" sourceRef=\"Task_SelectSeveralShops\" targetRef=\"Gateway_OrderMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MergeToOrder\" sourceRef=\"Gateway_OrderMerge\" targetRef=\"Task_PlaceOrders\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderToArrival\" sourceRef=\"Task_PlaceOrders\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ArrivalToReceive\" sourceRef=\"Gateway_ArrivalMerge\" targetRef=\"Task_ReceiveBatch\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReceiveToBuild\" sourceRef=\"Task_ReceiveBatch\" targetRef=\"Task_Build\"/>\n    <bpmn:sequenceFlow id=\"Flow_BuildToStock\" sourceRef=\"Task_Build\" targetRef=\"Gateway_StockBelow5\"/>\n    <bpmn:sequenceFlow id=\"Flow_Below5Yes\" name=\"Yes\" sourceRef=\"Gateway_StockBelow5\" targetRef=\"Task_ReorderCheapest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel &lt; 5}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Below5No\" name=\"No\" sourceRef=\"Gateway_StockBelow5\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheapToBelow3\" sourceRef=\"Task_ReorderCheapest\" targetRef=\"Gateway_StockBelow3\"/>\n    <bpmn:sequenceFlow id=\"Flow_Below3Yes\" name=\"Yes\" sourceRef=\"Gateway_StockBelow3\" targetRef=\"Gateway_StockZero\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel &lt; 3}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Below3No\" name=\"No\" sourceRef=\"Gateway_StockBelow3\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ZeroYes\" name=\"Yes\" sourceRef=\"Gateway_StockZero\" targetRef=\"Task_ComplaintMail\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel == 0}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ZeroNo\" name=\"No\" sourceRef=\"Gateway_StockZero\" targetRef=\"Task_ReorderFastest\"/>\n    <bpmn:sequenceFlow id=\"Flow_MailToEnd\" sourceRef=\"Task_ComplaintMail\" targetRef=\"End_Complaint\"/>\n    <bpmn:sequenceFlow id=\"Flow_FastToArrival\" sourceRef=\"Task_ReorderFastest\" targetRef=\"Gateway_ArrivalMerge\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 2289.8,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 56,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.395235,
+    "workflow_order_similarity": 0.33367,
+    "connection_f1": 0.113208,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.652174,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.296426,
+    "activity_semantic_similarity": 0.49463,
+    "activity_label_precision": 0.583333,
+    "activity_label_recall": 0.7,
+    "activity_label_f1": 0.636364
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_Contract\" targetNamespace=\"http://example.org/bpmn/contract\">\n  <bpmn:message id=\"Msg_Query\" name=\"Parts query\"/>\n  <bpmn:message id=\"Msg_Offer\" name=\"Offer (quantity, price, delivery time)\"/>\n  <bpmn:message id=\"Msg_Order\" name=\"Parts order\"/>\n  <bpmn:collaboration id=\"Collaboration_Contract\">\n    <bpmn:participant id=\"Participant_Project\" name=\"Contract project\" processRef=\"Process_Contract\"/>\n    <bpmn:participant id=\"Participant_WebShops\" name=\"Web shops\"/>\n    <bpmn:messageFlow id=\"MF_Query\" name=\"Query parts\" sourceRef=\"Task_Query\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_Offers\" name=\"Offers\" sourceRef=\"Participant_WebShops\" targetRef=\"Task_ReceiveOffers\"/>\n    <bpmn:messageFlow id=\"MF_Order\" name=\"Orders\" sourceRef=\"Task_PlaceOrders\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_ReorderCheapest\" name=\"Reorder (cheapest)\" sourceRef=\"Task_ReorderCheapest\" targetRef=\"Participant_WebShops\"/>\n    <bpmn:messageFlow id=\"MF_ReorderFastest\" name=\"Reorder (fastest)\" sourceRef=\"Task_ReorderFastest\" targetRef=\"Participant_WebShops\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Contract\" name=\"Contract\" isExecutable=\"false\">\n    <bpmn:documentation>Query all web shops for quantity, price and delivery time; create the list of parts per shop, using the cheapest parts from one shop or from several shops; place orders; receive batches of parts (arriving about +/- 2 days in random order) and build; reorder cheapest when stock of a single part falls below 5, reorder fastest when it falls below 3, and write a complaint mail when it is zero.</bpmn:documentation>\n    <bpmn:startEvent id=\"Start_Project\" name=\"Contract project needs parts\"/>\n    <bpmn:sendTask id=\"Task_Query\" name=\"Query web shops for quantity, price and delivery time\" messageRef=\"Msg_Query\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveOffers\" name=\"Receive offers from web shops\" messageRef=\"Msg_Offer\"/>\n    <bpmn:task id=\"Task_Compare\" name=\"Compare offers\"/>\n    <bpmn:task id=\"Task_CreateList\" name=\"Create list of parts to order per shop\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_EnoughFromOne\" name=\"Enough parts from one shop?\" default=\"Flow_SeveralShops\"/>\n    <bpmn:task id=\"Task_SelectOneShop\" name=\"Select cheapest parts from one shop\"/>\n    <bpmn:task id=\"Task_SelectSeveralShops\" name=\"Select cheapest parts from several shops\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OrderMerge\" name=\"Parts selected\"/>\n    <bpmn:sendTask id=\"Task_PlaceOrders\" name=\"Place orders with web shops\" messageRef=\"Msg_Order\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ArrivalMerge\" name=\"Parts expected\"/>\n    <bpmn:manualTask id=\"Task_ReceiveBatch\" name=\"Receive parts batch\"/>\n    <bpmn:manualTask id=\"Task_Build\" name=\"Build with arrived parts\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockBelow5\" name=\"Stock of a single part below 5?\" default=\"Flow_Below5No\"/>\n    <bpmn:sendTask id=\"Task_ReorderCheapest\" name=\"Reorder parts (cheapest)\" messageRef=\"Msg_Order\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockBelow3\" name=\"Stock below 3?\" default=\"Flow_Below3No\"/>\n    <bpmn:sendTask id=\"Task_ReorderFastest\" name=\"Reorder parts (fastest)\" messageRef=\"Msg_Order\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockZero\" name=\"Stock zero?\" default=\"Flow_ZeroNo\"/>\n    <bpmn:manualTask id=\"Task_ComplaintMail\" name=\"Write mail to friends complaining about web shops\"/>\n    <bpmn:endEvent id=\"End_Complaint\" name=\"Stock depleted, complaint sent\"/>\n    <bpmn:sequenceFlow id=\"Flow_Start\" sourceRef=\"Start_Project\" targetRef=\"Task_Query\"/>\n    <bpmn:sequenceFlow id=\"Flow_QueryToReceive\" sourceRef=\"Task_Query\" targetRef=\"Task_ReceiveOffers\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReceiveToCompare\" sourceRef=\"Task_ReceiveOffers\" targetRef=\"Task_Compare\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompareToList\" sourceRef=\"Task_Compare\" targetRef=\"Task_CreateList\"/>\n    <bpmn:sequenceFlow id=\"Flow_ListToGateway\" sourceRef=\"Task_CreateList\" targetRef=\"Gateway_EnoughFromOne\"/>\n    <bpmn:sequenceFlow id=\"Flow_OneShop\" name=\"Yes\" sourceRef=\"Gateway_EnoughFromOne\" targetRef=\"Task_SelectOneShop\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${enoughFromOneShop}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SeveralShops\" name=\"No\" sourceRef=\"Gateway_EnoughFromOne\" targetRef=\"Task_SelectSeveralShops\"/>\n    <bpmn:sequenceFlow id=\"Flow_OneToMerge\" sourceRef=\"Task_SelectOneShop\" targetRef=\"Gateway_OrderMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_SeveralToMerge\" sourceRef=\"Task_SelectSeveralShops\" targetRef=\"Gateway_OrderMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MergeToOrder\" sourceRef=\"Gateway_OrderMerge\" targetRef=\"Task_PlaceOrders\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderToArrival\" sourceRef=\"Task_PlaceOrders\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ArrivalToReceive\" sourceRef=\"Gateway_ArrivalMerge\" targetRef=\"Task_ReceiveBatch\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReceiveToBuild\" sourceRef=\"Task_ReceiveBatch\" targetRef=\"Task_Build\"/>\n    <bpmn:sequenceFlow id=\"Flow_BuildToStock\" sourceRef=\"Task_Build\" targetRef=\"Gateway_StockBelow5\"/>\n    <bpmn:sequenceFlow id=\"Flow_Below5Yes\" name=\"Yes\" sourceRef=\"Gateway_StockBelow5\" targetRef=\"Task_ReorderCheapest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel &lt; 5}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Below5No\" name=\"No\" sourceRef=\"Gateway_StockBelow5\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheapToBelow3\" sourceRef=\"Task_ReorderCheapest\" targetRef=\"Gateway_StockBelow3\"/>\n    <bpmn:sequenceFlow id=\"Flow_Below3Yes\" name=\"Yes\" sourceRef=\"Gateway_StockBelow3\" targetRef=\"Task_ReorderFastest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel &lt; 3}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Below3No\" name=\"No\" sourceRef=\"Gateway_StockBelow3\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_FastToZero\" sourceRef=\"Task_ReorderFastest\" targetRef=\"Gateway_StockZero\"/>\n    <bpmn:sequenceFlow id=\"Flow_ZeroYes\" name=\"Yes\" sourceRef=\"Gateway_StockZero\" targetRef=\"Task_ComplaintMail\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${stockLevel == 0}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ZeroNo\" name=\"No\" sourceRef=\"Gateway_StockZero\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MailToEnd\" sourceRef=\"Task_ComplaintMail\" targetRef=\"End_Complaint\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  }
+ ]
+}

@@ -1,0 +1,112 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_EShopOrdering" targetNamespace="http://example.org/bpmn/eshop-ordering">
+  <bpmn:message id="Msg_LoginRequest" name="Login request"/>
+  <bpmn:message id="Msg_LoginResult" name="Login result"/>
+  <bpmn:message id="Msg_OrderSubmitted" name="Order submitted"/>
+  <bpmn:message id="Msg_PaymentData" name="Payment data"/>
+  <bpmn:message id="Msg_PaymentConfirmation" name="Payment confirmation"/>
+  <bpmn:message id="Msg_AddressPaymentCompleted" name="Address and payment completed"/>
+
+  <bpmn:collaboration id="Collaboration_EShopOrdering">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_EShopSystem" name="E-Shop System" processRef="Process_EShopSystem"/>
+    <bpmn:participant id="Participant_Bank" name="Bank"/>
+    <bpmn:messageFlow id="MF_LoginRequest" name="Login request" sourceRef="T_Login" targetRef="IC_LoginRequest" messageRef="Msg_LoginRequest"/>
+    <bpmn:messageFlow id="MF_LoginResult" name="Login result" sourceRef="T_CheckCredentials" targetRef="IC_LoginConfirmation" messageRef="Msg_LoginResult"/>
+    <bpmn:messageFlow id="MF_OrderSubmitted" name="Order submitted" sourceRef="T_SubmitOrder" targetRef="IC_OrderSubmitted" messageRef="Msg_OrderSubmitted"/>
+    <bpmn:messageFlow id="MF_PaymentData" name="Payment data" sourceRef="T_EnterPaymentData" targetRef="Participant_Bank" messageRef="Msg_PaymentData"/>
+    <bpmn:messageFlow id="MF_PaymentConfirmation" name="Payment confirmation" sourceRef="Participant_Bank" targetRef="IC_PaymentConfirmed" messageRef="Msg_PaymentConfirmation"/>
+    <bpmn:messageFlow id="MF_AddressPaymentCompleted" name="Address and payment completed" sourceRef="T_SendCompletion" targetRef="IC_AddressPaymentDone" messageRef="Msg_AddressPaymentCompleted"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Customer" name="Customer" isExecutable="false">
+    <bpmn:startEvent id="SC_Start" name="Customer starts login"/>
+    <bpmn:manualTask id="T_Login" name="Log in to E-Shop system"/>
+    <bpmn:intermediateCatchEvent id="IC_LoginConfirmation" name="Login confirmation received">
+      <bpmn:messageEventDefinition id="MED_LoginConfirmation" messageRef="Msg_LoginResult"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="GW_LoginResult" name="Login successful?" default="F_LoginFailed"/>
+    <bpmn:endEvent id="End_ShoppingStopped" name="Shopping experience stopped"/>
+    <bpmn:userTask id="T_SelectProduct" name="Select product"/>
+    <bpmn:userTask id="T_AddToCart" name="Add product to shopping cart"/>
+    <bpmn:userTask id="T_SaveProduct" name="Save product"/>
+    <bpmn:manualTask id="T_CheckAllSelected" name="Check whether all products were selected"/>
+    <bpmn:exclusiveGateway id="GW_ProductsCheck" name="All products selected?" default="F_ProductsNotAllSelected"/>
+    <bpmn:sendTask id="T_SubmitOrder" name="Submit order" messageRef="Msg_OrderSubmitted"/>
+    <bpmn:userTask id="T_EnterPaymentData" name="Enter payment data"/>
+    <bpmn:parallelGateway id="GW_WaitSplit" name="Split while waiting for payment"/>
+    <bpmn:intermediateCatchEvent id="IC_PaymentConfirmed" name="Payment confirmed by bank">
+      <bpmn:messageEventDefinition id="MED_PaymentConfirmed" messageRef="Msg_PaymentConfirmation"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="T_EnterShippingAddress" name="Enter shipping address"/>
+    <bpmn:exclusiveGateway id="GW_BillingSplit" name="Billing address differs from shipping address?" default="F_BillingSameAsShipping"/>
+    <bpmn:userTask id="T_EnterBillingAddress" name="Enter billing address"/>
+    <bpmn:exclusiveGateway id="GW_AddressMerge" name="Address entry done"/>
+    <bpmn:parallelGateway id="GW_WaitJoin" name="Payment and address done"/>
+    <bpmn:sendTask id="T_SendCompletion" name="Send payment and address completion" messageRef="Msg_AddressPaymentCompleted"/>
+    <bpmn:endEvent id="End_CustomerDone" name="Customer part finished"/>
+
+    <bpmn:sequenceFlow id="F_C1" sourceRef="SC_Start" targetRef="T_Login"/>
+    <bpmn:sequenceFlow id="F_C2" sourceRef="T_Login" targetRef="IC_LoginConfirmation"/>
+    <bpmn:sequenceFlow id="F_C3" sourceRef="IC_LoginConfirmation" targetRef="GW_LoginResult"/>
+    <bpmn:sequenceFlow id="F_LoginSuccess" name="Yes" sourceRef="GW_LoginResult" targetRef="T_SelectProduct">
+      <bpmn:conditionExpression>Login successful</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_LoginFailed" name="No" sourceRef="GW_LoginResult" targetRef="End_ShoppingStopped"/>
+    <bpmn:sequenceFlow id="F_C4" sourceRef="T_SelectProduct" targetRef="T_AddToCart"/>
+    <bpmn:sequenceFlow id="F_C5" sourceRef="T_AddToCart" targetRef="T_SaveProduct"/>
+    <bpmn:sequenceFlow id="F_C6" sourceRef="T_SaveProduct" targetRef="T_CheckAllSelected"/>
+    <bpmn:sequenceFlow id="F_C7" sourceRef="T_CheckAllSelected" targetRef="GW_ProductsCheck"/>
+    <bpmn:sequenceFlow id="F_AllSelected" name="Yes" sourceRef="GW_ProductsCheck" targetRef="T_SubmitOrder">
+      <bpmn:conditionExpression>All products selected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_ProductsNotAllSelected" name="No" sourceRef="GW_ProductsCheck" targetRef="T_SelectProduct"/>
+    <bpmn:sequenceFlow id="F_C8" sourceRef="T_SubmitOrder" targetRef="T_EnterPaymentData"/>
+    <bpmn:sequenceFlow id="F_C9" sourceRef="T_EnterPaymentData" targetRef="GW_WaitSplit"/>
+    <bpmn:sequenceFlow id="F_C10" sourceRef="GW_WaitSplit" targetRef="IC_PaymentConfirmed"/>
+    <bpmn:sequenceFlow id="F_C11" sourceRef="GW_WaitSplit" targetRef="T_EnterShippingAddress"/>
+    <bpmn:sequenceFlow id="F_C12" sourceRef="T_EnterShippingAddress" targetRef="GW_BillingSplit"/>
+    <bpmn:sequenceFlow id="F_BillingDiffers" name="Yes" sourceRef="GW_BillingSplit" targetRef="T_EnterBillingAddress">
+      <bpmn:conditionExpression>Billing address differs from shipping address</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_BillingSameAsShipping" name="No" sourceRef="GW_BillingSplit" targetRef="GW_AddressMerge"/>
+    <bpmn:sequenceFlow id="F_C13" sourceRef="T_EnterBillingAddress" targetRef="GW_AddressMerge"/>
+    <bpmn:sequenceFlow id="F_C14" sourceRef="GW_AddressMerge" targetRef="GW_WaitJoin"/>
+    <bpmn:sequenceFlow id="F_C15" sourceRef="IC_PaymentConfirmed" targetRef="GW_WaitJoin"/>
+    <bpmn:sequenceFlow id="F_C16" sourceRef="GW_WaitJoin" targetRef="T_SendCompletion"/>
+    <bpmn:sequenceFlow id="F_C17" sourceRef="T_SendCompletion" targetRef="End_CustomerDone"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_EShopSystem" name="E-Shop System" isExecutable="false">
+    <bpmn:startEvent id="SE_Start" name="E-Shop system ready"/>
+    <bpmn:intermediateCatchEvent id="IC_LoginRequest" name="Login request received">
+      <bpmn:messageEventDefinition id="MED_LoginRequest" messageRef="Msg_LoginRequest"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="T_CheckCredentials" name="Check credentials"/>
+    <bpmn:intermediateCatchEvent id="IC_OrderSubmitted" name="Order submitted">
+      <bpmn:messageEventDefinition id="MED_OrderSubmitted" messageRef="Msg_OrderSubmitted"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="T_FinishOrder" name="Finish order"/>
+    <bpmn:parallelGateway id="GW_PrepSplit" name="Prepare payment and shipment"/>
+    <bpmn:task id="T_PreparePayment" name="Prepare payment"/>
+    <bpmn:task id="T_PrepareShipment" name="Prepare shipment"/>
+    <bpmn:parallelGateway id="GW_PrepJoin" name="Payment and shipment prepared"/>
+    <bpmn:intermediateCatchEvent id="IC_AddressPaymentDone" name="Address and payment completed">
+      <bpmn:messageEventDefinition id="MED_AddressPaymentDone" messageRef="Msg_AddressPaymentCompleted"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="T_CompleteOrder" name="Complete order"/>
+    <bpmn:endEvent id="End_OrderCompleted" name="Order completed"/>
+
+    <bpmn:sequenceFlow id="F_S1" sourceRef="SE_Start" targetRef="IC_LoginRequest"/>
+    <bpmn:sequenceFlow id="F_S2" sourceRef="IC_LoginRequest" targetRef="T_CheckCredentials"/>
+    <bpmn:sequenceFlow id="F_S3" sourceRef="T_CheckCredentials" targetRef="IC_OrderSubmitted"/>
+    <bpmn:sequenceFlow id="F_S4" sourceRef="IC_OrderSubmitted" targetRef="T_FinishOrder"/>
+    <bpmn:sequenceFlow id="F_S5" sourceRef="T_FinishOrder" targetRef="GW_PrepSplit"/>
+    <bpmn:sequenceFlow id="F_S6" sourceRef="GW_PrepSplit" targetRef="T_PreparePayment"/>
+    <bpmn:sequenceFlow id="F_S7" sourceRef="GW_PrepSplit" targetRef="T_PrepareShipment"/>
+    <bpmn:sequenceFlow id="F_S8" sourceRef="T_PreparePayment" targetRef="GW_PrepJoin"/>
+    <bpmn:sequenceFlow id="F_S9" sourceRef="T_PrepareShipment" targetRef="GW_PrepJoin"/>
+    <bpmn:sequenceFlow id="F_S10" sourceRef="GW_PrepJoin" targetRef="IC_AddressPaymentDone"/>
+    <bpmn:sequenceFlow id="F_S11" sourceRef="IC_AddressPaymentDone" targetRef="T_CompleteOrder"/>
+    <bpmn:sequenceFlow id="F_S12" sourceRef="T_CompleteOrder" targetRef="End_OrderCompleted"/>
+  </bpmn:process>
+</bpmn:definitions>

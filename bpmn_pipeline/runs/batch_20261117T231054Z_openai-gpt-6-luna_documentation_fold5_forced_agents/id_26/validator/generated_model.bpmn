@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_BecomingAParent"
+                  targetNamespace="http://example.com/bpmn/becoming-a-parent">
+  <bpmn:message id="Message_LeaveNotification" name="Maternity leave notification"/>
+  <bpmn:message id="Message_CompanyInformation" name="Information from companies"/>
+
+  <bpmn:collaboration id="Collaboration_BecomingAParent" name="Becoming A Parent">
+    <bpmn:participant id="Participant_ParentSupport" name="Maternity leave support" processRef="Process_BecomingAParent"/>
+    <bpmn:participant id="Participant_SocialSecurity" name="Social Security"/>
+    <bpmn:participant id="Participant_Companies" name="Companies"/>
+    <bpmn:messageFlow id="MessageFlow_NotifySocialSecurity" name="Notify Social Security" sourceRef="Task_Notify" targetRef="Participant_SocialSecurity" messageRef="Message_LeaveNotification"/>
+    <bpmn:messageFlow id="MessageFlow_NotifyCompanies" name="Notify companies" sourceRef="Task_Notify" targetRef="Participant_Companies" messageRef="Message_LeaveNotification"/>
+    <bpmn:messageFlow id="MessageFlow_CompanyInformation" name="Information from companies" sourceRef="Participant_Companies" targetRef="Task_GatherCompanyInformation" messageRef="Message_CompanyInformation"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_BecomingAParent" name="Becoming A Parent" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Process" name="Start"/>
+    <bpmn:task id="Task_FetchInformation" name="Fetch information about potential models"/>
+    <bpmn:userTask id="Task_SelectModel" name="Select a leave model"/>
+    <bpmn:task id="Task_CollectInformation" name="Collect relevant information"/>
+    <bpmn:sendTask id="Task_Notify" name="Notify Social Security and companies in time" messageRef="Message_LeaveNotification"/>
+    <bpmn:receiveTask id="Task_GatherCompanyInformation" name="Gather information from companies" messageRef="Message_CompanyInformation"/>
+    <bpmn:intermediateCatchEvent id="Event_EndOfPeriod" name="End of leave period">
+      <bpmn:timerEventDefinition id="TimerDefinition_EndOfPeriod">
+        <bpmn:timeDate xsi:type="bpmn:tFormalExpression">leavePeriodEnd</bpmn:timeDate>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_DecideExtension" name="Decide whether to extend leave"/>
+    <bpmn:exclusiveGateway id="Gateway_ExtensionDecision" name="Extend leave?" default="Flow_Extension_No"/>
+    <bpmn:endEvent id="EndEvent_ExtensionSelected" name="Leave extended"/>
+    <bpmn:endEvent id="EndEvent_NoExtension" name="Leave ends without extension"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Fetch" sourceRef="StartEvent_Process" targetRef="Task_FetchInformation"/>
+    <bpmn:sequenceFlow id="Flow_Fetch_Select" sourceRef="Task_FetchInformation" targetRef="Task_SelectModel"/>
+    <bpmn:sequenceFlow id="Flow_Select_Collect" sourceRef="Task_SelectModel" targetRef="Task_CollectInformation"/>
+    <bpmn:sequenceFlow id="Flow_Collect_Notify" sourceRef="Task_CollectInformation" targetRef="Task_Notify"/>
+    <bpmn:sequenceFlow id="Flow_Notify_Gather" sourceRef="Task_Notify" targetRef="Task_GatherCompanyInformation"/>
+    <bpmn:sequenceFlow id="Flow_Gather_PeriodEnd" sourceRef="Task_GatherCompanyInformation" targetRef="Event_EndOfPeriod"/>
+    <bpmn:sequenceFlow id="Flow_PeriodEnd_Decide" sourceRef="Event_EndOfPeriod" targetRef="Task_DecideExtension"/>
+    <bpmn:sequenceFlow id="Flow_Decide_Gateway" sourceRef="Task_DecideExtension" targetRef="Gateway_ExtensionDecision"/>
+    <bpmn:sequenceFlow id="Flow_Extension_Yes" name="Yes" sourceRef="Gateway_ExtensionDecision" targetRef="EndEvent_ExtensionSelected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${extensionChosen}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Extension_No" name="No" sourceRef="Gateway_ExtensionDecision" targetRef="EndEvent_NoExtension"/>
+  </bpmn:process>
+</bpmn:definitions>

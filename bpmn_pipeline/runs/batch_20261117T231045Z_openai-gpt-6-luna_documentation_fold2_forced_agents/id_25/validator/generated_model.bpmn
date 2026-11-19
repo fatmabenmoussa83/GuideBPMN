@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" targetNamespace="https://example.com/bpmn/find-a-job">
+  <bpmn:collaboration id="Collaboration_FindAJob">
+    <bpmn:participant id="Participant_Applicant" name="Job applicant" processRef="Process_FindAJob"/>
+    <bpmn:participant id="Participant_Companies" name="Companies"/>
+    <bpmn:messageFlow id="MessageFlow_Applications" name="Job applications" sourceRef="Task_SubmitApplications" targetRef="Participant_Companies"/>
+    <bpmn:messageFlow id="MessageFlow_ApplicationResponse" name="Application confirmation and rating" sourceRef="Participant_Companies" targetRef="Task_ReceiveApplicationResponse"/>
+    <bpmn:messageFlow id="MessageFlow_Offers" name="Potential job offers" sourceRef="Participant_Companies" targetRef="Task_ReceiveOffers"/>
+    <bpmn:messageFlow id="MessageFlow_FurtherOffers" name="Further job offers" sourceRef="Participant_Companies" targetRef="Task_ReceiveFurtherOffers"/>
+    <bpmn:messageFlow id="MessageFlow_InterviewNegotiation" name="Interview negotiation" sourceRef="Task_NegotiateInterview" targetRef="Participant_Companies"/>
+    <bpmn:messageFlow id="MessageFlow_CompanyRating" name="Company rating of applicant" sourceRef="Participant_Companies" targetRef="Task_ReceiveCompanyRating"/>
+    <bpmn:messageFlow id="MessageFlow_ApplicantRating" name="Applicant rating of company" sourceRef="Task_RateCompany" targetRef="Participant_Companies"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_FindAJob" name="Find a Job" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_FindAJob" name="Start job search"/>
+    <bpmn:task id="Task_SubmitApplications" name="Submit job applications"/>
+    <bpmn:task id="Task_ReportApplications" name="Regularly report companies applied to"/>
+    <bpmn:receiveTask id="Task_ReceiveApplicationResponse" name="Receive application confirmation and rating"/>
+    <bpmn:receiveTask id="Task_ReceiveOffers" name="Receive potential job offers"/>
+    <bpmn:receiveTask id="Task_ReceiveFurtherOffers" name="Receive further job offers"/>
+    <bpmn:exclusiveGateway id="Gateway_InterviewSplit" name="Negotiate an interview?" default="Flow_InterviewSkip"/>
+    <bpmn:task id="Task_NegotiateInterview" name="Negotiate job interview"/>
+    <bpmn:exclusiveGateway id="Gateway_InterviewMerge"/>
+    <bpmn:exclusiveGateway id="Gateway_CompanyWantsApplicant" name="Does a company want the applicant to work for it?"/>
+    <bpmn:task id="Task_Probation" name="Enter probation phase"/>
+    <bpmn:parallelGateway id="Gateway_RatingsSplit" name="Rate after probation"/>
+    <bpmn:task id="Task_RateCompany" name="Rate company"/>
+    <bpmn:receiveTask id="Task_ReceiveCompanyRating" name="Receive company rating of applicant"/>
+    <bpmn:parallelGateway id="Gateway_RatingsJoin"/>
+    <bpmn:exclusiveGateway id="Gateway_Permanent" name="Does the job become permanent?"/>
+    <bpmn:exclusiveGateway id="Gateway_CompanyRatingThreshold" name="Did the applicant rate the company C or less?"/>
+    <bpmn:endEvent id="EndEvent_FindAJob" name="Job becomes permanent"/>
+    <bpmn:sequenceFlow id="Flow_Start_Submit" sourceRef="StartEvent_FindAJob" targetRef="Task_SubmitApplications"/>
+    <bpmn:sequenceFlow id="Flow_Submit_Report" sourceRef="Task_SubmitApplications" targetRef="Task_ReportApplications"/>
+    <bpmn:sequenceFlow id="Flow_Report_Response" sourceRef="Task_ReportApplications" targetRef="Task_ReceiveApplicationResponse"/>
+    <bpmn:sequenceFlow id="Flow_Response_Offers" sourceRef="Task_ReceiveApplicationResponse" targetRef="Task_ReceiveOffers"/>
+    <bpmn:sequenceFlow id="Flow_Offers_InterviewSplit" sourceRef="Task_ReceiveOffers" targetRef="Gateway_InterviewSplit"/>
+    <bpmn:sequenceFlow id="Flow_FurtherOffers_InterviewSplit" sourceRef="Task_ReceiveFurtherOffers" targetRef="Gateway_InterviewSplit"/>
+    <bpmn:sequenceFlow id="Flow_InterviewNegotiate" name="Negotiate" sourceRef="Gateway_InterviewSplit" targetRef="Task_NegotiateInterview">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${interviewNegotiated}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_InterviewSkip" name="Do not negotiate" sourceRef="Gateway_InterviewSplit" targetRef="Gateway_InterviewMerge"/>
+    <bpmn:sequenceFlow id="Flow_Negotiate_Merge" sourceRef="Task_NegotiateInterview" targetRef="Gateway_InterviewMerge"/>
+    <bpmn:sequenceFlow id="Flow_InterviewMerge_Wants" sourceRef="Gateway_InterviewMerge" targetRef="Gateway_CompanyWantsApplicant"/>
+    <bpmn:sequenceFlow id="Flow_Wants_Probation" name="Yes" sourceRef="Gateway_CompanyWantsApplicant" targetRef="Task_Probation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${companyWantsApplicant}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Wants_No" name="No" sourceRef="Gateway_CompanyWantsApplicant" targetRef="Task_SubmitApplications">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${not companyWantsApplicant}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Probation_RatingsSplit" sourceRef="Task_Probation" targetRef="Gateway_RatingsSplit"/>
+    <bpmn:sequenceFlow id="Flow_RatingsSplit_Applicant" sourceRef="Gateway_RatingsSplit" targetRef="Task_RateCompany"/>
+    <bpmn:sequenceFlow id="Flow_RatingsSplit_Company" sourceRef="Gateway_RatingsSplit" targetRef="Task_ReceiveCompanyRating"/>
+    <bpmn:sequenceFlow id="Flow_ApplicantRating_Join" sourceRef="Task_RateCompany" targetRef="Gateway_RatingsJoin"/>
+    <bpmn:sequenceFlow id="Flow_CompanyRating_Join" sourceRef="Task_ReceiveCompanyRating" targetRef="Gateway_RatingsJoin"/>
+    <bpmn:sequenceFlow id="Flow_RatingsJoin_Permanent" sourceRef="Gateway_RatingsJoin" targetRef="Gateway_Permanent"/>
+    <bpmn:sequenceFlow id="Flow_Permanent_Yes" name="Yes" sourceRef="Gateway_Permanent" targetRef="Gateway_CompanyRatingThreshold">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${jobPermanent}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Permanent_No" name="No" sourceRef="Gateway_Permanent" targetRef="Task_SubmitApplications">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${not jobPermanent}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Rating_Low" name="C or less" sourceRef="Gateway_CompanyRatingThreshold" targetRef="Task_ReceiveFurtherOffers">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${companyRatingAtMostC}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Rating_Higher" name="Higher than C" sourceRef="Gateway_CompanyRatingThreshold" targetRef="EndEvent_FindAJob">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${companyRatingAboveC}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:textAnnotation id="TextAnnotation_ReviewVisibility">
+      <bpmn:text>Reviews for a company can only be seen by job applicants after 1 year.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_ReviewVisibility" sourceRef="Task_RateCompany" targetRef="TextAnnotation_ReviewVisibility"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_TransactionDataRequest" targetNamespace="http://example.org/bpmn/transaction-data-request">
+  <bpmn:message id="Message_DataRequest" name="Transaction data request"/>
+  <bpmn:message id="Message_DataTransmission" name="Data transmission"/>
+  <bpmn:message id="Message_Rejection" name="Rejection"/>
+  <bpmn:collaboration id="Collaboration_TransactionDataRequest">
+    <bpmn:participant id="Participant_INQ" name="INQ" processRef="Process_INQ"/>
+    <bpmn:participant id="Participant_IP" name="IP" processRef="Process_IP"/>
+    <bpmn:messageFlow id="MessageFlow_RequestToIP" name="Transaction data request" sourceRef="SendTask_TransmitRequest" targetRef="StartEvent_RequestReceived"/>
+    <bpmn:messageFlow id="MessageFlow_DataToINQ" name="Data transmission" sourceRef="Task_TransmitData" targetRef="IntermediateCatch_DataReceived"/>
+    <bpmn:messageFlow id="MessageFlow_RejectionToINQ" name="Rejection" sourceRef="Task_RejectRequest" targetRef="IntermediateCatch_RejectionReceived"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_INQ" name="INQ" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_INQ" name="Transaction data needed"/>
+    <bpmn:sendTask id="SendTask_TransmitRequest" name="Transmit transaction data request" messageRef="Message_DataRequest"/>
+    <bpmn:eventBasedGateway id="Gateway_AnswerSplit" name="Answer of IP"/>
+    <bpmn:intermediateCatchEvent id="IntermediateCatch_DataReceived" name="Data transmission received">
+      <bpmn:messageEventDefinition id="MessageEventDef_DataReceived" messageRef="Message_DataTransmission"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="IntermediateCatch_RejectionReceived" name="Rejection received">
+      <bpmn:messageEventDefinition id="MessageEventDef_RejectionReceived" messageRef="Message_Rejection"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="EndEvent_DataReceived" name="Transaction data received"/>
+    <bpmn:endEvent id="EndEvent_Rejected" name="Request rejected"/>
+    <bpmn:sequenceFlow id="Flow_INQ_1" sourceRef="StartEvent_INQ" targetRef="SendTask_TransmitRequest"/>
+    <bpmn:sequenceFlow id="Flow_INQ_2" sourceRef="SendTask_TransmitRequest" targetRef="Gateway_AnswerSplit"/>
+    <bpmn:sequenceFlow id="Flow_INQ_3" sourceRef="Gateway_AnswerSplit" targetRef="IntermediateCatch_DataReceived"/>
+    <bpmn:sequenceFlow id="Flow_INQ_4" sourceRef="Gateway_AnswerSplit" targetRef="IntermediateCatch_RejectionReceived"/>
+    <bpmn:sequenceFlow id="Flow_INQ_5" sourceRef="IntermediateCatch_DataReceived" targetRef="EndEvent_DataReceived"/>
+    <bpmn:sequenceFlow id="Flow_INQ_6" sourceRef="IntermediateCatch_RejectionReceived" targetRef="EndEvent_Rejected"/>
+  </bpmn:process>
+  <bpmn:process id="Process_IP" name="IP" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_RequestReceived" name="Transaction data request received">
+      <bpmn:messageEventDefinition id="MessageEventDef_RequestReceived" messageRef="Message_DataRequest"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CheckRequest" name="Check request of INQ"/>
+    <bpmn:exclusiveGateway id="Gateway_ExaminationOutcome" name="Examination outcome"/>
+    <bpmn:task id="Task_TransmitData" name="Transmit data to INQ"/>
+    <bpmn:task id="Task_RejectRequest" name="Reject request of INQ"/>
+    <bpmn:endEvent id="EndEvent_DataTransmitted" name="Data transmitted"/>
+    <bpmn:endEvent id="EndEvent_RequestRejected" name="Request rejected"/>
+    <bpmn:sequenceFlow id="Flow_IP_1" sourceRef="StartEvent_RequestReceived" targetRef="Task_CheckRequest"/>
+    <bpmn:sequenceFlow id="Flow_IP_2" sourceRef="Task_CheckRequest" targetRef="Gateway_ExaminationOutcome"/>
+    <bpmn:sequenceFlow id="Flow_IP_3" name="Examination positive" sourceRef="Gateway_ExaminationOutcome" targetRef="Task_TransmitData">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${examinationResult == 'positive'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_IP_4" name="Examination negative" sourceRef="Gateway_ExaminationOutcome" targetRef="Task_RejectRequest">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${examinationResult == 'negative'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_IP_5" sourceRef="Task_TransmitData" targetRef="EndEvent_DataTransmitted"/>
+    <bpmn:sequenceFlow id="Flow_IP_6" sourceRef="Task_RejectRequest" targetRef="EndEvent_RequestRejected"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_DIY_Smartphone_Repair"
+                  targetNamespace="http://example.org/bpmn/diy-smartphone-repair">
+
+  <bpmn:message id="Msg_ModelDamage" name="Model and damage"/>
+  <bpmn:message id="Msg_Lists" name="Material, tool and ordering lists"/>
+  <bpmn:message id="Msg_ContactFriend" name="Borrow or buy request"/>
+  <bpmn:message id="Msg_FriendOffer" name="Friend offer"/>
+  <bpmn:message id="Msg_Instructions" name="Repair instructions"/>
+  <bpmn:message id="Msg_ReviewVideo" name="Review and video"/>
+  <bpmn:message id="Msg_PhoneToExpert" name="Phone for expert repair"/>
+
+  <bpmn:collaboration id="Collaboration_DIY_Repair">
+    <bpmn:participant id="Participant_User" name="Do-it-yourself repairer" processRef="Process_User"/>
+    <bpmn:participant id="Participant_Tool" name="Online repair tool" processRef="Process_Tool"/>
+    <bpmn:participant id="Participant_Friend" name="Friend"/>
+    <bpmn:participant id="Participant_Expert" name="Repair expert"/>
+
+    <bpmn:messageFlow id="MF_SubmitModel" name="Model and damage" sourceRef="Task_SubmitModel" targetRef="Start_Tool_Model"/>
+    <bpmn:messageFlow id="MF_SendLists" name="Lists and ordering choices" sourceRef="Task_SendLists" targetRef="Task_SelectOrdering"/>
+    <bpmn:messageFlow id="MF_ContactFriend" name="Borrow or buy request" sourceRef="Task_ContactFriend" targetRef="Participant_Friend"/>
+    <bpmn:messageFlow id="MF_FriendOffer" name="Friend offer" sourceRef="Participant_Friend" targetRef="Task_ReceiveFriendOffer"/>
+    <bpmn:messageFlow id="MF_SendInstructions" name="Repair instructions" sourceRef="Task_SendInstructions" targetRef="Task_Repair"/>
+    <bpmn:messageFlow id="MF_ReviewVideo" name="Review and/or video" sourceRef="Task_SendReview" targetRef="Catch_Tool_Review"/>
+    <bpmn:messageFlow id="MF_PhoneToExpert" name="Phone for expert repair" sourceRef="Task_SendToExpert" targetRef="Participant_Expert"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_User" name="DIY repair process (user)" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_User" name="Start DIY repair"/>
+    <bpmn:userTask id="Task_EnterModel" name="Enter model and what is broken"/>
+    <bpmn:sendTask id="Task_SubmitModel" name="Submit model and damage" messageRef="Msg_ModelDamage"/>
+    <bpmn:userTask id="Task_SelectOrdering" name="Select ordering choice for each part"/>
+    <bpmn:exclusiveGateway id="Gateway_SourceSplit" name="Item source?"/>
+    <bpmn:manualTask id="Task_UseOwned" name="Use owned items"/>
+    <bpmn:sendTask id="Task_ContactFriend" name="Contact friend about cheap borrow or purchase" messageRef="Msg_ContactFriend"/>
+    <bpmn:receiveTask id="Task_ReceiveFriendOffer" name="Receive friend offer" messageRef="Msg_FriendOffer"/>
+    <bpmn:manualTask id="Task_BuyRemaining" name="Buy remaining items"/>
+    <bpmn:exclusiveGateway id="Gateway_SourceMerge" name="Items ready"/>
+    <bpmn:manualTask id="Task_Repair" name="Repair the smartphone screen"/>
+    <bpmn:exclusiveGateway id="Gateway_Outcome" name="Repair successful?"/>
+    <bpmn:sendTask id="Task_SendReview" name="Send review and/or video" messageRef="Msg_ReviewVideo"/>
+    <bpmn:sendTask id="Task_SendToExpert" name="Send phone to expert" messageRef="Msg_PhoneToExpert"/>
+    <bpmn:endEvent id="End_Repaired" name="Repair completed"/>
+    <bpmn:endEvent id="End_Expert" name="Phone sent to expert"/>
+
+    <bpmn:sequenceFlow id="SF_U1" sourceRef="StartEvent_User" targetRef="Task_EnterModel"/>
+    <bpmn:sequenceFlow id="SF_U2" sourceRef="Task_EnterModel" targetRef="Task_SubmitModel"/>
+    <bpmn:sequenceFlow id="SF_U3" sourceRef="Task_SubmitModel" targetRef="Task_SelectOrdering"/>
+    <bpmn:sequenceFlow id="SF_U4" sourceRef="Task_SelectOrdering" targetRef="Gateway_SourceSplit"/>
+    <bpmn:sequenceFlow id="SF_U5" name="Already owned" sourceRef="Gateway_SourceSplit" targetRef="Task_UseOwned"/>
+    <bpmn:sequenceFlow id="SF_U6" name="Cheap from friend" sourceRef="Gateway_SourceSplit" targetRef="Task_ContactFriend"/>
+    <bpmn:sequenceFlow id="SF_U7" name="Must buy" sourceRef="Gateway_SourceSplit" targetRef="Task_BuyRemaining"/>
+    <bpmn:sequenceFlow id="SF_U8" sourceRef="Task_ContactFriend" targetRef="Task_ReceiveFriendOffer"/>
+    <bpmn:sequenceFlow id="SF_U9" sourceRef="Task_ReceiveFriendOffer" targetRef="Gateway_SourceMerge"/>
+    <bpmn:sequenceFlow id="SF_U10" sourceRef="Task_UseOwned" targetRef="Gateway_SourceMerge"/>
+    <bpmn:sequenceFlow id="SF_U11" sourceRef="Task_BuyRemaining" targetRef="Gateway_SourceMerge"/>
+    <bpmn:sequenceFlow id="SF_U12" sourceRef="Gateway_SourceMerge" targetRef="Task_Repair"/>
+    <bpmn:sequenceFlow id="SF_U13" sourceRef="Task_Repair" targetRef="Gateway_Outcome"/>
+    <bpmn:sequenceFlow id="SF_U14" name="Worked" sourceRef="Gateway_Outcome" targetRef="Task_SendReview"/>
+    <bpmn:sequenceFlow id="SF_U15" name="Did not work" sourceRef="Gateway_Outcome" targetRef="Task_SendToExpert"/>
+    <bpmn:sequenceFlow id="SF_U16" sourceRef="Task_SendReview" targetRef="End_Repaired"/>
+    <bpmn:sequenceFlow id="SF_U17" sourceRef="Task_SendToExpert" targetRef="End_Expert"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Tool" name="Online repair tool process" isExecutable="false">
+    <bpmn:startEvent id="Start_Tool_Model" name="Model and damage received">
+      <bpmn:messageEventDefinition id="MED_Tool_Model" messageRef="Msg_ModelDamage"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_GenerateLists" name="Generate material, tool and ordering lists"/>
+    <bpmn:sendTask id="Task_SendLists" name="Send lists and ordering choices" messageRef="Msg_Lists"/>
+    <bpmn:serviceTask id="Task_PrepareInstructions" name="Prepare repair instructions"/>
+    <bpmn:sendTask id="Task_SendInstructions" name="Send repair instructions" messageRef="Msg_Instructions"/>
+    <bpmn:intermediateCatchEvent id="Catch_Tool_Review" name="Review and/or video received">
+      <bpmn:messageEventDefinition id="MED_Tool_Review" messageRef="Msg_ReviewVideo"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="Task_StoreReview" name="Store review and video"/>
+    <bpmn:endEvent id="End_Review_Stored" name="Review stored"/>
+
+    <bpmn:sequenceFlow id="SF_T1" sourceRef="Start_Tool_Model" targetRef="Task_GenerateLists"/>
+    <bpmn:sequenceFlow id="SF_T2" sourceRef="Task_GenerateLists" targetRef="Task_SendLists"/>
+    <bpmn:sequenceFlow id="SF_T3" sourceRef="Task_SendLists" targetRef="Task_PrepareInstructions"/>
+    <bpmn:sequenceFlow id="SF_T4" sourceRef="Task_PrepareInstructions" targetRef="Task_SendInstructions"/>
+    <bpmn:sequenceFlow id="SF_T5" sourceRef="Task_SendInstructions" targetRef="Catch_Tool_Review"/>
+    <bpmn:sequenceFlow id="SF_T6" sourceRef="Catch_Tool_Review" targetRef="Task_StoreReview"/>
+    <bpmn:sequenceFlow id="SF_T7" sourceRef="Task_StoreReview" targetRef="End_Review_Stored"/>
+  </bpmn:process>
+
+</bpmn:definitions>

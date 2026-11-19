@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Internship" targetNamespace="http://example.org/bpmn/internship">
+  <bpmn:message id="Message_Offer" name="Offer"/>
+  <bpmn:message id="Message_OfferAccepted" name="Offer accepted"/>
+  <bpmn:collaboration id="Collaboration_Internship">
+    <bpmn:participant id="Participant_Student" name="Student" processRef="Process_Student"/>
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_Company"/>
+    <bpmn:participant id="Participant_Twitter" name="Twitter"/>
+    <bpmn:messageFlow id="MessageFlow_Offer" name="Offer" sourceRef="Task_SendOffer" targetRef="Catch_OfferReceived"/>
+    <bpmn:messageFlow id="MessageFlow_AcceptOffer" name="Offer accepted" sourceRef="Task_SendAcceptance" targetRef="Catch_OfferAccepted"/>
+    <bpmn:messageFlow id="MessageFlow_Tweet" name="Tweet" sourceRef="Task_Tweet" targetRef="Participant_Twitter"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Student" name="Student internship process" isExecutable="false">
+    <bpmn:startEvent id="Start_Student" name="Start search"/>
+    <bpmn:userTask id="Task_EnterPreferences" name="Enter topic, salary, experience and hobbies"/>
+    <bpmn:exclusiveGateway id="Gateway_Offers_Merge" name="Offers merge"/>
+    <bpmn:intermediateCatchEvent id="Catch_OfferReceived" name="Offer received">
+      <bpmn:messageEventDefinition id="MED_OfferReceived" messageRef="Message_Offer"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_ReviewOffer" name="Review offer"/>
+    <bpmn:exclusiveGateway id="Gateway_AcceptOffer_Split" name="Accept offer?"/>
+    <bpmn:userTask id="Task_DenyOffer" name="Deny offer"/>
+    <bpmn:parallelGateway id="Gateway_AcceptEffects_Split" name="Offer accepted effects split"/>
+    <bpmn:sendTask id="Task_SendAcceptance" name="Send acceptance to company" messageRef="Message_OfferAccepted"/>
+    <bpmn:task id="Task_InvalidateOffers" name="Invalidate all other offers"/>
+    <bpmn:parallelGateway id="Gateway_AcceptEffects_Join" name="Offer accepted effects join"/>
+    <bpmn:exclusiveGateway id="Gateway_StatusUpdates_Merge" name="Status updates merge"/>
+    <bpmn:userTask id="Task_WriteStatusUpdate" name="Write status update about internship"/>
+    <bpmn:exclusiveGateway id="Gateway_StatusUpdates_Split" name="At least 3 status updates written?"/>
+    <bpmn:sendTask id="Task_Tweet" name="Send tweet to friend">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false"/>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Student" name="Recommendation sent"/>
+
+    <bpmn:sequenceFlow id="Flow_S1" sourceRef="Start_Student" targetRef="Task_EnterPreferences"/>
+    <bpmn:sequenceFlow id="Flow_S2" sourceRef="Task_EnterPreferences" targetRef="Gateway_Offers_Merge"/>
+    <bpmn:sequenceFlow id="Flow_S3" sourceRef="Gateway_Offers_Merge" targetRef="Catch_OfferReceived"/>
+    <bpmn:sequenceFlow id="Flow_S4" sourceRef="Catch_OfferReceived" targetRef="Task_ReviewOffer"/>
+    <bpmn:sequenceFlow id="Flow_S5" sourceRef="Task_ReviewOffer" targetRef="Gateway_AcceptOffer_Split"/>
+    <bpmn:sequenceFlow id="Flow_S6" name="Deny" sourceRef="Gateway_AcceptOffer_Split" targetRef="Task_DenyOffer"/>
+    <bpmn:sequenceFlow id="Flow_S7" sourceRef="Task_DenyOffer" targetRef="Gateway_Offers_Merge"/>
+    <bpmn:sequenceFlow id="Flow_S8" name="Accept" sourceRef="Gateway_AcceptOffer_Split" targetRef="Gateway_AcceptEffects_Split"/>
+    <bpmn:sequenceFlow id="Flow_S9" sourceRef="Gateway_AcceptEffects_Split" targetRef="Task_SendAcceptance"/>
+    <bpmn:sequenceFlow id="Flow_S10" sourceRef="Gateway_AcceptEffects_Split" targetRef="Task_InvalidateOffers"/>
+    <bpmn:sequenceFlow id="Flow_S11" sourceRef="Task_SendAcceptance" targetRef="Gateway_AcceptEffects_Join"/>
+    <bpmn:sequenceFlow id="Flow_S12" sourceRef="Task_InvalidateOffers" targetRef="Gateway_AcceptEffects_Join"/>
+    <bpmn:sequenceFlow id="Flow_S13" sourceRef="Gateway_AcceptEffects_Join" targetRef="Gateway_StatusUpdates_Merge"/>
+    <bpmn:sequenceFlow id="Flow_S14" sourceRef="Gateway_StatusUpdates_Merge" targetRef="Task_WriteStatusUpdate"/>
+    <bpmn:sequenceFlow id="Flow_S15" sourceRef="Task_WriteStatusUpdate" targetRef="Gateway_StatusUpdates_Split"/>
+    <bpmn:sequenceFlow id="Flow_S16" name="No" sourceRef="Gateway_StatusUpdates_Split" targetRef="Gateway_StatusUpdates_Merge"/>
+    <bpmn:sequenceFlow id="Flow_S17" name="Yes" sourceRef="Gateway_StatusUpdates_Split" targetRef="Task_Tweet"/>
+    <bpmn:sequenceFlow id="Flow_S18" sourceRef="Task_Tweet" targetRef="End_Student"/>
+  </bpmn:process>
+  <bpmn:process id="Process_Company" name="Company process" isExecutable="false">
+    <bpmn:startEvent id="Start_Company" name="Start offer"/>
+    <bpmn:sendTask id="Task_SendOffer" name="Send offer to student" messageRef="Message_Offer"/>
+    <bpmn:intermediateCatchEvent id="Catch_OfferAccepted" name="Offer accepted by student">
+      <bpmn:messageEventDefinition id="MED_OfferAccepted" messageRef="Message_OfferAccepted"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_CompanyUpdates_Merge" name="Company status updates merge"/>
+    <bpmn:userTask id="Task_CompanyStatusUpdate" name="Write status update about student"/>
+    <bpmn:exclusiveGateway id="Gateway_CompanyUpdates_Split" name="At least 3 status updates written?"/>
+    <bpmn:endEvent id="End_CompanyDone" name="Status updates completed"/>
+
+    <bpmn:sequenceFlow id="Flow_C1" sourceRef="Start_Company" targetRef="Task_SendOffer"/>
+    <bpmn:sequenceFlow id="Flow_C2" sourceRef="Task_SendOffer" targetRef="Catch_OfferAccepted"/>
+    <bpmn:sequenceFlow id="Flow_C3" sourceRef="Catch_OfferAccepted" targetRef="Gateway_CompanyUpdates_Merge"/>
+    <bpmn:sequenceFlow id="Flow_C4" sourceRef="Gateway_CompanyUpdates_Merge" targetRef="Task_CompanyStatusUpdate"/>
+    <bpmn:sequenceFlow id="Flow_C5" sourceRef="Task_CompanyStatusUpdate" targetRef="Gateway_CompanyUpdates_Split"/>
+    <bpmn:sequenceFlow id="Flow_C6" name="No" sourceRef="Gateway_CompanyUpdates_Split" targetRef="Gateway_CompanyUpdates_Merge"/>
+    <bpmn:sequenceFlow id="Flow_C7" name="Yes" sourceRef="Gateway_CompanyUpdates_Split" targetRef="End_CompanyDone"/>
+  </bpmn:process>
+</bpmn:definitions>

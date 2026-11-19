@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Internship"
+                  targetNamespace="http://example.org/bpmn/internship">
+
+  <bpmn:message id="Msg_Preferences" name="Preferences"/>
+  <bpmn:message id="Msg_Offer" name="Offer"/>
+  <bpmn:message id="Msg_Acceptance" name="Acceptance"/>
+  <bpmn:message id="Msg_Denial" name="Denial"/>
+  <bpmn:message id="Msg_InternshipFinished" name="Internship finished"/>
+  <bpmn:message id="Msg_Tweet" name="Tweet recommendation"/>
+
+  <bpmn:collaboration id="Collaboration_Internship">
+    <bpmn:participant id="Participant_Student" name="Student" processRef="Process_Student"/>
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_Company"/>
+    <bpmn:participant id="Participant_Twitter" name="Twitter (friends)"/>
+
+    <bpmn:messageFlow id="MF_Preferences" name="Preferences" sourceRef="Task_SendPreferences" targetRef="StartEvent_Company"/>
+    <bpmn:messageFlow id="MF_Offer" name="Offer" sourceRef="Task_SendOffer" targetRef="Event_OfferReceived"/>
+    <bpmn:messageFlow id="MF_Acceptance" name="Acceptance" sourceRef="Task_SendAcceptance" targetRef="Event_AcceptanceReceived"/>
+    <bpmn:messageFlow id="MF_Denial" name="Denial" sourceRef="Task_SendDenial" targetRef="Event_DenialReceived"/>
+    <bpmn:messageFlow id="MF_InternshipFinished" name="Internship finished" sourceRef="Event_CompanyFinished" targetRef="Event_InternshipFinished"/>
+    <bpmn:messageFlow id="MF_Tweets" name="Recommendation tweets" sourceRef="Task_SendTweets" targetRef="Participant_Twitter"/>
+  </bpmn:collaboration>
+
+  <!-- Student process -->
+  <bpmn:process id="Process_Student" name="Student" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Student" name="Internship search started"/>
+    <bpmn:userTask id="Task_EnterTopicSalary" name="Enter topic and desired salary"/>
+    <bpmn:userTask id="Task_EnterExperience" name="Enter experience and hobbies"/>
+    <bpmn:sendTask id="Task_SendPreferences" name="Send preferences"/>
+    <bpmn:exclusiveGateway id="Gateway_OfferMerge" name="Offer merge"/>
+    <bpmn:intermediateCatchEvent id="Event_OfferReceived" name="Offer received">
+      <bpmn:messageEventDefinition id="MED_OfferReceived" messageRef="Msg_Offer"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_AcceptOrDenyOffer" name="Accept or deny offer"/>
+    <bpmn:exclusiveGateway id="Gateway_OfferDecision" name="Offer accepted?" default="Flow_S9"/>
+    <bpmn:sendTask id="Task_SendAcceptance" name="Send acceptance"/>
+    <bpmn:sendTask id="Task_SendDenial" name="Send denial"/>
+    <bpmn:parallelGateway id="Gateway_WorkSplit" name="Start internship work"/>
+    <bpmn:userTask id="Task_WriteStatus" name="Write at least 3 status updates, each week"/>
+    <bpmn:exclusiveGateway id="Gateway_UpdateCount" name="At least 3 updates written?"/>
+    <bpmn:intermediateCatchEvent id="Event_InternshipFinished" name="Internship finished">
+      <bpmn:messageEventDefinition id="MED_InternshipFinished" messageRef="Msg_InternshipFinished"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:parallelGateway id="Gateway_WorkJoin" name="Internship work complete"/>
+    <bpmn:sendTask id="Task_SendTweets" name="Tweet recommendation to each friend">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false"/>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_Student" name="Recommendations sent"/>
+
+    <bpmn:sequenceFlow id="Flow_S1" sourceRef="StartEvent_Student" targetRef="Task_EnterTopicSalary"/>
+    <bpmn:sequenceFlow id="Flow_S2" sourceRef="Task_EnterTopicSalary" targetRef="Task_EnterExperience"/>
+    <bpmn:sequenceFlow id="Flow_S3" sourceRef="Task_EnterExperience" targetRef="Task_SendPreferences"/>
+    <bpmn:sequenceFlow id="Flow_S4" sourceRef="Task_SendPreferences" targetRef="Gateway_OfferMerge"/>
+    <bpmn:sequenceFlow id="Flow_S5" sourceRef="Gateway_OfferMerge" targetRef="Event_OfferReceived"/>
+    <bpmn:sequenceFlow id="Flow_S6" sourceRef="Event_OfferReceived" targetRef="Task_AcceptOrDenyOffer"/>
+    <bpmn:sequenceFlow id="Flow_S7" sourceRef="Task_AcceptOrDenyOffer" targetRef="Gateway_OfferDecision"/>
+    <bpmn:sequenceFlow id="Flow_S8" name="Accept" sourceRef="Gateway_OfferDecision" targetRef="Task_SendAcceptance">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">offerAccepted == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_S9" name="Deny" sourceRef="Gateway_OfferDecision" targetRef="Task_SendDenial"/>
+    <bpmn:sequenceFlow id="Flow_S10" sourceRef="Task_SendDenial" targetRef="Gateway_OfferMerge"/>
+    <bpmn:sequenceFlow id="Flow_S11" sourceRef="Task_SendAcceptance" targetRef="Gateway_WorkSplit"/>
+    <bpmn:sequenceFlow id="Flow_S12" sourceRef="Gateway_WorkSplit" targetRef="Task_WriteStatus"/>
+    <bpmn:sequenceFlow id="Flow_S13" sourceRef="Task_WriteStatus" targetRef="Gateway_UpdateCount"/>
+    <bpmn:sequenceFlow id="Flow_S14" name="Fewer than 3" sourceRef="Gateway_UpdateCount" targetRef="Task_WriteStatus">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">updatesWritten &lt; 3</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_S15" name="At least 3" sourceRef="Gateway_UpdateCount" targetRef="Gateway_WorkJoin">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">updatesWritten &gt;= 3</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_S16" sourceRef="Gateway_WorkSplit" targetRef="Event_InternshipFinished"/>
+    <bpmn:sequenceFlow id="Flow_S17" sourceRef="Event_InternshipFinished" targetRef="Gateway_WorkJoin"/>
+    <bpmn:sequenceFlow id="Flow_S18" sourceRef="Gateway_WorkJoin" targetRef="Task_SendTweets"/>
+    <bpmn:sequenceFlow id="Flow_S19" sourceRef="Task_SendTweets" targetRef="EndEvent_Student"/>
+
+    <bpmn:textAnnotation id="Annotation_InvalidOffers">
+      <bpmn:text>Accepting an offer makes all other offers invalid</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Assoc_InvalidOffers" sourceRef="Task_SendAcceptance" targetRef="Annotation_InvalidOffers"/>
+  </bpmn:process>
+
+  <!-- Company process -->
+  <bpmn:process id="Process_Company" name="Company" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Company" name="Preferences received">
+      <bpmn:messageEventDefinition id="MED_Preferences" messageRef="Msg_Preferences"/>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_SendOffer" name="Send offer"/>
+    <bpmn:eventBasedGateway id="Gateway_OfferResponse" name="Offer response"/>
+    <bpmn:intermediateCatchEvent id="Event_AcceptanceReceived" name="Acceptance received">
+      <bpmn:messageEventDefinition id="MED_Acceptance" messageRef="Msg_Acceptance"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_DenialReceived" name="Denial received">
+      <bpmn:messageEventDefinition id="MED_Denial" messageRef="Msg_Denial"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_WriteStatusAboutStudent" name="Write at least 3 status updates about student, each week"/>
+    <bpmn:exclusiveGateway id="Gateway_CompanyUpdateCount" name="At least 3 updates written?"/>
+    <bpmn:intermediateThrowEvent id="Event_CompanyFinished" name="Internship finished">
+      <bpmn:messageEventDefinition id="MED_CompanyFinished" messageRef="Msg_InternshipFinished"/>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="EndEvent_Company" name="Internship completed"/>
+
+    <bpmn:sequenceFlow id="Flow_C1" sourceRef="StartEvent_Company" targetRef="Task_SendOffer"/>
+    <bpmn:sequenceFlow id="Flow_C2" sourceRef="Task_SendOffer" targetRef="Gateway_OfferResponse"/>
+    <bpmn:sequenceFlow id="Flow_C3" sourceRef="Gateway_OfferResponse" targetRef="Event_AcceptanceReceived"/>
+    <bpmn:sequenceFlow id="Flow_C4" sourceRef="Gateway_OfferResponse" targetRef="Event_DenialReceived"/>
+    <bpmn:sequenceFlow id="Flow_C5" sourceRef="Event_DenialReceived" targetRef="Task_SendOffer"/>
+    <bpmn:sequenceFlow id="Flow_C6" sourceRef="Event_AcceptanceReceived" targetRef="Task_WriteStatusAboutStudent"/>
+    <bpmn:sequenceFlow id="Flow_C7" sourceRef="Task_WriteStatusAboutStudent" targetRef="Gateway_CompanyUpdateCount"/>
+    <bpmn:sequenceFlow id="Flow_C8" name="Fewer than 3" sourceRef="Gateway_CompanyUpdateCount" targetRef="Task_WriteStatusAboutStudent">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">updatesWritten &lt; 3</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_C9" name="At least 3" sourceRef="Gateway_CompanyUpdateCount" targetRef="Event_CompanyFinished">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">updatesWritten &gt;= 3</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_C10" sourceRef="Event_CompanyFinished" targetRef="EndEvent_Company"/>
+  </bpmn:process>
+
+</bpmn:definitions>

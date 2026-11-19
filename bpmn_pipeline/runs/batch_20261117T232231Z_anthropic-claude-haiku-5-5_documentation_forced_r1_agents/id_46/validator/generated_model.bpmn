@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_StorageManagement" targetNamespace="http://example.com/bpmn/storage-management">
+  <bpmn:process id="Process_StorageManagement" name="Storage management" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Begin" name="Storage management started"/>
+    <bpmn:task id="Task_ReadOrder" name="Read order from automatic order management system"/>
+    <bpmn:exclusiveGateway id="Gateway_ProductLoop_Merge" name="Next product to check"/>
+    <bpmn:task id="Task_CheckProductStock" name="Check whether current product is in stock"/>
+    <bpmn:exclusiveGateway id="Gateway_InStock_Split" name="Product in stock?" default="Flow_NotInStock"/>
+    <bpmn:task id="Task_WithdrawProduct" name="Withdraw product from warehouse"/>
+    <bpmn:task id="Task_ReorderFromWholesaler" name="Reorder product from wholesaler"/>
+    <bpmn:task id="Task_WaitForArrival" name="Wait for arrival of ordered product"/>
+    <bpmn:exclusiveGateway id="Gateway_DelayCheck_Split" name="Waited more than 10 days?" default="Flow_NoDelayPenalty"/>
+    <bpmn:serviceTask id="Task_DemandDelayPenalty" name="Automatically demand delivery delay penalty from wholesaler"/>
+    <bpmn:exclusiveGateway id="Gateway_Arrival_Merge" name="Product arrived or penalty handled"/>
+    <bpmn:task id="Task_RegisterArrivedProduct" name="Register arrived product in stock management system"/>
+    <bpmn:exclusiveGateway id="Gateway_Stock_Merge" name="Product available"/>
+    <bpmn:task id="Task_CheckOrderReady" name="Check whether whole order is ready for shipment"/>
+    <bpmn:exclusiveGateway id="Gateway_OrderReady_Split" name="Order ready for shipment?" default="Flow_OrderNotReady"/>
+    <bpmn:parallelGateway id="Gateway_Shipment_Split" name="Start shipment preparation"/>
+    <bpmn:task id="Task_RequestCourier" name="Request courier"/>
+    <bpmn:task id="Task_PackProducts" name="Pack products"/>
+    <bpmn:parallelGateway id="Gateway_Shipment_Join" name="Courier requested and products packed"/>
+    <bpmn:task id="Task_ShipOrder" name="Ship order"/>
+    <bpmn:endEvent id="EndEvent_OrderShipped" name="Order shipped"/>
+    <bpmn:task id="Task_SelectNextProduct" name="Select next product from order"/>
+
+    <bpmn:sequenceFlow id="Flow_Start" sourceRef="StartEvent_Begin" targetRef="Task_ReadOrder"/>
+    <bpmn:sequenceFlow id="Flow_ReadToLoopMerge" sourceRef="Task_ReadOrder" targetRef="Gateway_ProductLoop_Merge"/>
+    <bpmn:sequenceFlow id="Flow_LoopMergeToCheck" sourceRef="Gateway_ProductLoop_Merge" targetRef="Task_CheckProductStock"/>
+    <bpmn:sequenceFlow id="Flow_CheckToSplit" sourceRef="Task_CheckProductStock" targetRef="Gateway_InStock_Split"/>
+    <bpmn:sequenceFlow id="Flow_InStock" name="Yes" sourceRef="Gateway_InStock_Split" targetRef="Task_WithdrawProduct">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${inStock}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotInStock" name="No" sourceRef="Gateway_InStock_Split" targetRef="Task_ReorderFromWholesaler"/>
+    <bpmn:sequenceFlow id="Flow_ReorderToWait" sourceRef="Task_ReorderFromWholesaler" targetRef="Task_WaitForArrival"/>
+    <bpmn:sequenceFlow id="Flow_WaitToDelayCheck" sourceRef="Task_WaitForArrival" targetRef="Gateway_DelayCheck_Split"/>
+    <bpmn:sequenceFlow id="Flow_DelayOver10Days" name="Yes" sourceRef="Gateway_DelayCheck_Split" targetRef="Task_DemandDelayPenalty">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${waitingDays &gt; 10}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoDelayPenalty" name="No" sourceRef="Gateway_DelayCheck_Split" targetRef="Gateway_Arrival_Merge"/>
+    <bpmn:sequenceFlow id="Flow_PenaltyToArrivalMerge" sourceRef="Task_DemandDelayPenalty" targetRef="Gateway_Arrival_Merge"/>
+    <bpmn:sequenceFlow id="Flow_ArrivalMergeToRegister" sourceRef="Gateway_Arrival_Merge" targetRef="Task_RegisterArrivedProduct"/>
+    <bpmn:sequenceFlow id="Flow_RegisterToStockMerge" sourceRef="Task_RegisterArrivedProduct" targetRef="Gateway_Stock_Merge"/>
+    <bpmn:sequenceFlow id="Flow_WithdrawToStockMerge" sourceRef="Task_WithdrawProduct" targetRef="Gateway_Stock_Merge"/>
+    <bpmn:sequenceFlow id="Flow_StockMergeToCheckReady" sourceRef="Gateway_Stock_Merge" targetRef="Task_CheckOrderReady"/>
+    <bpmn:sequenceFlow id="Flow_CheckReadyToSplit" sourceRef="Task_CheckOrderReady" targetRef="Gateway_OrderReady_Split"/>
+    <bpmn:sequenceFlow id="Flow_OrderReady" name="Yes" sourceRef="Gateway_OrderReady_Split" targetRef="Gateway_Shipment_Split">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${orderReady}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_OrderNotReady" name="No" sourceRef="Gateway_OrderReady_Split" targetRef="Task_SelectNextProduct"/>
+    <bpmn:sequenceFlow id="Flow_NextProductLoop" sourceRef="Task_SelectNextProduct" targetRef="Gateway_ProductLoop_Merge"/>
+    <bpmn:sequenceFlow id="Flow_ToRequestCourier" sourceRef="Gateway_Shipment_Split" targetRef="Task_RequestCourier"/>
+    <bpmn:sequenceFlow id="Flow_ToPackProducts" sourceRef="Gateway_Shipment_Split" targetRef="Task_PackProducts"/>
+    <bpmn:sequenceFlow id="Flow_CourierToJoin" sourceRef="Task_RequestCourier" targetRef="Gateway_Shipment_Join"/>
+    <bpmn:sequenceFlow id="Flow_PackToJoin" sourceRef="Task_PackProducts" targetRef="Gateway_Shipment_Join"/>
+    <bpmn:sequenceFlow id="Flow_JoinToShip" sourceRef="Gateway_Shipment_Join" targetRef="Task_ShipOrder"/>
+    <bpmn:sequenceFlow id="Flow_ShipToEnd" sourceRef="Task_ShipOrder" targetRef="EndEvent_OrderShipped"/>
+  </bpmn:process>
+</bpmn:definitions>

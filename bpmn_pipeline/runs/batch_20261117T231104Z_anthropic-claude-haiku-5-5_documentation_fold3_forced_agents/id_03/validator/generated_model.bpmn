@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Inventory_Restock" targetNamespace="http://example.com/bpmn/inventory-restock">
+  <bpmn:process id="Process_Inventory_Restock" name="Inventory Restock Process" isExecutable="false">
+    <bpmn:startEvent id="Event_Start" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Monitor_Inventory" name="Monitor inventory levels">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Threshold_Split" name="Stock reached threshold?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_Signal_Split" name="Reorder signal type">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Automated_Alert" name="Send automated reorder alert">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_Manual_Check" name="Perform manual stock check">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Signal_Join" name="Reorder need signalled">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Evaluate_Suppliers" name="Evaluate suppliers by cost, delivery time and reliability">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Place_Order" name="Place order with supplier">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_Update_Delivery_Dates" name="Update inventory system with expected delivery dates">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateCatchEvent id="Event_Stock_Received" name="Stock delivery received">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_Inspect_Quality" name="Inspect stock quality">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_Record_Receipt" name="Record received stock in system">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:manualTask id="Task_Store_Stock" name="Place stock on shelves or in storage">
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+      <bpmn:outgoing>Flow_16</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:serviceTask id="Task_Update_Inventory_Levels" name="Update inventory levels after restock">
+      <bpmn:incoming>Flow_16</bpmn:incoming>
+      <bpmn:outgoing>Flow_17</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="Event_End" name="Restock completed">
+      <bpmn:incoming>Flow_17</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Event_Start" targetRef="Task_Monitor_Inventory"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Monitor_Inventory" targetRef="Gateway_Threshold_Split"/>
+    <bpmn:sequenceFlow id="Flow_3" name="Yes" sourceRef="Gateway_Threshold_Split" targetRef="Gateway_Signal_Split">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${thresholdReached == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_4" name="No" sourceRef="Gateway_Threshold_Split" targetRef="Task_Monitor_Inventory">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${thresholdReached == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_5" name="Automated alert" sourceRef="Gateway_Signal_Split" targetRef="Task_Automated_Alert"/>
+    <bpmn:sequenceFlow id="Flow_6" name="Manual check" sourceRef="Gateway_Signal_Split" targetRef="Task_Manual_Check"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_Automated_Alert" targetRef="Gateway_Signal_Join"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_Manual_Check" targetRef="Gateway_Signal_Join"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Gateway_Signal_Join" targetRef="Task_Evaluate_Suppliers"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_Evaluate_Suppliers" targetRef="Task_Place_Order"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_Place_Order" targetRef="Task_Update_Delivery_Dates"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_Update_Delivery_Dates" targetRef="Event_Stock_Received"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Event_Stock_Received" targetRef="Task_Inspect_Quality"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_Inspect_Quality" targetRef="Task_Record_Receipt"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_Record_Receipt" targetRef="Task_Store_Stock"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Task_Store_Stock" targetRef="Task_Update_Inventory_Levels"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Task_Update_Inventory_Levels" targetRef="Event_End"/>
+  </bpmn:process>
+</bpmn:definitions>

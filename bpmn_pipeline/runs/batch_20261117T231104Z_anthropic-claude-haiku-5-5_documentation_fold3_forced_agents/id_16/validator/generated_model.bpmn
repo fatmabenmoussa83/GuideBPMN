@@ -1,0 +1,308 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_AnnualAudit" targetNamespace="http://example.com/bpmn/annual-audit">
+
+  <bpmn:message id="Msg_AuditNotification" name="Audit notification"/>
+  <bpmn:message id="Msg_DocumentsSubmitted" name="Documents submitted"/>
+  <bpmn:message id="Msg_ClarificationRequest" name="Clarification request"/>
+  <bpmn:message id="Msg_Clarifications" name="Clarifications provided"/>
+  <bpmn:message id="Msg_FinalReport" name="Final audit report"/>
+
+  <bpmn:collaboration id="Collab_AnnualAudit">
+    <bpmn:participant id="Part_Coordinator" name="Audit Coordinator" processRef="Process_Coordinator"/>
+    <bpmn:participant id="Part_Regional" name="Regional Office" processRef="Process_Regional"/>
+    <bpmn:participant id="Part_Compliance" name="Compliance Team" processRef="Process_Compliance"/>
+    <bpmn:participant id="Part_Central" name="Central Audit Team" processRef="Process_Central"/>
+    <bpmn:participant id="Part_ExecBoard" name="Executive Board"/>
+
+    <bpmn:messageFlow id="MF_NotifyRegional" name="Audit notification" sourceRef="SendTask_SendNotification" targetRef="StartEvent_Notification"/>
+    <bpmn:messageFlow id="MF_SubmitDocs" name="Submit documents" sourceRef="SendTask_SubmitDocuments" targetRef="StartEvent_DocumentsReceived"/>
+    <bpmn:messageFlow id="MF_RequestClarification" name="Request clarifications" sourceRef="SendTask_RequestClarification" targetRef="StartEvent_ClarificationRequest"/>
+    <bpmn:messageFlow id="MF_SendClarifications" name="Send clarifications" sourceRef="SendTask_SendClarifications" targetRef="CatchEvent_ClarificationsReceived"/>
+    <bpmn:messageFlow id="MF_DistributeReport" name="Distribute final report" sourceRef="SendTask_DistributeReport" targetRef="Part_ExecBoard"/>
+  </bpmn:collaboration>
+
+  <!-- Audit Coordinator -->
+  <bpmn:process id="Process_Coordinator" name="Audit Coordinator Process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Initiate" name="Audit process initiated">
+      <bpmn:outgoing>Flow_C1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="SendTask_SendNotification" name="Send audit notification to regional office" messageRef="Msg_AuditNotification">
+      <bpmn:incoming>Flow_C1</bpmn:incoming>
+      <bpmn:outgoing>Flow_C2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_Notified" name="Notification sent">
+      <bpmn:incoming>Flow_C2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_C1" sourceRef="StartEvent_Initiate" targetRef="SendTask_SendNotification"/>
+    <bpmn:sequenceFlow id="Flow_C2" sourceRef="SendTask_SendNotification" targetRef="EndEvent_Notified"/>
+  </bpmn:process>
+
+  <!-- Regional Office -->
+  <bpmn:process id="Process_Regional" name="Regional Office Process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Notification" name="Audit notification received">
+      <bpmn:outgoing>Flow_R1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Notification" messageRef="Msg_AuditNotification"/>
+    </bpmn:startEvent>
+    <bpmn:parallelGateway id="Fork_Preparation" name="Split preparation">
+      <bpmn:incoming>Flow_R1</bpmn:incoming>
+      <bpmn:outgoing>Flow_R2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_R3</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_PrepareFinancialStatements" name="Prepare financial statements">
+      <bpmn:incoming>Flow_R2</bpmn:incoming>
+      <bpmn:outgoing>Flow_R4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_GatherDocuments" name="Gather necessary documents">
+      <bpmn:incoming>Flow_R3</bpmn:incoming>
+      <bpmn:outgoing>Flow_R5</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Join_Preparation" name="Join preparation">
+      <bpmn:incoming>Flow_R4</bpmn:incoming>
+      <bpmn:incoming>Flow_R5</bpmn:incoming>
+      <bpmn:outgoing>Flow_R6</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sendTask id="SendTask_SubmitDocuments" name="Submit documents to central audit team" messageRef="Msg_DocumentsSubmitted">
+      <bpmn:incoming>Flow_R6</bpmn:incoming>
+      <bpmn:outgoing>Flow_R7</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_DocumentsSubmitted" name="Documents submitted">
+      <bpmn:incoming>Flow_R7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="SubProcess_ClarificationHandling" name="Handle clarification request" triggeredByEvent="true">
+      <bpmn:startEvent id="StartEvent_ClarificationRequest" name="Clarification request received" isInterrupting="false">
+        <bpmn:outgoing>Flow_RE1</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="MED_ClarRequest" messageRef="Msg_ClarificationRequest"/>
+      </bpmn:startEvent>
+      <bpmn:task id="Task_ProvideClarifications" name="Provide clarifications">
+        <bpmn:incoming>Flow_RE1</bpmn:incoming>
+        <bpmn:outgoing>Flow_RE2</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:sendTask id="SendTask_SendClarifications" name="Send clarifications to central audit team" messageRef="Msg_Clarifications">
+        <bpmn:incoming>Flow_RE2</bpmn:incoming>
+        <bpmn:outgoing>Flow_RE3</bpmn:outgoing>
+      </bpmn:sendTask>
+      <bpmn:endEvent id="EndEvent_ClarificationsSent" name="Clarifications sent">
+        <bpmn:incoming>Flow_RE3</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_RE1" sourceRef="StartEvent_ClarificationRequest" targetRef="Task_ProvideClarifications"/>
+      <bpmn:sequenceFlow id="Flow_RE2" sourceRef="Task_ProvideClarifications" targetRef="SendTask_SendClarifications"/>
+      <bpmn:sequenceFlow id="Flow_RE3" sourceRef="SendTask_SendClarifications" targetRef="EndEvent_ClarificationsSent"/>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="Flow_R1" sourceRef="StartEvent_Notification" targetRef="Fork_Preparation"/>
+    <bpmn:sequenceFlow id="Flow_R2" sourceRef="Fork_Preparation" targetRef="Task_PrepareFinancialStatements"/>
+    <bpmn:sequenceFlow id="Flow_R3" sourceRef="Fork_Preparation" targetRef="Task_GatherDocuments"/>
+    <bpmn:sequenceFlow id="Flow_R4" sourceRef="Task_PrepareFinancialStatements" targetRef="Join_Preparation"/>
+    <bpmn:sequenceFlow id="Flow_R5" sourceRef="Task_GatherDocuments" targetRef="Join_Preparation"/>
+    <bpmn:sequenceFlow id="Flow_R6" sourceRef="Join_Preparation" targetRef="SendTask_SubmitDocuments"/>
+    <bpmn:sequenceFlow id="Flow_R7" sourceRef="SendTask_SubmitDocuments" targetRef="EndEvent_DocumentsSubmitted"/>
+  </bpmn:process>
+
+  <!-- Compliance Team -->
+  <bpmn:process id="Process_Compliance" name="Compliance Team Process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Compliance" name="Compliance check started">
+      <bpmn:outgoing>Flow_K1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CheckRegulatoryUpdates" name="Check for regulatory updates affecting the audit">
+      <bpmn:incoming>Flow_K1</bpmn:incoming>
+      <bpmn:outgoing>Flow_K2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_ComplianceDone" name="Regulatory check completed">
+      <bpmn:incoming>Flow_K2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_K1" sourceRef="StartEvent_Compliance" targetRef="Task_CheckRegulatoryUpdates"/>
+    <bpmn:sequenceFlow id="Flow_K2" sourceRef="Task_CheckRegulatoryUpdates" targetRef="EndEvent_ComplianceDone"/>
+  </bpmn:process>
+
+  <!-- Central Audit Team -->
+  <bpmn:process id="Process_Central" name="Central Audit Team Process" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Central">
+      <bpmn:lane id="Lane_AuditTeam" name="Audit Team">
+        <bpmn:flowNodeRef>StartEvent_DocumentsReceived</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Merge_Review</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReviewDocuments</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Discrepancies</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SendTask_RequestClarification</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>CatchEvent_ClarificationsReceived</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Fork_RiskAssessment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FinancialRisk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_OperationalRisk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ComplianceRisk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Join_RiskAssessment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_HighRisk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DataAnalysis</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Interviews</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_SiteVisitNeeded</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SiteVisit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Merge_RiskAddressed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CompileReport</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Merge_ReportReview</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_UpdateReport</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ResubmitReport</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SendTask_DistributeReport</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ArchiveReport</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_AuditClosed</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_AuditDirector" name="Audit Director">
+        <bpmn:flowNodeRef>Task_DirectorReview</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ReportApproval</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_DocumentsReceived" name="Documents submitted">
+      <bpmn:outgoing>Flow_T1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_DocumentsSubmitted" messageRef="Msg_DocumentsSubmitted"/>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Merge_Review" name="Review entry">
+      <bpmn:incoming>Flow_T1</bpmn:incoming>
+      <bpmn:incoming>Flow_T3</bpmn:incoming>
+      <bpmn:outgoing>Flow_T2</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ReviewDocuments" name="Review submitted documents">
+      <bpmn:incoming>Flow_T2</bpmn:incoming>
+      <bpmn:outgoing>Flow_T4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Discrepancies" name="Discrepancies found?" default="Flow_T7">
+      <bpmn:incoming>Flow_T4</bpmn:incoming>
+      <bpmn:outgoing>Flow_T5</bpmn:outgoing>
+      <bpmn:outgoing>Flow_T7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="SendTask_RequestClarification" name="Request clarifications from regional office" messageRef="Msg_ClarificationRequest">
+      <bpmn:incoming>Flow_T5</bpmn:incoming>
+      <bpmn:outgoing>Flow_T6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="CatchEvent_ClarificationsReceived" name="Clarifications received">
+      <bpmn:incoming>Flow_T6</bpmn:incoming>
+      <bpmn:outgoing>Flow_T3</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_ClarificationsReceived" messageRef="Msg_Clarifications"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:parallelGateway id="Fork_RiskAssessment" name="Split risk assessment">
+      <bpmn:incoming>Flow_T7</bpmn:incoming>
+      <bpmn:outgoing>Flow_T8</bpmn:outgoing>
+      <bpmn:outgoing>Flow_T9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_T10</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_FinancialRisk" name="Evaluate financial risks">
+      <bpmn:incoming>Flow_T8</bpmn:incoming>
+      <bpmn:outgoing>Flow_T11</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_OperationalRisk" name="Evaluate operational risks">
+      <bpmn:incoming>Flow_T9</bpmn:incoming>
+      <bpmn:outgoing>Flow_T12</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ComplianceRisk" name="Evaluate compliance risks">
+      <bpmn:incoming>Flow_T10</bpmn:incoming>
+      <bpmn:outgoing>Flow_T13</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Join_RiskAssessment" name="Join risk assessment">
+      <bpmn:incoming>Flow_T11</bpmn:incoming>
+      <bpmn:incoming>Flow_T12</bpmn:incoming>
+      <bpmn:incoming>Flow_T13</bpmn:incoming>
+      <bpmn:outgoing>Flow_T14</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:exclusiveGateway id="Gateway_HighRisk" name="High risk identified?" default="Flow_T16">
+      <bpmn:incoming>Flow_T14</bpmn:incoming>
+      <bpmn:outgoing>Flow_T15</bpmn:outgoing>
+      <bpmn:outgoing>Flow_T16</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_DataAnalysis" name="Perform data analysis">
+      <bpmn:incoming>Flow_T15</bpmn:incoming>
+      <bpmn:outgoing>Flow_T17</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Interviews" name="Conduct interviews">
+      <bpmn:incoming>Flow_T17</bpmn:incoming>
+      <bpmn:outgoing>Flow_T18</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_SiteVisitNeeded" name="Site visit required?" default="Flow_T20">
+      <bpmn:incoming>Flow_T18</bpmn:incoming>
+      <bpmn:outgoing>Flow_T19</bpmn:outgoing>
+      <bpmn:outgoing>Flow_T20</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_SiteVisit" name="Conduct site visit">
+      <bpmn:incoming>Flow_T19</bpmn:incoming>
+      <bpmn:outgoing>Flow_T21</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Merge_RiskAddressed" name="All risks addressed">
+      <bpmn:incoming>Flow_T16</bpmn:incoming>
+      <bpmn:incoming>Flow_T20</bpmn:incoming>
+      <bpmn:incoming>Flow_T21</bpmn:incoming>
+      <bpmn:outgoing>Flow_T22</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_CompileReport" name="Compile audit report">
+      <bpmn:incoming>Flow_T22</bpmn:incoming>
+      <bpmn:outgoing>Flow_T23</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Merge_ReportReview" name="Report ready for director review">
+      <bpmn:incoming>Flow_T23</bpmn:incoming>
+      <bpmn:incoming>Flow_T29</bpmn:incoming>
+      <bpmn:outgoing>Flow_T24</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_DirectorReview" name="Review audit report">
+      <bpmn:incoming>Flow_T24</bpmn:incoming>
+      <bpmn:outgoing>Flow_T25</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_ReportApproval" name="Report approved?" default="Flow_T27">
+      <bpmn:incoming>Flow_T25</bpmn:incoming>
+      <bpmn:outgoing>Flow_T26</bpmn:outgoing>
+      <bpmn:outgoing>Flow_T27</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_UpdateReport" name="Update report with required revisions">
+      <bpmn:incoming>Flow_T27</bpmn:incoming>
+      <bpmn:outgoing>Flow_T28</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ResubmitReport" name="Resubmit revised report to audit director">
+      <bpmn:incoming>Flow_T28</bpmn:incoming>
+      <bpmn:outgoing>Flow_T29</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="SendTask_DistributeReport" name="Distribute final report to executive board" messageRef="Msg_FinalReport">
+      <bpmn:incoming>Flow_T26</bpmn:incoming>
+      <bpmn:outgoing>Flow_T30</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:task id="Task_ArchiveReport" name="Archive final report">
+      <bpmn:incoming>Flow_T30</bpmn:incoming>
+      <bpmn:outgoing>Flow_T31</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_AuditClosed" name="Audit process closed">
+      <bpmn:incoming>Flow_T31</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_T1" sourceRef="StartEvent_DocumentsReceived" targetRef="Merge_Review"/>
+    <bpmn:sequenceFlow id="Flow_T2" sourceRef="Merge_Review" targetRef="Task_ReviewDocuments"/>
+    <bpmn:sequenceFlow id="Flow_T3" sourceRef="CatchEvent_ClarificationsReceived" targetRef="Merge_Review"/>
+    <bpmn:sequenceFlow id="Flow_T4" sourceRef="Task_ReviewDocuments" targetRef="Gateway_Discrepancies"/>
+    <bpmn:sequenceFlow id="Flow_T5" name="Yes" sourceRef="Gateway_Discrepancies" targetRef="SendTask_RequestClarification">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${discrepanciesFound}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_T6" sourceRef="SendTask_RequestClarification" targetRef="CatchEvent_ClarificationsReceived"/>
+    <bpmn:sequenceFlow id="Flow_T7" name="No" sourceRef="Gateway_Discrepancies" targetRef="Fork_RiskAssessment"/>
+    <bpmn:sequenceFlow id="Flow_T8" sourceRef="Fork_RiskAssessment" targetRef="Task_FinancialRisk"/>
+    <bpmn:sequenceFlow id="Flow_T9" sourceRef="Fork_RiskAssessment" targetRef="Task_OperationalRisk"/>
+    <bpmn:sequenceFlow id="Flow_T10" sourceRef="Fork_RiskAssessment" targetRef="Task_ComplianceRisk"/>
+    <bpmn:sequenceFlow id="Flow_T11" sourceRef="Task_FinancialRisk" targetRef="Join_RiskAssessment"/>
+    <bpmn:sequenceFlow id="Flow_T12" sourceRef="Task_OperationalRisk" targetRef="Join_RiskAssessment"/>
+    <bpmn:sequenceFlow id="Flow_T13" sourceRef="Task_ComplianceRisk" targetRef="Join_RiskAssessment"/>
+    <bpmn:sequenceFlow id="Flow_T14" sourceRef="Join_RiskAssessment" targetRef="Gateway_HighRisk"/>
+    <bpmn:sequenceFlow id="Flow_T15" name="Yes" sourceRef="Gateway_HighRisk" targetRef="Task_DataAnalysis">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${highRiskIdentified}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_T16" name="No" sourceRef="Gateway_HighRisk" targetRef="Merge_RiskAddressed"/>
+    <bpmn:sequenceFlow id="Flow_T17" sourceRef="Task_DataAnalysis" targetRef="Task_Interviews"/>
+    <bpmn:sequenceFlow id="Flow_T18" sourceRef="Task_Interviews" targetRef="Gateway_SiteVisitNeeded"/>
+    <bpmn:sequenceFlow id="Flow_T19" name="Yes" sourceRef="Gateway_SiteVisitNeeded" targetRef="Task_SiteVisit">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${siteVisitRequired}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_T20" name="No" sourceRef="Gateway_SiteVisitNeeded" targetRef="Merge_RiskAddressed"/>
+    <bpmn:sequenceFlow id="Flow_T21" sourceRef="Task_SiteVisit" targetRef="Merge_RiskAddressed"/>
+    <bpmn:sequenceFlow id="Flow_T22" sourceRef="Merge_RiskAddressed" targetRef="Task_CompileReport"/>
+    <bpmn:sequenceFlow id="Flow_T23" sourceRef="Task_CompileReport" targetRef="Merge_ReportReview"/>
+    <bpmn:sequenceFlow id="Flow_T24" sourceRef="Merge_ReportReview" targetRef="Task_DirectorReview"/>
+    <bpmn:sequenceFlow id="Flow_T25" sourceRef="Task_DirectorReview" targetRef="Gateway_ReportApproval"/>
+    <bpmn:sequenceFlow id="Flow_T26" name="Approved" sourceRef="Gateway_ReportApproval" targetRef="SendTask_DistributeReport">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${reportApproved}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_T27" name="Revisions required" sourceRef="Gateway_ReportApproval" targetRef="Task_UpdateReport"/>
+    <bpmn:sequenceFlow id="Flow_T28" sourceRef="Task_UpdateReport" targetRef="Task_ResubmitReport"/>
+    <bpmn:sequenceFlow id="Flow_T29" sourceRef="Task_ResubmitReport" targetRef="Merge_ReportReview"/>
+    <bpmn:sequenceFlow id="Flow_T30" sourceRef="SendTask_DistributeReport" targetRef="Task_ArchiveReport"/>
+    <bpmn:sequenceFlow id="Flow_T31" sourceRef="Task_ArchiveReport" targetRef="EndEvent_AuditClosed"/>
+  </bpmn:process>
+
+</bpmn:definitions>

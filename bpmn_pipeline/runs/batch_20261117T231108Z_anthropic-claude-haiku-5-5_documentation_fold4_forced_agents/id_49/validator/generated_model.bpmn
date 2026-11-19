@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ComputerRepair" targetNamespace="http://example.org/bpmn/computer-repair">
+  <bpmn:message id="Msg_DefectiveComputer" name="Defective computer brought in"/>
+  <bpmn:message id="Msg_CostCalculation" name="Repair cost calculation"/>
+  <bpmn:message id="Msg_CostAccepted" name="Costs accepted"/>
+  <bpmn:message id="Msg_CostRejected" name="Costs not accepted"/>
+
+  <bpmn:collaboration id="Collaboration_ComputerRepair">
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_CRS" name="CRS" processRef="Process_CRS"/>
+    <bpmn:messageFlow id="MessageFlow_BringIn" name="Bring in defective computer" sourceRef="Participant_Customer" targetRef="StartEvent_ComputerBroughtIn"/>
+    <bpmn:messageFlow id="MessageFlow_CostCalc" name="Repair cost calculation" sourceRef="SendTask_SendCostCalculation" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MessageFlow_Accepted" name="Costs accepted" sourceRef="Participant_Customer" targetRef="Catch_CostsAccepted"/>
+    <bpmn:messageFlow id="MessageFlow_Rejected" name="Costs not accepted" sourceRef="Participant_Customer" targetRef="Catch_CostsRejected"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_CRS" name="CRS" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_ComputerBroughtIn" name="Defective computer brought in">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_ComputerBroughtIn" messageRef="Msg_DefectiveComputer"/>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_CheckDefect" name="Check defect">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:sendTask id="SendTask_SendCostCalculation" name="Send repair cost calculation" messageRef="Msg_CostCalculation">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:eventBasedGateway id="Gateway_CustomerDecision" name="Customer decision">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+
+    <bpmn:intermediateCatchEvent id="Catch_CostsAccepted" name="Costs accepted">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_CostsAccepted" messageRef="Msg_CostAccepted"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:intermediateCatchEvent id="Catch_CostsRejected" name="Costs not accepted">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_CostsRejected" messageRef="Msg_CostRejected"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:endEvent id="EndEvent_UnrepairedTakenHome" name="Computer taken home unrepaired">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:parallelGateway id="Gateway_RepairSplit" name="Start repair activities">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:task id="Task_RepairHardware" name="Check and repair hardware">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_TestHardware" name="Test hardware functionality">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ConfigureSoftware" name="Check and configure software">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_TestSoftware" name="Test software functionality">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="Gateway_RepairJoin" name="Repair activities completed">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:exclusiveGateway id="Gateway_ErrorMerge" name="Merge after test">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+      <bpmn:incoming>Flow_19</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:exclusiveGateway id="Gateway_ErrorCheck" name="Error detected?">
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+      <bpmn:outgoing>Flow_16</bpmn:outgoing>
+      <bpmn:outgoing>Flow_17</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_FurtherRepair" name="Execute another repair activity">
+      <bpmn:incoming>Flow_16</bpmn:incoming>
+      <bpmn:outgoing>Flow_18</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_TestFurther" name="Test system functionality">
+      <bpmn:incoming>Flow_18</bpmn:incoming>
+      <bpmn:outgoing>Flow_19</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="EndEvent_RepairFinished" name="Repair finished">
+      <bpmn:incoming>Flow_17</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_ComputerBroughtIn" targetRef="Task_CheckDefect"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_CheckDefect" targetRef="SendTask_SendCostCalculation"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="SendTask_SendCostCalculation" targetRef="Gateway_CustomerDecision"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Gateway_CustomerDecision" targetRef="Catch_CostsAccepted"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_CustomerDecision" targetRef="Catch_CostsRejected"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Catch_CostsAccepted" targetRef="Gateway_RepairSplit"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Catch_CostsRejected" targetRef="EndEvent_UnrepairedTakenHome"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Gateway_RepairSplit" targetRef="Task_RepairHardware"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Gateway_RepairSplit" targetRef="Task_ConfigureSoftware"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_RepairHardware" targetRef="Task_TestHardware"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_TestHardware" targetRef="Gateway_RepairJoin"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_ConfigureSoftware" targetRef="Task_TestSoftware"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_TestSoftware" targetRef="Gateway_RepairJoin"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Gateway_RepairJoin" targetRef="Gateway_ErrorMerge"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Gateway_ErrorMerge" targetRef="Gateway_ErrorCheck"/>
+    <bpmn:sequenceFlow id="Flow_16" name="Error detected" sourceRef="Gateway_ErrorCheck" targetRef="Task_FurtherRepair"/>
+    <bpmn:sequenceFlow id="Flow_17" name="No error" sourceRef="Gateway_ErrorCheck" targetRef="EndEvent_RepairFinished"/>
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Task_FurtherRepair" targetRef="Task_TestFurther"/>
+    <bpmn:sequenceFlow id="Flow_19" sourceRef="Task_TestFurther" targetRef="Gateway_ErrorMerge"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,92 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_LegoMachine" targetNamespace="http://example.org/bpmn/lego-machine">
+  <bpmn:process id="Process_LegoMachine" name="Building a custom machine out of Lego bricks" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Start" name="Machine build started">
+      <bpmn:outgoing>Flow_Start_Design</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_DevelopDesign" name="Develop basic design">
+      <bpmn:incoming>Flow_Start_Design</bpmn:incoming>
+      <bpmn:outgoing>Flow_Design_Order</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_OrderSets" name="Order Lego brick sets">
+      <bpmn:incoming>Flow_Design_Order</bpmn:incoming>
+      <bpmn:outgoing>Flow_Order_HandOver</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:manualTask id="ManualTask_HandOverSets" name="Hand over Lego sets to group of children">
+      <bpmn:incoming>Flow_Order_HandOver</bpmn:incoming>
+      <bpmn:outgoing>Flow_HandOver_Sort</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:manualTask id="ManualTask_SortParts" name="Sort parts into containers">
+      <bpmn:incoming>Flow_HandOver_Sort</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sort_BuildMerge</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gateway_Build_Merge" name="Subcomponent ready to build">
+      <bpmn:incoming>Flow_Sort_BuildMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_More_BuildMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_BuildMerge_Build</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="ManualTask_BuildSubcomponent" name="Build subcomponent from sorted parts">
+      <bpmn:incoming>Flow_BuildMerge_Build</bpmn:incoming>
+      <bpmn:incoming>Flow_Reorder_Build</bpmn:incoming>
+      <bpmn:incoming>Flow_Redesign_Build</bpmn:incoming>
+      <bpmn:outgoing>Flow_Build_PartsCheck</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gateway_PartsCheck_Split" name="Parts remain in container?" default="Flow_PartsRemain_Test">
+      <bpmn:incoming>Flow_Build_PartsCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_PartsEmpty_Reorder</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PartsRemain_Test</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ReorderParts" name="Reorder individual parts">
+      <bpmn:incoming>Flow_PartsEmpty_Reorder</bpmn:incoming>
+      <bpmn:outgoing>Flow_Reorder_Build</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_TestSubcomponent" name="Test subcomponent">
+      <bpmn:incoming>Flow_PartsRemain_Test</bpmn:incoming>
+      <bpmn:outgoing>Flow_Test_TestResult</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_TestResult_Split" name="Test successful?" default="Flow_TestPassed_AllDone">
+      <bpmn:incoming>Flow_Test_TestResult</bpmn:incoming>
+      <bpmn:outgoing>Flow_TestFailed_Redesign</bpmn:outgoing>
+      <bpmn:outgoing>Flow_TestPassed_AllDone</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_RedesignSubcomponent" name="Redesign and rebuild subcomponent">
+      <bpmn:incoming>Flow_TestFailed_Redesign</bpmn:incoming>
+      <bpmn:outgoing>Flow_Redesign_Build</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_AllDone_Split" name="All subcomponents built and tested?" default="Flow_AllDone_Assemble">
+      <bpmn:incoming>Flow_TestPassed_AllDone</bpmn:incoming>
+      <bpmn:outgoing>Flow_More_BuildMerge</bpmn:outgoing>
+      <bpmn:outgoing>Flow_AllDone_Assemble</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_AssembleMachine" name="Assemble machine from tested subcomponents">
+      <bpmn:incoming>Flow_AllDone_Assemble</bpmn:incoming>
+      <bpmn:outgoing>Flow_Assemble_End</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_Machine" name="Machine completed">
+      <bpmn:incoming>Flow_Assemble_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_Design" sourceRef="StartEvent_Start" targetRef="Task_DevelopDesign"/>
+    <bpmn:sequenceFlow id="Flow_Design_Order" sourceRef="Task_DevelopDesign" targetRef="Task_OrderSets"/>
+    <bpmn:sequenceFlow id="Flow_Order_HandOver" sourceRef="Task_OrderSets" targetRef="ManualTask_HandOverSets"/>
+    <bpmn:sequenceFlow id="Flow_HandOver_Sort" sourceRef="ManualTask_HandOverSets" targetRef="ManualTask_SortParts"/>
+    <bpmn:sequenceFlow id="Flow_Sort_BuildMerge" sourceRef="ManualTask_SortParts" targetRef="Gateway_Build_Merge"/>
+    <bpmn:sequenceFlow id="Flow_BuildMerge_Build" sourceRef="Gateway_Build_Merge" targetRef="ManualTask_BuildSubcomponent"/>
+    <bpmn:sequenceFlow id="Flow_Build_PartsCheck" sourceRef="ManualTask_BuildSubcomponent" targetRef="Gateway_PartsCheck_Split"/>
+    <bpmn:sequenceFlow id="Flow_PartsEmpty_Reorder" name="No more parts in container" sourceRef="Gateway_PartsCheck_Split" targetRef="Task_ReorderParts">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${partsRemaining == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_PartsRemain_Test" name="Parts remain" sourceRef="Gateway_PartsCheck_Split" targetRef="Task_TestSubcomponent"/>
+    <bpmn:sequenceFlow id="Flow_Reorder_Build" sourceRef="Task_ReorderParts" targetRef="ManualTask_BuildSubcomponent"/>
+    <bpmn:sequenceFlow id="Flow_Test_TestResult" sourceRef="Task_TestSubcomponent" targetRef="Gateway_TestResult_Split"/>
+    <bpmn:sequenceFlow id="Flow_TestFailed_Redesign" name="Test not successful" sourceRef="Gateway_TestResult_Split" targetRef="Task_RedesignSubcomponent">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${testFailed == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_TestPassed_AllDone" name="Test successful" sourceRef="Gateway_TestResult_Split" targetRef="Gateway_AllDone_Split"/>
+    <bpmn:sequenceFlow id="Flow_Redesign_Build" sourceRef="Task_RedesignSubcomponent" targetRef="ManualTask_BuildSubcomponent"/>
+    <bpmn:sequenceFlow id="Flow_More_BuildMerge" name="More subcomponents remain" sourceRef="Gateway_AllDone_Split" targetRef="Gateway_Build_Merge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${moreSubcomponents == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_AllDone_Assemble" name="All subcomponents tested successfully" sourceRef="Gateway_AllDone_Split" targetRef="Task_AssembleMachine"/>
+    <bpmn:sequenceFlow id="Flow_Assemble_End" sourceRef="Task_AssembleMachine" targetRef="EndEvent_Machine"/>
+  </bpmn:process>
+</bpmn:definitions>

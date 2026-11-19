@@ -1,0 +1,646 @@
+{
+  "catalogue_id": "bpmn_documentation_guidelines_v2",
+  "version": "2.2",
+  "title": "BPMN 2.0.2 documentation guidelines for process and collaboration generation",
+  "purpose": "Operational paraphrases for an LLM that generates BPMN 2.0 XML from a process description.",
+  "normative_source": {
+    "title": "Business Process Model and Notation (BPMN), Version 2.0.2",
+    "omg_document_number": "formal/2013-12-09",
+    "source_file": "formal-13-12-09.pdf"
+  },
+  "profile_scope": [
+    "Private process models",
+    "Tasks, subprocesses, events, gateways and sequence flows",
+    "Pools, lanes and message flows",
+    "Common data objects and documentation artifacts"
+  ],
+  "outside_prompt_scope": [
+    "Detailed choreography and conversation models",
+    "BPMN-DI coordinates and graphical layout",
+    "WS-BPEL mapping",
+    "Vendor extensions and engine-specific deployment attributes"
+  ],
+  "methodology_note": "Concise paraphrases, not copied normative text. This common generation profile does not replace XSD validation or the full OMG specification.",
+  "source_map": {
+    "Document and XML structure": [
+      "8.2.1",
+      "8.3",
+      "15.3"
+    ],
+    "Faithfulness and modeling decisions": [
+      "7.2",
+      "7.3",
+      "7.5"
+    ],
+    "Processes and scopes": [
+      "10.1",
+      "10.2",
+      "13.2"
+    ],
+    "Activities and task types": [
+      "10.3.1-10.3.4",
+      "13.3"
+    ],
+    "Subprocesses, calls and repetition": [
+      "10.3.5-10.3.8",
+      "13.3.4-13.3.7"
+    ],
+    "Events": [
+      "10.5",
+      "13.5"
+    ],
+    "Gateways, branches and joins": [
+      "10.6",
+      "13.4"
+    ],
+    "Sequence flows and conditions": [
+      "7.6.1",
+      "8.4.13",
+      "13.3.1"
+    ],
+    "Collaboration, pools and messages": [
+      "7.6.2",
+      "9.1-9.4",
+      "9.6"
+    ],
+    "Lanes and responsibility": [
+      "9.3.2",
+      "10.8"
+    ],
+    "Data and documentation artifacts": [
+      "7.3.1",
+      "8.4.1",
+      "10.4"
+    ],
+    "Final consistency checks": [
+      "7-10",
+      "13",
+      "15.3"
+    ]
+  },
+  "sections": [
+    {
+      "category": "Document and XML structure",
+      "rules": [
+        {
+          "id": "XML-01",
+          "instruction": "Return one complete, well-formed bpmn:definitions document and no surrounding explanation or Markdown fence."
+        },
+        {
+          "id": "XML-02",
+          "instruction": "Declare the BPMN model namespace http://www.omg.org/spec/BPMN/20100524/MODEL and a non-empty targetNamespace on bpmn:definitions."
+        },
+        {
+          "id": "XML-03",
+          "instruction": "Assign a unique XML id to every referenced element. Resolve all Ref attributes to existing, type-compatible elements. For example, a split gateway and the gateway that joins its branches get two different ids, such as Gateway_Approval_Split and Gateway_Approval_Join.",
+          "pilot_note": "example added in v2.2 after the pilot (2 duplicate gateway ids)"
+        },
+        {
+          "id": "XML-04",
+          "instruction": "Escape XML special characters in names, documentation and expressions. Do not emit undeclared prefixes, duplicate attributes or unclosed tags."
+        },
+        {
+          "id": "XML-05",
+          "instruction": "Do not add BPMN-DI, vendor extensions or execution-engine attributes unless the requested output explicitly requires them."
+        },
+        {
+          "id": "XML-06",
+          "instruction": "Follow the BPMN XML schema: never put a documentation element directly inside bpmn:definitions, and never nest a sequenceFlow inside a task, gateway or event. If you add an ioSpecification, it must contain its dataInput and dataOutput elements first, then at least one inputSet and one outputSet, even if empty: <bpmn:inputSet/><bpmn:outputSet/>.",
+          "source_clause": "BPMN 2.0 XSD (BPMN20.xsd: tDefinitions; Semantic.xsd: tInputOutputSpecification); 8.3",
+          "pilot_evidence": 5
+        },
+        {
+          "id": "XML-07",
+          "instruction": "Write default, sourceRef, targetRef, attachedToRef, processRef and messageRef as attributes, never as child elements, and give every association both a sourceRef and a targetRef.",
+          "source_clause": "BPMN 2.0 XSD (Semantic.xsd)",
+          "pilot_evidence": 2
+        }
+      ]
+    },
+    {
+      "category": "Faithfulness and modeling decisions",
+      "rules": [
+        {
+          "id": "FID-01",
+          "instruction": "Model every distinct activity, event, participant, decision, branch, loop, message and outcome stated in the description. Do not invent process facts."
+        },
+        {
+          "id": "FID-02",
+          "instruction": "Do not merge separately described actions into one task or split one stated action without a process reason. Preserve described dependencies."
+        },
+        {
+          "id": "FID-03",
+          "instruction": "Use short, faithful labels in the input language. Prefer verb-object activity names and meaningful business triggers or outcomes for events."
+        },
+        {
+          "id": "FID-04",
+          "instruction": "When the description does not justify a specialized construct, use the simplest compatible BPMN construct and do not guess missing semantics."
+        }
+      ]
+    },
+    {
+      "category": "Processes and scopes",
+      "rules": [
+        {
+          "id": "PROC-01",
+          "instruction": "Represent each modeled internal workflow with bpmn:process. Use isExecutable=false unless execution-ready behavior is explicitly required and fully specified."
+        },
+        {
+          "id": "PROC-02",
+          "instruction": "Keep each flow node and sequence flow inside its owning process or subprocess. Sequence flows never cross pool or subprocess boundaries."
+        },
+        {
+          "id": "PROC-03",
+          "instruction": "Build a connected path from each modeled start to an end or intentionally continuing state. Avoid accidental disconnected flow nodes."
+        },
+        {
+          "id": "PROC-04",
+          "instruction": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+        },
+        {
+          "id": "PROC-05",
+          "instruction": "Give every process and every expanded subProcess its own explicit start event and end event. A trigger that occurs after the main flow (for example later feedback or a return) is joined to the main flow by a gateway, or modeled as an event subprocess or a separate process.",
+          "source_clause": "10.2, 10.3.5; stricter than BPMN, which allows implicit start and end events in some cases",
+          "pilot_evidence": 11
+        }
+      ]
+    },
+    {
+      "category": "Activities and task types",
+      "rules": [
+        {
+          "id": "ACT-01",
+          "instruction": "Use bpmn:task for atomic work when the execution mode is unspecified. A task contains no internal flow."
+        },
+        {
+          "id": "ACT-02",
+          "instruction": "Use bpmn:userTask for human work assisted by software and bpmn:manualTask for human work performed without an execution application."
+        },
+        {
+          "id": "ACT-03",
+          "instruction": "Use bpmn:serviceTask for automated service work, bpmn:scriptTask for an explicit script, and bpmn:businessRuleTask for explicit rule evaluation."
+        },
+        {
+          "id": "ACT-04",
+          "instruction": "Use bpmn:sendTask or bpmn:receiveTask when sending or waiting for a message is itself the modeled unit of work."
+        },
+        {
+          "id": "ACT-05",
+          "instruction": "Distinguish message tasks from message events: a task models performed work; an event models a message occurrence affecting flow."
+        },
+        {
+          "id": "ACT-06",
+          "instruction": "Model performer information only when responsibility is stated. Prefer lanes for ordinary organizational responsibility."
+        },
+        {
+          "id": "ACT-07",
+          "instruction": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+        },
+        {
+          "id": "ACT-08",
+          "instruction": "Do not infer a task subtype only from a verb in its label; require supporting meaning in the full description."
+        }
+      ]
+    },
+    {
+      "category": "Subprocesses, calls and repetition",
+      "rules": [
+        {
+          "id": "SUB-01",
+          "instruction": "Use bpmn:subProcess for a nested workflow belonging to its parent process; keep all internal nodes and flows inside it."
+        },
+        {
+          "id": "SUB-02",
+          "instruction": "Use bpmn:callActivity only to invoke a separately defined reusable process or global task; make calledElement resolvable in the intended model context."
+        },
+        {
+          "id": "SUB-03",
+          "instruction": "An ordinary embedded subprocess participates in normal sequence flow and may contain its own starts, ends, activities, gateways and flows."
+        },
+        {
+          "id": "SUB-04",
+          "instruction": "For an event subprocess set triggeredByEvent=true, use exactly one triggered start event, and add no incoming or outgoing sequence flow."
+        },
+        {
+          "id": "SUB-05",
+          "instruction": "Use standard loop or multi-instance characteristics only when repetition is explicit; choose sequential or parallel instances from the description."
+        },
+        {
+          "id": "SUB-06",
+          "instruction": "Use transaction, ad-hoc or compensation behavior only when its specific semantics are explicitly described."
+        },
+        {
+          "id": "SUB-07",
+          "instruction": "Inside an ordinary subProcess (embedded or called), use only a None start event; typed start triggers are reserved for top-level processes and event subprocesses.",
+          "source_clause": "10.5.2, Table 10.85"
+        }
+      ]
+    },
+    {
+      "category": "Events",
+      "rules": [
+        {
+          "id": "EVT-01",
+          "instruction": "Use start events for stated process triggers. A start event has no incoming sequence flow and is not the source of a message flow."
+        },
+        {
+          "id": "EVT-02",
+          "instruction": "Use end events for terminal outcomes. An end event has no outgoing sequence flow and is not the target of a message flow."
+        },
+        {
+          "id": "EVT-03",
+          "instruction": "Use an intermediate catch event when flow waits for a trigger and an intermediate throw event when flow emits or raises a result."
+        },
+        {
+          "id": "EVT-04",
+          "instruction": "Use message events for directed participant communication, signal events for broadcasts, and timer events for stated dates, durations or cycles."
+        },
+        {
+          "id": "EVT-05",
+          "instruction": "Use conditional, error, escalation, cancel, compensation, link, multiple or terminate events only when their specific semantics and placement are supported."
+        },
+        {
+          "id": "EVT-06",
+          "instruction": "Use a none start when no trigger is stated. Never use a none start for an event subprocess."
+        },
+        {
+          "id": "EVT-07",
+          "instruction": "Attach a boundary event with attachedToRef. Set cancelActivity=true when it interrupts the activity and false only for supported non-interrupting behavior."
+        },
+        {
+          "id": "EVT-08",
+          "instruction": "Use an interrupting event-subprocess start when the parent scope stops; use non-interrupting only when the parent continues."
+        },
+        {
+          "id": "EVT-09",
+          "instruction": "Use a terminate end only when all remaining activity in the current scope must end immediately."
+        },
+        {
+          "id": "EVT-10",
+          "instruction": "Keep catch and throw direction consistent and avoid representing one occurrence redundantly as an equivalent adjacent task and event."
+        },
+        {
+          "id": "EVT-11",
+          "instruction": "Attach to an activity boundary only these triggers: message, timer, escalation, conditional, signal, error, cancel, compensation or multiple. Never a none or link event.",
+          "source_clause": "10.5.4, Table 10.90"
+        },
+        {
+          "id": "EVT-12",
+          "instruction": "An error boundary event is always interrupting (cancelActivity=true); a cancel boundary event is used only on a transaction subProcess.",
+          "source_clause": "10.5.4, Table 10.90; 10.5.6"
+        },
+        {
+          "id": "EVT-13",
+          "instruction": "Respect event positions: a none intermediate event is catch-only in normal flow and never on a boundary; link events are intermediate-only, thrown and caught in pairs at the same process level, and a catching link has no incoming sequence flow; terminate is an end event only.",
+          "source_clause": "10.5.5, 10.5.6"
+        },
+        {
+          "id": "EVT-14",
+          "instruction": "For a message event, put messageRef on its bpmn:messageEventDefinition, never on the event element itself.",
+          "source_clause": "10.5.2, 10.5.6; BPMN 2.0 XSD",
+          "pilot_evidence": 1
+        }
+      ]
+    },
+    {
+      "category": "Gateways, branches and joins",
+      "rules": [
+        {
+          "id": "GW-01",
+          "instruction": "Use gateways to control divergence and convergence, never to represent work. Identify exclusive, inclusive, parallel, event-driven or complex behavior."
+        },
+        {
+          "id": "GW-02",
+          "instruction": "Use an exclusive split when exactly one data-based alternative runs. Add supported conditions and at most one default fallback."
+        },
+        {
+          "id": "GW-03",
+          "instruction": "Use an exclusive merge for alternative paths; it does not wait for inactive alternatives."
+        },
+        {
+          "id": "GW-04",
+          "instruction": "Use a parallel split when all outgoing branches start. Do not add decision conditions to parallel branches."
+        },
+        {
+          "id": "GW-05",
+          "instruction": "Use a parallel join when a shared continuation waits for all active parallel branches. Never use it to join mutually exclusive alternatives."
+        },
+        {
+          "id": "GW-06",
+          "instruction": "Use an inclusive split when one or more conditions can be true; use an inclusive join to synchronize only activated reachable branches."
+        },
+        {
+          "id": "GW-07",
+          "instruction": "Use an event-based gateway when the first occurring event selects the path. Target supported catching events or receive tasks, not ordinary tasks."
+        },
+        {
+          "id": "GW-08",
+          "instruction": "Use a complex gateway only for an explicitly described rule that XOR, OR and AND cannot express. Prefer separate split and join gateways for clarity."
+        },
+        {
+          "id": "GW-09",
+          "instruction": "Give the outgoing sequence flows of an event-based gateway no conditionExpression; the first occurring target event selects the path.",
+          "source_clause": "10.6.6"
+        },
+        {
+          "id": "GW-10",
+          "instruction": "Every gateway either splits (two or more outgoing flows) or merges (two or more incoming flows); never give a gateway one incoming and one outgoing flow.",
+          "source_clause": "10.6, 13.4",
+          "pilot_evidence": 1
+        }
+      ]
+    },
+    {
+      "category": "Sequence flows and conditions",
+      "rules": [
+        {
+          "id": "FLOW-01",
+          "instruction": "Use bpmn:sequenceFlow for execution order between flow nodes in the same process or subprocess scope; set valid sourceRef and targetRef values."
+        },
+        {
+          "id": "FLOW-02",
+          "instruction": "Only activities, gateways and events are sequence-flow endpoints. Never connect sequence flows to pools, lanes, data objects, groups or annotations."
+        },
+        {
+          "id": "FLOW-03",
+          "instruction": "Keep incoming and outgoing references consistent where used. Never add incoming flow to a start or outgoing flow from an end."
+        },
+        {
+          "id": "FLOW-04",
+          "instruction": "Use a boolean formal conditionExpression on a conditional flow only when the description supports the condition."
+        },
+        {
+          "id": "FLOW-05",
+          "instruction": "Reference a default flow with the source activity or gateway default attribute and give the default flow no conditionExpression."
+        },
+        {
+          "id": "FLOW-06",
+          "instruction": "Trace every split to continuations or endings. Add a join only when paths reunite and choose matching waiting semantics."
+        },
+        {
+          "id": "FLOW-07",
+          "instruction": "Represent loops only when repetition is stated and provide a meaningful exit unless endless behavior is explicit."
+        }
+      ]
+    },
+    {
+      "category": "Collaboration, pools and messages",
+      "rules": [
+        {
+          "id": "COL-01",
+          "instruction": "Create bpmn:collaboration when distinct participants interact and represent every participant as a bpmn:participant pool."
+        },
+        {
+          "id": "COL-02",
+          "instruction": "A white-box participant references its process with processRef. A black-box participant has no processRef and no modeled internal workflow."
+        },
+        {
+          "id": "COL-03",
+          "instruction": "Use sequence flows inside one participant process and message flows between different participants. Never use sequence flow across pools."
+        },
+        {
+          "id": "COL-04",
+          "instruction": "Direct each message flow from sender to receiver. Its endpoints must belong to different pools and be valid interaction nodes."
+        },
+        {
+          "id": "COL-05",
+          "instruction": "Do not attach message flows to lanes, gateways, data objects, groups or annotations; use participant boundaries or eligible flow nodes."
+        },
+        {
+          "id": "COL-06",
+          "instruction": "Create reusable bpmn:message elements and messageRef only when communication content or shared message identity matters."
+        },
+        {
+          "id": "COL-07",
+          "instruction": "Do not create separate pools for ordinary internal roles unless the description treats them as independent communicating participants."
+        }
+      ]
+    },
+    {
+      "category": "Lanes and responsibility",
+      "rules": [
+        {
+          "id": "LANE-01",
+          "instruction": "Use lanes to partition one process by a stated role, department, system or responsibility; lanes are not separate processes."
+        },
+        {
+          "id": "LANE-02",
+          "instruction": "Each lane flowNodeRef identifies a node in the owning process. Assign nodes according to stated responsibility and avoid arbitrary membership."
+        },
+        {
+          "id": "LANE-03",
+          "instruction": "Sequence flows may cross lanes in one process. Use message flows across participant pools, never between lanes."
+        },
+        {
+          "id": "LANE-04",
+          "instruction": "Lanes may be nested: a lane can contain a child laneSet that partitions it further; every flowNodeRef at any depth references nodes of the one owning process.",
+          "source_clause": "10.2, Figure 10.125"
+        },
+        {
+          "id": "LANE-05",
+          "instruction": "Put each flow node, including gateways and events, in exactly one lane.",
+          "source_clause": "10.8",
+          "pilot_evidence": 1
+        }
+      ]
+    },
+    {
+      "category": "Data and documentation artifacts",
+      "rules": [
+        {
+          "id": "DATA-01",
+          "instruction": "Use dataObjectReference for process-instance data and dataStoreReference for persistent information available beyond one process instance."
+        },
+        {
+          "id": "DATA-02",
+          "instruction": "Use data input and output associations between data and activities. Data associations do not define execution order."
+        },
+        {
+          "id": "DATA-03",
+          "instruction": "Use text annotations and associations only for explanatory information; they do not control execution."
+        },
+        {
+          "id": "DATA-04",
+          "instruction": "Use groups only for documentation or analysis categories; groups create no scope and change no flow behavior."
+        }
+      ]
+    },
+    {
+      "category": "Final consistency checks",
+      "rules": [
+        {
+          "id": "QA-01",
+          "instruction": "Verify XML syntax, namespaces, unique IDs, reference types, scopes, and all incoming and outgoing flow references."
+        },
+        {
+          "id": "QA-02",
+          "instruction": "Verify every start-to-end path, loop exit, branch condition and join; prevent deadlocks from incompatible branch and join semantics."
+        },
+        {
+          "id": "QA-03",
+          "instruction": "Verify processRef values, lane membership, message-flow endpoints and directions, and the prohibition on sequence flows between pools."
+        },
+        {
+          "id": "QA-04",
+          "instruction": "Compare the model with the description; remove unsupported elements and retain every explicitly stated alternative, outcome and collaboration."
+        }
+      ]
+    },
+    {
+      "category": "Learned guidelines (promoted on evidence)",
+      "rules": [
+        {
+          "id": "LRN-002",
+          "instruction": "When the description states a condition that determines whether a path continues but does not state what happens when it does not: Use a neutral label for any modeled end event on that path rather than asserting an unsupported outcome."
+        },
+        {
+          "id": "LRN-003",
+          "instruction": "When the description says that one of several alternatives is selected, or that an activity may occur: Model the choice or optional activity with an appropriate gateway, and reconnect the resulting paths before subsequent common work."
+        },
+        {
+          "id": "LRN-005",
+          "instruction": "When the description names multiple required activities in a phase, gives no order among them, and states that a later outcome occurs only after the phase is finished: Model each activity separately, use a parallel split for the unordered activities, and join their branches before modeling the later outcome."
+        },
+        {
+          "id": "LRN-007",
+          "instruction": "When the description states that an actor identifies or determines a need before subsequent work begins: Model the identification as a task after a start event; do not represent the stated action only as the start event."
+        },
+        {
+          "id": "LRN-008",
+          "instruction": "When the description states an activity and separately specifies criteria used to perform it: Label the activity with its concise core action; do not add the criteria to the activity label unless they are needed to distinguish it from another activity."
+        },
+        {
+          "id": "LRN-009",
+          "instruction": "When the description explicitly states that an actor performs an action that initiates the described process: Model the stated action as an activity in the actor’s scope; do not use a start event representing the resulting occurrence as a substitute for that activity. Represent the process start separately with an appropriate start event."
+        },
+        {
+          "id": "LRN-010",
+          "instruction": "When the description explicitly specifies multiple actions, a recipient, or a distinguishing object or scope for an activity: Label the BPMN task to preserve those stated semantic details when they clarify what is done; do not omit or alter them, or add unsupported details."
+        },
+        {
+          "id": "LRN-015",
+          "instruction": "When the description states the action, purpose, recipient, scope, or outcome of a process element: Label the corresponding BPMN element with a concise phrase that preserves those stated semantics; do not substitute a related but different meaning, omit distinguishing details, or add unsupported details."
+        },
+        {
+          "id": "LRN-016",
+          "instruction": "When the description says that a decision or outcome is communicated to a person: Model the communication as a distinct activity; do not treat the decision gateway itself as the communication."
+        },
+        {
+          "id": "LRN-017",
+          "instruction": "When the description says an optional activity may occur after a case reaches its completion, regardless of which outcome completed the case: Model the optional activity as a subsequent activity reached from the applicable completion paths, rather than as a new process start event."
+        },
+        {
+          "id": "LRN-023",
+          "instruction": "When the description states that work proceeds concurrently and that a later step must wait until all of that work is complete: Model the concurrent work as parallel branches and synchronize them with a parallel gateway before the dependent step."
+        },
+        {
+          "id": "LRN-024",
+          "instruction": "When the description states an activity's object, scope, or alternative actions: Label the corresponding BPMN task concisely, preserving the stated action and distinctions without substituting a related action or adding unsupported meaning."
+        },
+        {
+          "id": "LRN-025",
+          "instruction": "When the description explicitly assigns an activity to a role, and the BPMN model does not otherwise make the performer clear: Include the stated role in the activity label along with the action."
+        },
+        {
+          "id": "LRN-026",
+          "instruction": "When the description explicitly states that an activity follows the process start or another activity: connect the corresponding BPMN elements with sequence flows in the stated order, preserving any intervening gateways and branches"
+        },
+        {
+          "id": "LRN-028",
+          "instruction": "When the description states that one activity is required while an independent activity is performed only when a condition holds.: Model an inclusive split so the required activity and the conditionally applicable activity can proceed, then use an inclusive join before their shared continuation."
+        },
+        {
+          "id": "LRN-030",
+          "instruction": "When the description distinguishes mutually exclusive cases by conditions, assigns different actions to them, and later gives them a shared continuation: Model the case selection with an exclusive split, and reconverge the alternative paths with an exclusive merge before the shared continuation."
+        },
+        {
+          "id": "LRN-032",
+          "instruction": "When the description mentions an external person or organization only as the recipient or source of a communication, without describing that party performing process activities or a separate process: Model the stated communication and any resulting wait or receipt within the described process; do not add a separate participant pool or message flows for that party."
+        },
+        {
+          "id": "LRN-035",
+          "instruction": "When the description says a participant may send an interim communication before continuing its work and sending a final response: model the interim communication on the applicable conditional path, continue the participant’s subsequent work on that path, and model the other participant’s wait for the final response with a catching event"
+        },
+        {
+          "id": "LRN-037",
+          "instruction": "When the description distinguishes multiple activities or events by their action, information, or outcome: Label each corresponding BPMN element to preserve those distinctions, rather than using interchangeable or overly generic labels."
+        },
+        {
+          "id": "LRN-041",
+          "instruction": "When the description identifies distinct participants and describes information or items being communicated or handed off between them: Model each participant as a separate pool and represent each described exchange between participants with a message flow from sender to receiver, using valid interaction nodes."
+        },
+        {
+          "id": "LRN-045",
+          "instruction": "When the description explicitly assigns an activity to an actor or states who sends or receives something: Make the stated performer and the direction of the interaction clear in the BPMN activity labels; do not reverse who performs, sends, or receives the action."
+        },
+        {
+          "id": "LRN-052",
+          "instruction": "When the description says information must be gathered or choices made before the main work begins: Model the gathering or choice as a distinct activity and connect it before the main work; do not use the main-work workflow as a substitute for it."
+        },
+        {
+          "id": "LRN-056",
+          "instruction": "When the description specifies multiple thresholds for the same quantity, with a different action at each threshold, and meeting a lower threshold also meets a higher-threshold condition.: Model the conditions so that the lower-threshold condition is evaluated after the higher-threshold condition, preserving both applicable actions when the lower threshold is met."
+        },
+        {
+          "id": "LRN-059",
+          "instruction": "When the description provides directions for a person to perform physical work themselves: model the person's execution as a manual task in sequence after the directions are provided"
+        },
+        {
+          "id": "LRN-063",
+          "instruction": "When the description says that a process collects or retrieves information from a source for a calculation or subsequent work: Model the collection or retrieval as a distinct activity before the information is used."
+        },
+        {
+          "id": "LRN-066",
+          "instruction": "When the description presents an event or activity as a later step in the same process rather than as an independent process trigger: Connect it to the preceding control flow with sequence flow instead of modeling it as a detached start-to-end chain."
+        },
+        {
+          "id": "LRN-067",
+          "instruction": "When the description assigns a communication to a participant, for example by saying that the participant is notified, receives information, or makes a payment: Model the communication from the stated participant’s perspective and preserve its direction. When receiving the communication affects the process flow, model the recipient side with a catching message event rather than a task that sends it."
+        },
+        {
+          "id": "LRN-068",
+          "instruction": "When the description presents the start of an activity and the elapse of a deadline as competing events after a notification: Model the wait with an event-based gateway leading to a catching event for the activity’s start and a timer event for the deadline, so whichever occurs first selects the path."
+        },
+        {
+          "id": "LRN-070",
+          "instruction": "When the description states that a communication or other action recurs at a fixed time interval while work is ongoing: Model the recurring action with a timer event and control flow that allows it to recur during the ongoing work, rather than omitting the timer sequence."
+        },
+        {
+          "id": "LRN-072",
+          "instruction": "When the description makes an action depend on whether the time spent waiting for an item to be received exceeded a stated threshold: Model an exclusive gateway after the receipt, routing to the action only when the threshold was exceeded."
+        },
+        {
+          "id": "LRN-073",
+          "instruction": "When the description states that progress waits for a specified occurrence before distinct work is performed afterward: Model the wait as an intermediate catch event and the later work as a separate activity, labeling each element for the occurrence or work it represents."
+        },
+        {
+          "id": "LRN-076",
+          "instruction": "When the description lists multiple required operations without specifying their order and states that a distinct follow-up occurs after each operation: Model the operations as required branches from a parallel split, with each follow-up on its corresponding branch."
+        },
+        {
+          "id": "LRN-079",
+          "instruction": "When the description states distinct activities leading to a decision, with one outcome returning work for another attempt and another outcome continuing the process.: Model the stated activities in their described order, then use a decision gateway to connect each outcome to its corresponding return or continuation path."
+        },
+        {
+          "id": "LRN-083",
+          "instruction": "When the description states that an activity or event sends, receives, or waits for a message: Place any message reference in the schema-defined location for the selected BPMN element; do not serialize it as a child element unless the BPMN schema allows it there."
+        },
+        {
+          "id": "LRN-085",
+          "instruction": "When the description says that a participant sends information to another participant: Model the sending action as a task in the sender’s process, rather than as a send task."
+        },
+        {
+          "id": "LRN-086",
+          "instruction": "When the description presents activities as successive steps, with one action followed by another in the stated process order: Connect the corresponding activities with sequence flows in that order, and connect the final activity of the process to an end event."
+        },
+        {
+          "id": "LRN-088",
+          "instruction": "When the description states that one or more conditional outcomes return work to an earlier activity, and the initial route also reaches that activity: Model the initial route and the return flows as converging through an exclusive gateway immediately before the repeated activity."
+        }
+      ]
+    }
+  ],
+  "renamed_from": "bpmn_baseline (v1); renamed to reflect the normative source: the OMG BPMN 2.0.2 documentation",
+  "updated_at_utc": "2026-11-16T00:04:09Z",
+  "update_note": "v2.2 (pilot round 2, Luna first models with v2.1: L3 failures 7 -> 3, L1 failures 4 -> 5): XML-06 gives the exact inputSet/outputSet snippet, XML-07 adds messageRef to the attribute list, and the existing rule XML-03 gets one example (distinct ids for a split and its join). No rule added. v2.1 states six rules explicitly after a pilot run: the validator's errors in 165 first models (GPT-6 Luna, Claude Haiku 5.5, GPT-6.1 Sol, documentation guidelines only) showed which rules of the specification and of its XML schema the generator broke. Only validator results were used, never a reference model. Each new rule carries its source_clause and pilot_evidence (number of failures it addresses). v2.0 note: v2.0 adds five rules identified by a systematic gap check of the catalogue against the full OMG PDF (formal/13-12-09): SUB-07, GW-09, EVT-11, EVT-12, EVT-13, LANE-04. Each carries its source clause. Cleanup: each v2.1 rule keeps only what the 76 earlier rules did not state; errors already covered by an earlier rule (unique ids XML-03, existing references FLOW-01/XML-03, parallel join of exclusive branches GW-05, lane of the owning process LANE-02, connected paths PROC-03) are not repeated. XML-06 corrected to match the schema exactly (no documentation in definitions; ioSpecification needs inputSet and outputSet)."
+}

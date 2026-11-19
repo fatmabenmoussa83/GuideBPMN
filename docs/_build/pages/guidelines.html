@@ -1,0 +1,76 @@
+<div class="mb-3"><div class="kicker">Catalogues</div><h1 class="h3 mb-0 text-gray-800 font-weight-bold">Guidelines</h1></div>
+<p class="mb-4" style="max-width:62rem">The two catalogues the generator works with: the <strong>documentation guidelines</strong>,
+  paraphrased from the OMG BPMN 2.0.2 specification and never modified by a run, and the <strong>error-driven guidelines</strong>,
+  written by the guideline agents from verified mistakes. Every learning run has <strong>its own catalogue</strong>, which starts empty:
+  one per Revised run (runs 1, 2, 3), one per Reuse round (rounds 1 to 5) and one per trial on a few descriptions, for each generator model. Catalogues are never mixed.
+  An error-driven guideline is either <em>new</em> or <em>refines</em> a documentation guideline; one that could not be written in general terms is kept as <em>example-specific</em>.</p>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">How guidelines are learned, tested and reused</h6></div>
+  <div class="card-body">
+    <p class="mb-1"><strong>Learning (Revised runs and Reuse training).</strong></p>
+    <ol>
+      <li><strong>Evidence.</strong> When a <a href="orchestrator.html#failures">failure type</a> is detected on a description, the orchestrator passes the evidence to the
+        guideline agents: the Structural validator's messages for T1 to T4 and, for T5 to T7, the differences measured by the
+        <a href="similarity.html">Similarity evaluator</a> (activities without a partner, missing and additional flows, order conflicts, participant differences).</li>
+      <li><strong>Retriever agent.</strong> A tool-using agent (ReAct loop, 4 tool calls: <code>list_evidence</code>, <code>search_evidence</code>, <code>find_counterparts</code>): it lists and searches the evidence records, selects the ones that matter for the failure type and explains the error.</li>
+      <li><strong>Expert agent.</strong> A tool-using agent (ReAct loop, 6 tool calls: <code>read_description</code>, <code>find_closest_documented_guidelines</code>, <code>find_closest_learned_guidelines</code>, <code>check_wording</code>): it reads the description, consults the closest documentation and error-driven guidelines and checks its wording,
+        then proposes one guideline of the form &ldquo;when the description states &hellip;, model &hellip;&rdquo;, cites the records it relies on, and decides the relation of its guideline to the existing ones.
+        It abstains only when the records show no difference or when the reference contradicts the description. Full detail: <a href="guideline_learning.html">Guideline learning</a>.</li>
+      <li><strong>Relation to what exists.</strong> The Expert must consult, through its tool, the 6 closest documentation guidelines (and the 4 closest error-driven guidelines of the same catalogue) before proposing, and it decides the relation:
+        <strong>contradicts</strong> a documentation guideline (it is asked once to write one that respects the guideline; otherwise the proposal is rejected), <strong>restates</strong> one (nothing stored, the guideline is sent back),
+        <strong>refines</strong> one, is <strong>new</strong>, or is the <strong>same as an error-driven guideline</strong> already learned (consolidated: the description is added as support).
+        Code guards check the citations, that no label comes from the reference model, and near-copies (cosine &ge; 0.88 or word overlap &ge; 0.60).
+        A guideline still worded in terms of its own process after one rewrite is kept as example-specific.</li>
+      <li><strong>Test in a next iteration.</strong> The guidelines learned for the description are sent back to the generator for that same description,
+        and the new model is validated and compared again. The iterations are <strong>forced</strong>: every description does 3 next iterations while a failure is left.</li>
+      <li><strong>From example-specific to generic.</strong> When an example-specific guideline was sent back and confirmed (rule below), the Expert agent may rewrite it in
+        general terms. The general form is checked like any guideline; if it passes, it joins the catalogue as a generic guideline (promoted), with a pointer to the example-specific one.
+        An example-specific guideline is sent back to its own description only, never given to another description.</li>
+    </ol>
+    <p class="mb-1"><strong>When a guideline is &ldquo;confirmed&rdquo;.</strong> Every guideline is learned from one type of error (T1&ndash;T7). The errors of that type
+      are counted before and after the next iteration:</p>
+    <div class="eq"><span>errors removed</span> = errors of its type before &minus; errors of its type after</div>
+    <div class="eq"><span>confirmed</span> when the errors removed are more than 0</div>
+    <p class="eq-note">If the new model has more errors in total (T1&ndash;T7) than the previous one, or is less valid, it is not kept: the previous model stays, so no
+      error is removed and the guidelines sent in that iteration are not confirmed. Each guideline is judged on its own type, also when several are sent together.</p>
+    <p class="mb-1"><strong>Reuse (test of a round).</strong> In round k, the catalogue learned on the 44 training descriptions is frozen. The 11 test descriptions of fold k,
+      never seen in training, receive the documentation guidelines and the <strong>confirmed generic guidelines</strong> of round k only, in a first pass without learning.</p>
+    <p class="mb-0"><strong>No description helps itself.</strong> A guideline is never given in Reuse to a description it was learned from: the test descriptions of a round are not in its training set.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-2 d-flex flex-wrap align-items-center">
+    <ul class="nav nav-pills small mr-3">
+      <li class="nav-item"><a class="nav-link active" id="glDocTab" href="#">Documentation guidelines</a></li>
+      <li class="nav-item"><a class="nav-link" id="glLearnedTab" href="#learned">Error-driven guidelines</a></li>
+    </ul>
+    <input id="glSearch" class="form-control form-control-sm mr-2 my-1" style="max-width:18rem" placeholder="Search (id, word, category)">
+    <div id="glCategoryBox"><select id="glCategory" class="form-control form-control-sm my-1" style="max-width:22rem"></select></div>
+  </div>
+  <div class="card-body">
+    <div id="glDocPane">
+      <p class="small text-muted mb-2"><span id="glDocCount"></span> guidelines &middot; <span id="glSource"></span> Read-only: no run changes this catalogue.</p>
+      <div class="table-responsive"><table class="table table-sm small mb-0">
+        <thead><tr><th>id</th><th>category</th><th>rule</th><th>OMG clause</th></tr></thead>
+        <tbody id="glDocTable"></tbody></table></div>
+    </div>
+    <div id="glLearnedPane" style="display:none">
+      <div class="form-row align-items-end mb-2">
+        <div class="form-group col-md-4 mb-1"><label class="small font-weight-bold" for="glApi">API address</label>
+          <input id="glApi" class="form-control form-control-sm" value="http://127.0.0.1:8765"></div>
+        <div class="form-group col-md-4 mb-1"><label class="small font-weight-bold" for="glModel">Catalogue (run or round)</label>
+          <select id="glModel" class="form-control form-control-sm"><option value="">choose a catalogue</option></select></div>
+        <div class="form-group col-md-2 mb-1"><button id="glReload" class="btn btn-sm btn-outline-primary"><i class="fas fa-sync-alt mr-1"></i>Reload</button></div>
+      </div>
+      <p class="small text-muted mb-2"><span id="glLearnedNote"></span> Showing <span id="glLearnedCount"></span>.</p>
+      <div class="table-responsive"><table class="table table-sm small mb-0">
+        <thead><tr><th>id</th><th>relation</th><th>category</th><th>guideline (when &hellip; : do &hellip;)</th><th>learned from</th></tr></thead>
+        <tbody id="glLearnedTable"></tbody></table></div>
+    </div>
+  </div>
+</div>
+<!--SCRIPTS-->
+<script src="assets/data/documentation_guidelines.js"></script>
+<script src="assets/js/guidelines.js"></script>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/bpmn/internship">
+  <bpmn:message id="Message_Offer" name="Internship offer"/>
+  <bpmn:message id="Message_Acceptance" name="Offer acceptance"/>
+  <bpmn:message id="Message_Tweet" name="Recommendation tweet"/>
+
+  <bpmn:collaboration id="Collaboration_Internship">
+    <bpmn:participant id="Participant_Applicant" name="Applicant" processRef="Process_Applicant"/>
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_Company"/>
+    <bpmn:participant id="Participant_Twitter" name="Twitter"/>
+    <bpmn:messageFlow id="MessageFlow_Offers" name="Internship offers" sourceRef="Task_SendOffers" targetRef="Task_ReceiveOffer" messageRef="Message_Offer"/>
+    <bpmn:messageFlow id="MessageFlow_Acceptance" name="Offer acceptance" sourceRef="Task_AcceptOffer" targetRef="Task_ReceiveAcceptance" messageRef="Message_Acceptance"/>
+    <bpmn:messageFlow id="MessageFlow_Tweets" name="Recommendation tweets" sourceRef="Task_SendTweets" targetRef="Participant_Twitter" messageRef="Message_Tweet"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Applicant" name="Internship" isExecutable="false">
+    <bpmn:startEvent id="Start_Applicant" name="Begin internship search"/>
+    <bpmn:task id="Task_EnterTopicAndMoney" name="Enter topic of interest and desired amount"/>
+    <bpmn:exclusiveGateway id="Gateway_OptionalDetails" name="Enter experience and hobbies?" default="Flow_SkipOptionalDetails"/>
+    <bpmn:task id="Task_EnterExperienceAndHobbies" name="Enter experience and hobbies"/>
+    <bpmn:exclusiveGateway id="Gateway_OptionalDetailsMerge" name="Continue search"/>
+    <bpmn:receiveTask id="Task_ReceiveOffer" name="Receive an offer" messageRef="Message_Offer"/>
+    <bpmn:exclusiveGateway id="Gateway_OfferDecision" name="Accept or deny the offer?" default="Flow_DenyOffer"/>
+    <bpmn:sendTask id="Task_AcceptOffer" name="Accept offer" messageRef="Message_Acceptance"/>
+    <bpmn:task id="Task_InvalidateOtherOffers" name="Invalidate all other offers"/>
+    <bpmn:task id="Task_DenyOffer" name="Deny offer"/>
+    <bpmn:task id="Task_WeeklyUpdates" name="Write at least 3 internship status updates every week"/>
+    <bpmn:exclusiveGateway id="Gateway_InternshipFinished" name="Has the internship finished?" default="Flow_ContinueWeeklyUpdates"/>
+    <bpmn:task id="Task_RecommendCompany" name="Recommend the company to friends via Twitter"/>
+    <bpmn:sendTask id="Task_SendTweets" name="Send a separate tweet to each friend in parallel" messageRef="Message_Tweet">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false">
+        <bpmn:loopCardinality xsi:type="bpmn:tFormalExpression">numberOfFriends</bpmn:loopCardinality>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Applicant" name="Recommendations sent"/>
+
+    <bpmn:sequenceFlow id="Flow_A1" sourceRef="Start_Applicant" targetRef="Task_EnterTopicAndMoney"/>
+    <bpmn:sequenceFlow id="Flow_A2" sourceRef="Task_EnterTopicAndMoney" targetRef="Gateway_OptionalDetails"/>
+    <bpmn:sequenceFlow id="Flow_EnterOptionalDetails" sourceRef="Gateway_OptionalDetails" targetRef="Task_EnterExperienceAndHobbies">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">enterExperienceAndHobbies</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SkipOptionalDetails" sourceRef="Gateway_OptionalDetails" targetRef="Gateway_OptionalDetailsMerge"/>
+    <bpmn:sequenceFlow id="Flow_OptionalDetailsMerge" sourceRef="Task_EnterExperienceAndHobbies" targetRef="Gateway_OptionalDetailsMerge"/>
+    <bpmn:sequenceFlow id="Flow_A3" sourceRef="Gateway_OptionalDetailsMerge" targetRef="Task_ReceiveOffer"/>
+    <bpmn:sequenceFlow id="Flow_A4" sourceRef="Task_ReceiveOffer" targetRef="Gateway_OfferDecision"/>
+    <bpmn:sequenceFlow id="Flow_AcceptOffer" sourceRef="Gateway_OfferDecision" targetRef="Task_AcceptOffer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">acceptOffer</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_DenyOffer" sourceRef="Gateway_OfferDecision" targetRef="Task_DenyOffer"/>
+    <bpmn:sequenceFlow id="Flow_A5" sourceRef="Task_DenyOffer" targetRef="Task_ReceiveOffer"/>
+    <bpmn:sequenceFlow id="Flow_A6" sourceRef="Task_AcceptOffer" targetRef="Task_InvalidateOtherOffers"/>
+    <bpmn:sequenceFlow id="Flow_A7" sourceRef="Task_InvalidateOtherOffers" targetRef="Task_WeeklyUpdates"/>
+    <bpmn:sequenceFlow id="Flow_A8" sourceRef="Task_WeeklyUpdates" targetRef="Gateway_InternshipFinished"/>
+    <bpmn:sequenceFlow id="Flow_ContinueWeeklyUpdates" sourceRef="Gateway_InternshipFinished" targetRef="Task_WeeklyUpdates"/>
+    <bpmn:sequenceFlow id="Flow_InternshipFinished" sourceRef="Gateway_InternshipFinished" targetRef="Task_RecommendCompany">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">internshipFinished</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_A9" sourceRef="Task_RecommendCompany" targetRef="Task_SendTweets"/>
+    <bpmn:sequenceFlow id="Flow_A10" sourceRef="Task_SendTweets" targetRef="End_Applicant"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Company" name="Company internship activities" isExecutable="false">
+    <bpmn:startEvent id="Start_Company" name="Begin offer process"/>
+    <bpmn:sendTask id="Task_SendOffers" name="Send several internship offers" messageRef="Message_Offer"/>
+    <bpmn:receiveTask id="Task_ReceiveAcceptance" name="Receive offer acceptance" messageRef="Message_Acceptance"/>
+    <bpmn:task id="Task_WriteCompanyUpdates" name="Write 3 status updates about the intern"/>
+    <bpmn:endEvent id="End_Company" name="Company status updates written"/>
+
+    <bpmn:sequenceFlow id="Flow_C1" sourceRef="Start_Company" targetRef="Task_SendOffers"/>
+    <bpmn:sequenceFlow id="Flow_C2" sourceRef="Task_SendOffers" targetRef="Task_ReceiveAcceptance"/>
+    <bpmn:sequenceFlow id="Flow_C3" sourceRef="Task_ReceiveAcceptance" targetRef="Task_WriteCompanyUpdates"/>
+    <bpmn:sequenceFlow id="Flow_C4" sourceRef="Task_WriteCompanyUpdates" targetRef="End_Company"/>
+  </bpmn:process>
+</bpmn:definitions>

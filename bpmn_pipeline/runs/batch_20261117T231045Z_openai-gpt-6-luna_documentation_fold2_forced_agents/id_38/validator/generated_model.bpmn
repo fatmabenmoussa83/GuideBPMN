@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_BuildingTreeHouse"
+                  targetNamespace="http://example.com/bpmn/building-tree-house">
+  <bpmn:message id="Message_Requirements" name="Requirements"/>
+  <bpmn:message id="Message_Draft" name="Tree house draft"/>
+  <bpmn:message id="Message_MaterialOrder" name="Material order"/>
+  <bpmn:message id="Message_OrderProcessed" name="Order processing complete"/>
+  <bpmn:message id="Message_BuildRequest" name="Request to build the tree house"/>
+  <bpmn:message id="Message_PartyInvitation" name="Tree house party invitation"/>
+
+  <bpmn:collaboration id="Collaboration_BuildingTreeHouse" name="Building a House">
+    <bpmn:participant id="Participant_You" name="You" processRef="Process_You"/>
+    <bpmn:participant id="Participant_Architect" name="Tree house architect" processRef="Process_Architect"/>
+    <bpmn:participant id="Participant_OnlineStores" name="Several online stores"/>
+    <bpmn:participant id="Participant_Friends" name="Friends"/>
+
+    <bpmn:messageFlow id="MessageFlow_InitialRequirements"
+                      name="Send initial requirements"
+                      sourceRef="Task_SendInitialRequirements"
+                      targetRef="Start_ArchitectRequirements"
+                      messageRef="Message_Requirements"/>
+    <bpmn:messageFlow id="MessageFlow_AdditionalRequirements"
+                      name="Send additional requirements"
+                      sourceRef="Task_SendAdditionalRequirements"
+                      targetRef="Start_ArchitectRequirements"
+                      messageRef="Message_Requirements"/>
+    <bpmn:messageFlow id="MessageFlow_Draft"
+                      name="Send draft"
+                      sourceRef="Task_SendDraft"
+                      targetRef="Task_ReceiveDraft"
+                      messageRef="Message_Draft"/>
+    <bpmn:messageFlow id="MessageFlow_MaterialOrder"
+                      name="Order materials from online stores"
+                      sourceRef="Task_OrderMaterials"
+                      targetRef="Participant_OnlineStores"
+                      messageRef="Message_MaterialOrder"/>
+    <bpmn:messageFlow id="MessageFlow_OrderProcessed"
+                      name="Notify that order processing is complete"
+                      sourceRef="Participant_OnlineStores"
+                      targetRef="Event_OrderProcessed"
+                      messageRef="Message_OrderProcessed"/>
+    <bpmn:messageFlow id="MessageFlow_BuildRequest"
+                      name="Ask friends to build the tree house"
+                      sourceRef="Task_AskFriendsToBuild"
+                      targetRef="Participant_Friends"
+                      messageRef="Message_BuildRequest"/>
+    <bpmn:messageFlow id="MessageFlow_PartyInvitation"
+                      name="Send party invitations to friends"
+                      sourceRef="Task_SendPartyInvitations"
+                      targetRef="Participant_Friends"
+                      messageRef="Message_PartyInvitation"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_You" name="Build a tree house" isExecutable="false">
+    <bpmn:startEvent id="Start_BuildingProcess" name="Start building a tree house"/>
+    <bpmn:task id="Task_CollectRequirements" name="Collect requirements"/>
+    <bpmn:sendTask id="Task_SendInitialRequirements" name="Send requirements to the architect"/>
+    <bpmn:receiveTask id="Task_ReceiveDraft" name="Receive draft"/>
+    <bpmn:exclusiveGateway id="Gateway_RefinementDecision"
+                           name="Are further refinements needed?"
+                           default="Flow_AcceptPlan"/>
+    <bpmn:task id="Task_RefineDraft" name="Refine draft with additional requirements"/>
+    <bpmn:sendTask id="Task_SendAdditionalRequirements" name="Send additional requirements to the architect"/>
+    <bpmn:task id="Task_CreateMaterialsList" name="Create list of needed materials from the plan"/>
+    <bpmn:task id="Task_CategorizeMaterials" name="Categorize materials"/>
+    <bpmn:sendTask id="Task_OrderMaterials" name="Order materials from several online stores"/>
+    <bpmn:parallelGateway id="Gateway_OrderAndFriendsSplit" name="Wait for order processing while contacting friends"/>
+    <bpmn:intermediateCatchEvent id="Event_OrderProcessed" name="Order processing complete">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_OrderProcessed" messageRef="Message_OrderProcessed"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="Task_AskFriendsToBuild" name="Ask friends to build the tree house"/>
+    <bpmn:parallelGateway id="Gateway_OrderAndFriendsJoin" name="Order processed and friends contacted"/>
+    <bpmn:task id="Task_BuildHouse" name="Build the tree house"/>
+    <bpmn:sendTask id="Task_SendPartyInvitations" name="Send tree house party invitations to friends"/>
+    <bpmn:task id="Task_CreateAttendeeList" name="Create list of people attending the party for buying snacks"/>
+    <bpmn:endEvent id="End_AttendeeListCreated" name="Attendee list created"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Collect" sourceRef="Start_BuildingProcess" targetRef="Task_CollectRequirements"/>
+    <bpmn:sequenceFlow id="Flow_Collect_SendInitial" sourceRef="Task_CollectRequirements" targetRef="Task_SendInitialRequirements"/>
+    <bpmn:sequenceFlow id="Flow_SendInitial_ReceiveDraft" sourceRef="Task_SendInitialRequirements" targetRef="Task_ReceiveDraft"/>
+    <bpmn:sequenceFlow id="Flow_ReceiveDraft_Decision" sourceRef="Task_ReceiveDraft" targetRef="Gateway_RefinementDecision"/>
+    <bpmn:sequenceFlow id="Flow_Refine" name="Further refinements needed" sourceRef="Gateway_RefinementDecision" targetRef="Task_RefineDraft">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">additionalRequirementsNeeded</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Refine_SendAdditional" sourceRef="Task_RefineDraft" targetRef="Task_SendAdditionalRequirements"/>
+    <bpmn:sequenceFlow id="Flow_SendAdditional_ReceiveDraft" sourceRef="Task_SendAdditionalRequirements" targetRef="Task_ReceiveDraft"/>
+    <bpmn:sequenceFlow id="Flow_AcceptPlan" name="Plan ready" sourceRef="Gateway_RefinementDecision" targetRef="Task_CreateMaterialsList"/>
+    <bpmn:sequenceFlow id="Flow_Materials_Categorize" sourceRef="Task_CreateMaterialsList" targetRef="Task_CategorizeMaterials"/>
+    <bpmn:sequenceFlow id="Flow_Categorize_Order" sourceRef="Task_CategorizeMaterials" targetRef="Task_OrderMaterials"/>
+    <bpmn:sequenceFlow id="Flow_Order_Split" sourceRef="Task_OrderMaterials" targetRef="Gateway_OrderAndFriendsSplit"/>
+    <bpmn:sequenceFlow id="Flow_Split_WaitOrder" sourceRef="Gateway_OrderAndFriendsSplit" targetRef="Event_OrderProcessed"/>
+    <bpmn:sequenceFlow id="Flow_Split_AskFriends" sourceRef="Gateway_OrderAndFriendsSplit" targetRef="Task_AskFriendsToBuild"/>
+    <bpmn:sequenceFlow id="Flow_WaitOrder_Join" sourceRef="Event_OrderProcessed" targetRef="Gateway_OrderAndFriendsJoin"/>
+    <bpmn:sequenceFlow id="Flow_AskFriends_Join" sourceRef="Task_AskFriendsToBuild" targetRef="Gateway_OrderAndFriendsJoin"/>
+    <bpmn:sequenceFlow id="Flow_Join_Build" sourceRef="Gateway_OrderAndFriendsJoin" targetRef="Task_BuildHouse"/>
+    <bpmn:sequenceFlow id="Flow_Build_Invitations" sourceRef="Task_BuildHouse" targetRef="Task_SendPartyInvitations"/>
+    <bpmn:sequenceFlow id="Flow_Invitations_AttendeeList" sourceRef="Task_SendPartyInvitations" targetRef="Task_CreateAttendeeList"/>
+    <bpmn:sequenceFlow id="Flow_AttendeeList_End" sourceRef="Task_CreateAttendeeList" targetRef="End_AttendeeListCreated"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Architect" name="Prepare and send a tree house draft" isExecutable="false">
+    <bpmn:startEvent id="Start_ArchitectRequirements" name="Requirements received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Requirements" messageRef="Message_Requirements"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_PrepareDraft" name="Prepare draft"/>
+    <bpmn:sendTask id="Task_SendDraft" name="Send draft to you"/>
+    <bpmn:endEvent id="End_DraftSent" name="Draft sent"/>
+
+    <bpmn:sequenceFlow id="Flow_Architect_Start_Prepare" sourceRef="Start_ArchitectRequirements" targetRef="Task_PrepareDraft"/>
+    <bpmn:sequenceFlow id="Flow_Architect_Prepare_Send" sourceRef="Task_PrepareDraft" targetRef="Task_SendDraft"/>
+    <bpmn:sequenceFlow id="Flow_Architect_Send_End" sourceRef="Task_SendDraft" targetRef="End_DraftSent"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,164 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_WorkLiveAustria" targetNamespace="http://example.org/bpmn/work-live-austria">
+  <bpmn:process id="Process_WorkLiveAustria" name="Work and Live in Austria" isExecutable="false">
+    <bpmn:documentation>Covers organizing accommodation and a bank account, then applying for a Rot-Weiss-Rot Card visa. The renewal interval ("every x months") is not specified in the description, so renewal is not modeled as a timer. Visa applications are routed by the competent representation office rules: Schengen visas by main travel destination, type D visas by place of residence. The listed requirements are checked once, and further documents are requested only if the representation office requires them.</bpmn:documentation>
+    <bpmn:laneSet id="LaneSet_Main">
+      <bpmn:lane id="Lane_Applicant" name="Applicant">
+        <bpmn:flowNodeRef>StartEvent_Plan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NegotiateAccommodation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NegotiateBankAccount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DetermineCompetence</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_VisaType_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ApplySchengen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ApplyTypeD</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Route_Merge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SubProcess_VisaRequirements</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitApplication</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ProvideAdditionalDocuments</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Representation" name="Representation Office (BMEIA)">
+        <bpmn:flowNodeRef>Task_CheckApplication</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AdditionalDocs_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RequestAdditionalDocuments</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AdditionalDocs_Merge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Decision_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_VisaIssued</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_VisaRefused</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_Plan" name="Plan to work and live in Austria">
+      <bpmn:outgoing>Flow_Start_Accommodation</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_NegotiateAccommodation" name="Negotiate accommodation">
+      <bpmn:incoming>Flow_Start_Accommodation</bpmn:incoming>
+      <bpmn:outgoing>Flow_Accommodation_Bank</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_NegotiateBankAccount" name="Negotiate bank account">
+      <bpmn:incoming>Flow_Accommodation_Bank</bpmn:incoming>
+      <bpmn:outgoing>Flow_Bank_Competence</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_DetermineCompetence" name="Determine competent representation office">
+      <bpmn:documentation>Schengen visas: representation of the main travel destination (or first Schengen entry country if no main destination). Category A and C: representation in consular district of legal residence. Type D: competent Austrian representation based on place of residence (centre of interest).</bpmn:documentation>
+      <bpmn:incoming>Flow_Bank_Competence</bpmn:incoming>
+      <bpmn:outgoing>Flow_Competence_VisaType</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_VisaType_Split" name="Visa type?">
+      <bpmn:incoming>Flow_Competence_VisaType</bpmn:incoming>
+      <bpmn:outgoing>Flow_VisaType_Schengen</bpmn:outgoing>
+      <bpmn:outgoing>Flow_VisaType_TypeD</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ApplySchengen" name="Apply at representation of Schengen competence">
+      <bpmn:incoming>Flow_VisaType_Schengen</bpmn:incoming>
+      <bpmn:outgoing>Flow_Schengen_Merge</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ApplyTypeD" name="Apply at competent Austrian representation (type D)">
+      <bpmn:incoming>Flow_VisaType_TypeD</bpmn:incoming>
+      <bpmn:outgoing>Flow_TypeD_Merge</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Route_Merge" name="Application route determined">
+      <bpmn:incoming>Flow_Schengen_Merge</bpmn:incoming>
+      <bpmn:incoming>Flow_TypeD_Merge</bpmn:incoming>
+      <bpmn:outgoing>Flow_Merge_Requirements</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:subProcess id="SubProcess_VisaRequirements" name="Prepare visa requirements">
+      <bpmn:incoming>Flow_Merge_Requirements</bpmn:incoming>
+      <bpmn:outgoing>Flow_Requirements_Submit</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart_Requirements">
+        <bpmn:outgoing>Flow_Sub_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:userTask id="Task_CompleteVisaForm" name="Complete visa application form">
+        <bpmn:incoming>Flow_Sub_1</bpmn:incoming>
+        <bpmn:outgoing>Flow_Sub_2</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:task id="Task_ProvideTravelDocument" name="Provide travel document (valid in Austria, issued within last ten years, validity at least three months beyond visa duration, at least two empty pages)">
+        <bpmn:incoming>Flow_Sub_2</bpmn:incoming>
+        <bpmn:outgoing>Flow_Sub_3</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Task_ProvidePassportPhoto" name="Provide passport photo (portrait, 35 x 45 mm, meeting photo criteria)">
+        <bpmn:incoming>Flow_Sub_3</bpmn:incoming>
+        <bpmn:outgoing>Flow_Sub_4</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Task_ProvideHealthInsurance" name="Provide comprehensive travel health insurance (EUR 30,000 cover, valid Schengen area, for full stay)">
+        <bpmn:incoming>Flow_Sub_4</bpmn:incoming>
+        <bpmn:outgoing>Flow_Sub_5</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Task_ProveMeansOfSubsistence" name="Prove sufficient means of subsistence (stay and return journey)">
+        <bpmn:incoming>Flow_Sub_5</bpmn:incoming>
+        <bpmn:outgoing>Flow_Sub_6</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Task_ProvideOtherEvidence" name="Provide other requested evidence (e.g. reservations, invitations, return ticket, proof of employment)">
+        <bpmn:incoming>Flow_Sub_6</bpmn:incoming>
+        <bpmn:outgoing>Flow_Sub_7</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="SubEnd_Requirements">
+        <bpmn:incoming>Flow_Sub_7</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_Sub_1" sourceRef="SubStart_Requirements" targetRef="Task_CompleteVisaForm"/>
+      <bpmn:sequenceFlow id="Flow_Sub_2" sourceRef="Task_CompleteVisaForm" targetRef="Task_ProvideTravelDocument"/>
+      <bpmn:sequenceFlow id="Flow_Sub_3" sourceRef="Task_ProvideTravelDocument" targetRef="Task_ProvidePassportPhoto"/>
+      <bpmn:sequenceFlow id="Flow_Sub_4" sourceRef="Task_ProvidePassportPhoto" targetRef="Task_ProvideHealthInsurance"/>
+      <bpmn:sequenceFlow id="Flow_Sub_5" sourceRef="Task_ProvideHealthInsurance" targetRef="Task_ProveMeansOfSubsistence"/>
+      <bpmn:sequenceFlow id="Flow_Sub_6" sourceRef="Task_ProveMeansOfSubsistence" targetRef="Task_ProvideOtherEvidence"/>
+      <bpmn:sequenceFlow id="Flow_Sub_7" sourceRef="Task_ProvideOtherEvidence" targetRef="SubEnd_Requirements"/>
+    </bpmn:subProcess>
+
+    <bpmn:userTask id="Task_SubmitApplication" name="Submit visa application">
+      <bpmn:incoming>Flow_Requirements_Submit</bpmn:incoming>
+      <bpmn:outgoing>Flow_Submit_Check</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_CheckApplication" name="Check listed documents and conditions for visa">
+      <bpmn:incoming>Flow_Submit_Check</bpmn:incoming>
+      <bpmn:outgoing>Flow_Check_AdditionalDocs</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_AdditionalDocs_Split" name="Additional documents requested?">
+      <bpmn:incoming>Flow_Check_AdditionalDocs</bpmn:incoming>
+      <bpmn:outgoing>Flow_AdditionalDocs_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_AdditionalDocs_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_RequestAdditionalDocuments" name="Request additional documents">
+      <bpmn:incoming>Flow_AdditionalDocs_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Request_Provide</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ProvideAdditionalDocuments" name="Provide additional documents">
+      <bpmn:incoming>Flow_Request_Provide</bpmn:incoming>
+      <bpmn:outgoing>Flow_Provide_Merge</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_AdditionalDocs_Merge" name="Documents checked">
+      <bpmn:incoming>Flow_AdditionalDocs_No</bpmn:incoming>
+      <bpmn:incoming>Flow_Provide_Merge</bpmn:incoming>
+      <bpmn:outgoing>Flow_Merge_Decision</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_Decision_Split" name="Visa approved?">
+      <bpmn:incoming>Flow_Merge_Decision</bpmn:incoming>
+      <bpmn:outgoing>Flow_Decision_Issued</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Decision_Refused</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_VisaIssued" name="Rot-Weiss-Rot Card visa issued">
+      <bpmn:incoming>Flow_Decision_Issued</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_VisaRefused" name="Visa refused">
+      <bpmn:incoming>Flow_Decision_Refused</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_Accommodation" sourceRef="StartEvent_Plan" targetRef="Task_NegotiateAccommodation"/>
+    <bpmn:sequenceFlow id="Flow_Accommodation_Bank" sourceRef="Task_NegotiateAccommodation" targetRef="Task_NegotiateBankAccount"/>
+    <bpmn:sequenceFlow id="Flow_Bank_Competence" sourceRef="Task_NegotiateBankAccount" targetRef="Task_DetermineCompetence"/>
+    <bpmn:sequenceFlow id="Flow_Competence_VisaType" sourceRef="Task_DetermineCompetence" targetRef="Gateway_VisaType_Split"/>
+    <bpmn:sequenceFlow id="Flow_VisaType_Schengen" name="Schengen visa" sourceRef="Gateway_VisaType_Split" targetRef="Task_ApplySchengen"/>
+    <bpmn:sequenceFlow id="Flow_VisaType_TypeD" name="Type D visa" sourceRef="Gateway_VisaType_Split" targetRef="Task_ApplyTypeD"/>
+    <bpmn:sequenceFlow id="Flow_Schengen_Merge" sourceRef="Task_ApplySchengen" targetRef="Gateway_Route_Merge"/>
+    <bpmn:sequenceFlow id="Flow_TypeD_Merge" sourceRef="Task_ApplyTypeD" targetRef="Gateway_Route_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Merge_Requirements" sourceRef="Gateway_Route_Merge" targetRef="SubProcess_VisaRequirements"/>
+    <bpmn:sequenceFlow id="Flow_Requirements_Submit" sourceRef="SubProcess_VisaRequirements" targetRef="Task_SubmitApplication"/>
+    <bpmn:sequenceFlow id="Flow_Submit_Check" sourceRef="Task_SubmitApplication" targetRef="Task_CheckApplication"/>
+    <bpmn:sequenceFlow id="Flow_Check_AdditionalDocs" sourceRef="Task_CheckApplication" targetRef="Gateway_AdditionalDocs_Split"/>
+    <bpmn:sequenceFlow id="Flow_AdditionalDocs_Yes" name="Yes" sourceRef="Gateway_AdditionalDocs_Split" targetRef="Task_RequestAdditionalDocuments"/>
+    <bpmn:sequenceFlow id="Flow_AdditionalDocs_No" name="No" sourceRef="Gateway_AdditionalDocs_Split" targetRef="Gateway_AdditionalDocs_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Request_Provide" sourceRef="Task_RequestAdditionalDocuments" targetRef="Task_ProvideAdditionalDocuments"/>
+    <bpmn:sequenceFlow id="Flow_Provide_Merge" sourceRef="Task_ProvideAdditionalDocuments" targetRef="Gateway_AdditionalDocs_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Merge_Decision" sourceRef="Gateway_AdditionalDocs_Merge" targetRef="Gateway_Decision_Split"/>
+    <bpmn:sequenceFlow id="Flow_Decision_Issued" name="Approved" sourceRef="Gateway_Decision_Split" targetRef="EndEvent_VisaIssued"/>
+    <bpmn:sequenceFlow id="Flow_Decision_Refused" name="Refused" sourceRef="Gateway_Decision_Split" targetRef="EndEvent_VisaRefused"/>
+  </bpmn:process>
+</bpmn:definitions>

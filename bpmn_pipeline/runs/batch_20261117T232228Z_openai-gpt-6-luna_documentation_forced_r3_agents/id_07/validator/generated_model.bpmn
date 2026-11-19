@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" targetNamespace="http://example.com/ticket-booking">
+  <bpmn:message id="Message_BookingRequest" name="Booking request"/>
+  <bpmn:message id="Message_Ticket" name="Ticket"/>
+  <bpmn:message id="Message_InventoryUpdate" name="Seat inventory update"/>
+
+  <bpmn:collaboration id="Collaboration_TicketBooking">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_BookingSystem" name="Booking system" processRef="Process_BookingSystem"/>
+    <bpmn:participant id="Participant_TravelCompany" name="Travel company" processRef="Process_TravelCompany"/>
+    <bpmn:messageFlow id="MessageFlow_BookingRequest" name="Booking request" sourceRef="Task_SendBookingRequest" targetRef="StartEvent_BookingRequest" messageRef="Message_BookingRequest"/>
+    <bpmn:messageFlow id="MessageFlow_Ticket" name="Ticket" sourceRef="Task_SendTicket" targetRef="Task_ReceiveTicket" messageRef="Message_Ticket"/>
+    <bpmn:messageFlow id="MessageFlow_InventoryUpdate" name="Seat inventory update" sourceRef="Task_SendInventoryUpdate" targetRef="StartEvent_InventoryUpdate" messageRef="Message_InventoryUpdate"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Customer" name="Customer ticket booking and journey" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Search" name="Customer begins ticket search"/>
+    <bpmn:task id="Task_SearchTicket" name="Search for a flight, train, or bus ticket"/>
+    <bpmn:task id="Task_SelectRoute" name="Select preferred route, date, and time"/>
+    <bpmn:task id="Task_ProvideDetails" name="Provide personal information and payment details"/>
+    <bpmn:sendTask id="Task_SendBookingRequest" name="Send booking request" messageRef="Message_BookingRequest"/>
+    <bpmn:receiveTask id="Task_ReceiveTicket" name="Receive ticket" messageRef="Message_Ticket"/>
+    <bpmn:exclusiveGateway id="Gateway_ReminderChoice" name="Receive pre-travel reminders and instructions?" default="Flow_NoReminder"/>
+    <bpmn:task id="Task_ReceiveTravelInstructions" name="Receive reminders and instructions for check-in or boarding"/>
+    <bpmn:exclusiveGateway id="Gateway_ReminderMerge" name="Continue to journey"/>
+    <bpmn:task id="Task_CompleteJourney" name="Complete journey"/>
+    <bpmn:exclusiveGateway id="Gateway_PostTravelChoice" name="Post-travel feedback or services?" default="Flow_JourneyComplete"/>
+    <bpmn:endEvent id="EndEvent_JourneyComplete" name="Journey completed"/>
+    <bpmn:task id="Task_PostTravel" name="Provide feedback or use post-travel services"/>
+    <bpmn:endEvent id="EndEvent_PostTravel" name="Post-travel feedback or services completed"/>
+
+    <bpmn:sequenceFlow id="Flow_Customer_1" sourceRef="StartEvent_Search" targetRef="Task_SearchTicket"/>
+    <bpmn:sequenceFlow id="Flow_Customer_2" sourceRef="Task_SearchTicket" targetRef="Task_SelectRoute"/>
+    <bpmn:sequenceFlow id="Flow_Customer_3" sourceRef="Task_SelectRoute" targetRef="Task_ProvideDetails"/>
+    <bpmn:sequenceFlow id="Flow_Customer_4" sourceRef="Task_ProvideDetails" targetRef="Task_SendBookingRequest"/>
+    <bpmn:sequenceFlow id="Flow_Customer_5" sourceRef="Task_SendBookingRequest" targetRef="Task_ReceiveTicket"/>
+    <bpmn:sequenceFlow id="Flow_Customer_6" sourceRef="Task_ReceiveTicket" targetRef="Gateway_ReminderChoice"/>
+    <bpmn:sequenceFlow id="Flow_ReceiveReminder" sourceRef="Gateway_ReminderChoice" targetRef="Task_ReceiveTravelInstructions"/>
+    <bpmn:sequenceFlow id="Flow_NoReminder" sourceRef="Gateway_ReminderChoice" targetRef="Gateway_ReminderMerge"/>
+    <bpmn:sequenceFlow id="Flow_ReminderReceived" sourceRef="Task_ReceiveTravelInstructions" targetRef="Gateway_ReminderMerge"/>
+    <bpmn:sequenceFlow id="Flow_Customer_7" sourceRef="Gateway_ReminderMerge" targetRef="Task_CompleteJourney"/>
+    <bpmn:sequenceFlow id="Flow_Customer_8" sourceRef="Task_CompleteJourney" targetRef="Gateway_PostTravelChoice"/>
+    <bpmn:sequenceFlow id="Flow_JourneyComplete" sourceRef="Gateway_PostTravelChoice" targetRef="EndEvent_JourneyComplete"/>
+    <bpmn:sequenceFlow id="Flow_PostTravel" sourceRef="Gateway_PostTravelChoice" targetRef="Task_PostTravel"/>
+    <bpmn:sequenceFlow id="Flow_PostTravelEnd" sourceRef="Task_PostTravel" targetRef="EndEvent_PostTravel"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_BookingSystem" name="Booking system workflow" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_BookingRequest" name="Booking request received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_BookingRequest" messageRef="Message_BookingRequest"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_GenerateTicket" name="Generate ticket"/>
+    <bpmn:parallelGateway id="Gateway_BookingSplit" name="Send ticket and update seat inventory"/>
+    <bpmn:sendTask id="Task_SendTicket" name="Send ticket by email or SMS" messageRef="Message_Ticket"/>
+    <bpmn:sendTask id="Task_SendInventoryUpdate" name="Send seat inventory update" messageRef="Message_InventoryUpdate"/>
+    <bpmn:parallelGateway id="Gateway_BookingJoin" name="Ticket sent and inventory update sent"/>
+    <bpmn:endEvent id="EndEvent_BookingSystem" name="Booking workflow completed"/>
+
+    <bpmn:sequenceFlow id="Flow_Booking_1" sourceRef="StartEvent_BookingRequest" targetRef="Task_GenerateTicket"/>
+    <bpmn:sequenceFlow id="Flow_Booking_2" sourceRef="Task_GenerateTicket" targetRef="Gateway_BookingSplit"/>
+    <bpmn:sequenceFlow id="Flow_Booking_3" sourceRef="Gateway_BookingSplit" targetRef="Task_SendTicket"/>
+    <bpmn:sequenceFlow id="Flow_Booking_4" sourceRef="Gateway_BookingSplit" targetRef="Task_SendInventoryUpdate"/>
+    <bpmn:sequenceFlow id="Flow_Booking_5" sourceRef="Task_SendTicket" targetRef="Gateway_BookingJoin"/>
+    <bpmn:sequenceFlow id="Flow_Booking_6" sourceRef="Task_SendInventoryUpdate" targetRef="Gateway_BookingJoin"/>
+    <bpmn:sequenceFlow id="Flow_Booking_7" sourceRef="Gateway_BookingJoin" targetRef="EndEvent_BookingSystem"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_TravelCompany" name="Travel company seat inventory workflow" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_InventoryUpdate" name="Seat inventory update received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_InventoryUpdate" messageRef="Message_InventoryUpdate"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_UpdateSeatInventory" name="Update seat inventory"/>
+    <bpmn:endEvent id="EndEvent_InventoryUpdated" name="Seat inventory updated"/>
+
+    <bpmn:sequenceFlow id="Flow_Inventory_1" sourceRef="StartEvent_InventoryUpdate" targetRef="Task_UpdateSeatInventory"/>
+    <bpmn:sequenceFlow id="Flow_Inventory_2" sourceRef="Task_UpdateSeatInventory" targetRef="EndEvent_InventoryUpdated"/>
+  </bpmn:process>
+</bpmn:definitions>

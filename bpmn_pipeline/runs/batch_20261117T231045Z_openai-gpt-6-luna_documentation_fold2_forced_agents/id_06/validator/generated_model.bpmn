@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_OrderFulfillment"
+                  targetNamespace="http://example.com/bpmn/order-fulfillment">
+  <bpmn:message id="Message_OnlineOrder" name="Online order"/>
+  <bpmn:message id="Message_PhoneOrder" name="Phone order"/>
+  <bpmn:message id="Message_OrderConfirmation" name="Order confirmation"/>
+  <bpmn:message id="Message_ShipmentHandover" name="Shipment handover"/>
+  <bpmn:message id="Message_TrackingInformation" name="Tracking information"/>
+  <bpmn:message id="Message_CustomerFeedback" name="Customer feedback"/>
+  <bpmn:message id="Message_ReturnRequest" name="Return request"/>
+
+  <bpmn:collaboration id="Collaboration_OrderFulfillment">
+    <bpmn:participant id="Participant_Company" name="Order fulfillment" processRef="Process_OrderFulfillment"/>
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_LogisticsProvider" name="Logistics provider"/>
+    <bpmn:messageFlow id="MessageFlow_OnlineOrder" name="Online order" sourceRef="Participant_Customer" targetRef="Start_OnlineOrder"/>
+    <bpmn:messageFlow id="MessageFlow_PhoneOrder" name="Phone order" sourceRef="Participant_Customer" targetRef="Start_PhoneOrder"/>
+    <bpmn:messageFlow id="MessageFlow_Confirmation" name="Order confirmation" sourceRef="Task_SendConfirmation" targetRef="Participant_Customer" messageRef="Message_OrderConfirmation"/>
+    <bpmn:messageFlow id="MessageFlow_Handover" name="Shipment handover" sourceRef="Task_HandoverShipment" targetRef="Participant_LogisticsProvider" messageRef="Message_ShipmentHandover"/>
+    <bpmn:messageFlow id="MessageFlow_Tracking" name="Tracking information" sourceRef="Task_SendTracking" targetRef="Participant_Customer" messageRef="Message_TrackingInformation"/>
+    <bpmn:messageFlow id="MessageFlow_Feedback" name="Customer feedback" sourceRef="Participant_Customer" targetRef="Start_Feedback" messageRef="Message_CustomerFeedback"/>
+    <bpmn:messageFlow id="MessageFlow_Return" name="Return request" sourceRef="Participant_Customer" targetRef="Start_Return" messageRef="Message_ReturnRequest"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_OrderFulfillment" name="Order fulfillment" isExecutable="false">
+    <bpmn:startEvent id="Start_OnlineOrder" name="Online order placed">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_OnlineOrder" messageRef="Message_OnlineOrder"/>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="Start_PhoneOrder" name="Phone order placed">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_PhoneOrder" messageRef="Message_PhoneOrder"/>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_GenerateConfirmation" name="Generate order confirmation"/>
+    <bpmn:sendTask id="Task_SendConfirmation" name="Send order confirmation" messageRef="Message_OrderConfirmation"/>
+    <bpmn:task id="Task_PickItems" name="Pick items"/>
+    <bpmn:task id="Task_PackItems" name="Pack items"/>
+    <bpmn:task id="Task_GenerateShippingLabel" name="Generate shipping label"/>
+    <bpmn:sendTask id="Task_HandoverShipment" name="Hand over shipment to logistics provider" messageRef="Message_ShipmentHandover"/>
+    <bpmn:sendTask id="Task_SendTracking" name="Send tracking information" messageRef="Message_TrackingInformation"/>
+    <bpmn:task id="Task_MonitorShipment" name="Monitor shipment"/>
+    <bpmn:exclusiveGateway id="Gateway_DeliveryReached" name="Shipment reached customer's address?" default="Flow_NotReached"/>
+    <bpmn:endEvent id="End_SuccessfulDelivery" name="Successfully delivered"/>
+
+    <bpmn:sequenceFlow id="Flow_OnlineToGenerate" sourceRef="Start_OnlineOrder" targetRef="Task_GenerateConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_PhoneToGenerate" sourceRef="Start_PhoneOrder" targetRef="Task_GenerateConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_GenerateToSendConfirmation" sourceRef="Task_GenerateConfirmation" targetRef="Task_SendConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_SendConfirmationToPick" sourceRef="Task_SendConfirmation" targetRef="Task_PickItems"/>
+    <bpmn:sequenceFlow id="Flow_PickToPack" sourceRef="Task_PickItems" targetRef="Task_PackItems"/>
+    <bpmn:sequenceFlow id="Flow_PackToLabel" sourceRef="Task_PackItems" targetRef="Task_GenerateShippingLabel"/>
+    <bpmn:sequenceFlow id="Flow_LabelToHandover" sourceRef="Task_GenerateShippingLabel" targetRef="Task_HandoverShipment"/>
+    <bpmn:sequenceFlow id="Flow_HandoverToTracking" sourceRef="Task_HandoverShipment" targetRef="Task_SendTracking"/>
+    <bpmn:sequenceFlow id="Flow_TrackingToMonitor" sourceRef="Task_SendTracking" targetRef="Task_MonitorShipment"/>
+    <bpmn:sequenceFlow id="Flow_MonitorToDeliveryCheck" sourceRef="Task_MonitorShipment" targetRef="Gateway_DeliveryReached"/>
+    <bpmn:sequenceFlow id="Flow_Reached" sourceRef="Gateway_DeliveryReached" targetRef="End_SuccessfulDelivery">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">shipmentReachedAddress = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotReached" sourceRef="Gateway_DeliveryReached" targetRef="Task_MonitorShipment"/>
+
+    <bpmn:subProcess id="SubProcess_Feedback" name="Further actions on customer feedback" triggeredByEvent="true">
+      <bpmn:startEvent id="Start_Feedback" name="Customer feedback received" isInterrupting="false">
+        <bpmn:messageEventDefinition id="MessageEventDefinition_Feedback" messageRef="Message_CustomerFeedback"/>
+      </bpmn:startEvent>
+      <bpmn:task id="Task_FurtherActionFeedback" name="Take further action on feedback"/>
+      <bpmn:endEvent id="End_Feedback" name="Feedback actions complete"/>
+      <bpmn:sequenceFlow id="Flow_FeedbackToAction" sourceRef="Start_Feedback" targetRef="Task_FurtherActionFeedback"/>
+      <bpmn:sequenceFlow id="Flow_FeedbackActionToEnd" sourceRef="Task_FurtherActionFeedback" targetRef="End_Feedback"/>
+    </bpmn:subProcess>
+
+    <bpmn:subProcess id="SubProcess_Return" name="Further actions on returns" triggeredByEvent="true">
+      <bpmn:startEvent id="Start_Return" name="Return request received" isInterrupting="false">
+        <bpmn:messageEventDefinition id="MessageEventDefinition_Return" messageRef="Message_ReturnRequest"/>
+      </bpmn:startEvent>
+      <bpmn:task id="Task_FurtherActionReturn" name="Take further action on return"/>
+      <bpmn:endEvent id="End_Return" name="Return actions complete"/>
+      <bpmn:sequenceFlow id="Flow_ReturnToAction" sourceRef="Start_Return" targetRef="Task_FurtherActionReturn"/>
+      <bpmn:sequenceFlow id="Flow_ReturnActionToEnd" sourceRef="Task_FurtherActionReturn" targetRef="End_Return"/>
+    </bpmn:subProcess>
+  </bpmn:process>
+</bpmn:definitions>

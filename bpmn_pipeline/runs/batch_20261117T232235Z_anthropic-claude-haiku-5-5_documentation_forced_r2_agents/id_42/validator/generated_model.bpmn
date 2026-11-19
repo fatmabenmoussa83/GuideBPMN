@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_FridgeService"
+                  targetNamespace="http://example.com/bpmn/fridge-service">
+
+  <bpmn:message id="Msg_Symptoms" name="Symptoms and fridge type"/>
+  <bpmn:message id="Msg_Request" name="Service request"/>
+  <bpmn:message id="Msg_Appointment" name="Appointment"/>
+  <bpmn:message id="Msg_RepairDone" name="Repair completed"/>
+
+  <bpmn:collaboration id="Collaboration_FridgeService">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_Center" name="Central Fridge Service Center" processRef="Process_Center"/>
+    <bpmn:participant id="Participant_Facility" name="Local Service Facility" processRef="Process_Facility"/>
+
+    <bpmn:messageFlow id="MF_Symptoms" name="Send symptoms and fridge type"
+                      sourceRef="Send_Symptoms" targetRef="Start_Center_Request"/>
+    <bpmn:messageFlow id="MF_Request" name="Forward service request"
+                      sourceRef="Send_Request_Facility" targetRef="Start_Facility_Request"/>
+    <bpmn:messageFlow id="MF_Appointment" name="Appointment offered"
+                      sourceRef="Send_Appointment" targetRef="Receive_Appointment"/>
+    <bpmn:messageFlow id="MF_RepairDone" name="Repair completed"
+                      sourceRef="Send_Repair_Done" targetRef="Catch_Repair_Done"/>
+  </bpmn:collaboration>
+
+  <!-- Customer -->
+  <bpmn:process id="Process_Customer" name="Customer" isExecutable="false">
+    <bpmn:startEvent id="Start_Customer" name="Fridge makes strange noises"/>
+    <bpmn:parallelGateway id="Gateway_Gather_Split" name="Prepare symptoms and fridge type"/>
+    <bpmn:task id="Task_Describe_Symptoms" name="Describe symptoms"/>
+    <bpmn:task id="Task_Provide_Fridge_Type" name="Provide fridge type"/>
+    <bpmn:parallelGateway id="Gateway_Gather_Join" name="Symptoms and type prepared"/>
+    <bpmn:sendTask id="Send_Symptoms" name="Send symptoms and fridge type" messageRef="Msg_Symptoms"/>
+    <bpmn:receiveTask id="Receive_Appointment" name="Receive appointment" messageRef="Msg_Appointment"/>
+    <bpmn:intermediateCatchEvent id="Catch_Repair_Done" name="Repair completed">
+      <bpmn:messageEventDefinition id="MED_Repair_Done" messageRef="Msg_RepairDone"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_Confirm_Repair" name="Confirm fridge is working again"/>
+    <bpmn:exclusiveGateway id="Gateway_Rate_Decision" name="Rate service facility?" default="CF_C12"/>
+    <bpmn:userTask id="Task_Rate_Facility" name="Rate service facility"/>
+    <bpmn:endEvent id="End_Customer" name="Service completed"/>
+
+    <bpmn:sequenceFlow id="CF_C1" sourceRef="Start_Customer" targetRef="Gateway_Gather_Split"/>
+    <bpmn:sequenceFlow id="CF_C2" sourceRef="Gateway_Gather_Split" targetRef="Task_Describe_Symptoms"/>
+    <bpmn:sequenceFlow id="CF_C3" sourceRef="Gateway_Gather_Split" targetRef="Task_Provide_Fridge_Type"/>
+    <bpmn:sequenceFlow id="CF_C4" sourceRef="Task_Describe_Symptoms" targetRef="Gateway_Gather_Join"/>
+    <bpmn:sequenceFlow id="CF_C5" sourceRef="Task_Provide_Fridge_Type" targetRef="Gateway_Gather_Join"/>
+    <bpmn:sequenceFlow id="CF_C6" sourceRef="Gateway_Gather_Join" targetRef="Send_Symptoms"/>
+    <bpmn:sequenceFlow id="CF_C7" sourceRef="Send_Symptoms" targetRef="Receive_Appointment"/>
+    <bpmn:sequenceFlow id="CF_C8" sourceRef="Receive_Appointment" targetRef="Catch_Repair_Done"/>
+    <bpmn:sequenceFlow id="CF_C9" sourceRef="Catch_Repair_Done" targetRef="Task_Confirm_Repair"/>
+    <bpmn:sequenceFlow id="CF_C10" sourceRef="Task_Confirm_Repair" targetRef="Gateway_Rate_Decision"/>
+    <bpmn:sequenceFlow id="CF_C11" name="Rate" sourceRef="Gateway_Rate_Decision" targetRef="Task_Rate_Facility"/>
+    <bpmn:sequenceFlow id="CF_C12" name="Skip rating" sourceRef="Gateway_Rate_Decision" targetRef="End_Customer"/>
+    <bpmn:sequenceFlow id="CF_C13" sourceRef="Task_Rate_Facility" targetRef="End_Customer"/>
+  </bpmn:process>
+
+  <!-- Central service center -->
+  <bpmn:process id="Process_Center" name="Central Fridge Service Center" isExecutable="false">
+    <bpmn:startEvent id="Start_Center_Request" name="Service request received">
+      <bpmn:messageEventDefinition id="MED_Center_Request" messageRef="Msg_Symptoms"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Select_Facility" name="Select local service facility"/>
+    <bpmn:sendTask id="Send_Request_Facility" name="Forward request to facility" messageRef="Msg_Request"/>
+    <bpmn:endEvent id="End_Center" name="Request forwarded"/>
+
+    <bpmn:sequenceFlow id="CF_D1" sourceRef="Start_Center_Request" targetRef="Task_Select_Facility"/>
+    <bpmn:sequenceFlow id="CF_D2" sourceRef="Task_Select_Facility" targetRef="Send_Request_Facility"/>
+    <bpmn:sequenceFlow id="CF_D3" sourceRef="Send_Request_Facility" targetRef="End_Center"/>
+  </bpmn:process>
+
+  <!-- Local service facility -->
+  <bpmn:process id="Process_Facility" name="Local Service Facility" isExecutable="false">
+    <bpmn:startEvent id="Start_Facility_Request" name="Service request received">
+      <bpmn:messageEventDefinition id="MED_Facility_Request" messageRef="Msg_Request"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Make_Appointment" name="Make appointment"/>
+    <bpmn:sendTask id="Send_Appointment" name="Send appointment to customer" messageRef="Msg_Appointment"/>
+    <bpmn:exclusiveGateway id="Gateway_Arrival_Merge" name="Merge before arrival"/>
+    <bpmn:intermediateCatchEvent id="Catch_Arrival" name="Facility arrives at random time"/>
+    <bpmn:manualTask id="Task_Visit_Customer" name="Inspect fridge on site"/>
+    <bpmn:exclusiveGateway id="Gateway_Repair_Split" name="Repair possible?" default="CF_F10"/>
+    <bpmn:manualTask id="Task_Repair_Fridge" name="Repair fridge"/>
+    <bpmn:sendTask id="Send_Repair_Done" name="Notify customer of completed repair" messageRef="Msg_RepairDone"/>
+    <bpmn:endEvent id="End_Repaired" name="Fridge repaired"/>
+    <bpmn:manualTask id="Task_Leave_Without_Repair" name="Leave without repairing"/>
+
+    <bpmn:sequenceFlow id="CF_F1" sourceRef="Start_Facility_Request" targetRef="Task_Make_Appointment"/>
+    <bpmn:sequenceFlow id="CF_F2" sourceRef="Task_Make_Appointment" targetRef="Send_Appointment"/>
+    <bpmn:sequenceFlow id="CF_F3" sourceRef="Send_Appointment" targetRef="Gateway_Arrival_Merge"/>
+    <bpmn:sequenceFlow id="CF_F4" sourceRef="Gateway_Arrival_Merge" targetRef="Catch_Arrival"/>
+    <bpmn:sequenceFlow id="CF_F5" sourceRef="Catch_Arrival" targetRef="Task_Visit_Customer"/>
+    <bpmn:sequenceFlow id="CF_F6" sourceRef="Task_Visit_Customer" targetRef="Gateway_Repair_Split"/>
+    <bpmn:sequenceFlow id="CF_F7" name="Repaired" sourceRef="Gateway_Repair_Split" targetRef="Task_Repair_Fridge"/>
+    <bpmn:sequenceFlow id="CF_F8" sourceRef="Task_Repair_Fridge" targetRef="Send_Repair_Done"/>
+    <bpmn:sequenceFlow id="CF_F9" sourceRef="Send_Repair_Done" targetRef="End_Repaired"/>
+    <bpmn:sequenceFlow id="CF_F10" name="Parts needed" sourceRef="Gateway_Repair_Split" targetRef="Task_Leave_Without_Repair"/>
+    <bpmn:sequenceFlow id="CF_F11" sourceRef="Task_Leave_Without_Repair" targetRef="Gateway_Arrival_Merge"/>
+  </bpmn:process>
+
+</bpmn:definitions>

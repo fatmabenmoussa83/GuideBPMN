@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_TicketBooking" targetNamespace="https://example.com/bpmn/ticket-booking">
+  <bpmn:message id="Message_BookingDetails" name="Personal information and payment details"/>
+  <bpmn:message id="Message_Ticket" name="Ticket"/>
+  <bpmn:message id="Message_TravelInstructions" name="Reminders and check-in or boarding instructions"/>
+
+  <bpmn:collaboration id="Collaboration_TicketBooking">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_TravelCompany" name="Travel company and booking system" processRef="Process_TravelCompany"/>
+    <bpmn:messageFlow id="MessageFlow_BookingDetails" name="Booking details" sourceRef="Task_SubmitDetails" targetRef="Start_BookingReceived" messageRef="Message_BookingDetails"/>
+    <bpmn:messageFlow id="MessageFlow_Ticket" name="Ticket" sourceRef="Task_SendTicket" targetRef="Task_ReceiveTicket" messageRef="Message_Ticket"/>
+    <bpmn:messageFlow id="MessageFlow_TravelInstructions" name="Reminders and instructions" sourceRef="Task_SendInstructions" targetRef="Task_ReceiveInstructions" messageRef="Message_TravelInstructions"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Customer" name="Customer ticket booking and journey" isExecutable="false">
+    <bpmn:startEvent id="Start_Customer" name="Search for a ticket"/>
+    <bpmn:task id="Task_Search" name="Search for a flight, train, or bus ticket"/>
+    <bpmn:task id="Task_Select" name="Select preferred route, date, and time"/>
+    <bpmn:sendTask id="Task_SubmitDetails" name="Provide personal information and payment details" messageRef="Message_BookingDetails"/>
+    <bpmn:receiveTask id="Task_ReceiveTicket" name="Receive ticket" messageRef="Message_Ticket"/>
+    <bpmn:exclusiveGateway id="Gateway_ReminderChoice" name="Reminder sent?"/>
+    <bpmn:receiveTask id="Task_ReceiveInstructions" name="Receive reminders and check-in or boarding instructions" messageRef="Message_TravelInstructions"/>
+    <bpmn:exclusiveGateway id="Gateway_ReminderMerge" name="Continue before travel"/>
+    <bpmn:task id="Task_CompleteJourney" name="Complete journey"/>
+    <bpmn:exclusiveGateway id="Gateway_PostTravelChoice" name="Post-travel feedback or services?"/>
+    <bpmn:task id="Task_PostTravel" name="Complete post-travel feedback or use post-travel services"/>
+    <bpmn:endEvent id="End_Customer" name="Customer process concludes"/>
+
+    <bpmn:sequenceFlow id="Flow_Customer_1" sourceRef="Start_Customer" targetRef="Task_Search"/>
+    <bpmn:sequenceFlow id="Flow_Customer_2" sourceRef="Task_Search" targetRef="Task_Select"/>
+    <bpmn:sequenceFlow id="Flow_Customer_3" sourceRef="Task_Select" targetRef="Task_SubmitDetails"/>
+    <bpmn:sequenceFlow id="Flow_Customer_4" sourceRef="Task_SubmitDetails" targetRef="Task_ReceiveTicket"/>
+    <bpmn:sequenceFlow id="Flow_Customer_5" sourceRef="Task_ReceiveTicket" targetRef="Gateway_ReminderChoice"/>
+    <bpmn:sequenceFlow id="Flow_Reminder_Yes" name="Reminder sent" sourceRef="Gateway_ReminderChoice" targetRef="Task_ReceiveInstructions">
+      <bpmn:conditionExpression>reminderSent</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Reminder_No" name="No reminder" sourceRef="Gateway_ReminderChoice" targetRef="Gateway_ReminderMerge"/>
+    <bpmn:sequenceFlow id="Flow_Reminder_Received" sourceRef="Task_ReceiveInstructions" targetRef="Gateway_ReminderMerge"/>
+    <bpmn:sequenceFlow id="Flow_Customer_6" sourceRef="Gateway_ReminderMerge" targetRef="Task_CompleteJourney"/>
+    <bpmn:sequenceFlow id="Flow_Customer_7" sourceRef="Task_CompleteJourney" targetRef="Gateway_PostTravelChoice"/>
+    <bpmn:sequenceFlow id="Flow_PostTravel_Yes" name="Feedback or services extend the process" sourceRef="Gateway_PostTravelChoice" targetRef="Task_PostTravel">
+      <bpmn:conditionExpression>postTravelExtensionOccurs</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_PostTravel_No" name="No extension" sourceRef="Gateway_PostTravelChoice" targetRef="End_Customer"/>
+    <bpmn:sequenceFlow id="Flow_PostTravel_End" sourceRef="Task_PostTravel" targetRef="End_Customer"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_TravelCompany" name="Travel company ticket processing" isExecutable="false">
+    <bpmn:startEvent id="Start_BookingReceived" name="Booking details received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_BookingDetails" messageRef="Message_BookingDetails"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_GenerateTicket" name="Generate ticket"/>
+    <bpmn:sendTask id="Task_SendTicket" name="Send ticket via email or SMS" messageRef="Message_Ticket"/>
+    <bpmn:task id="Task_UpdateInventory" name="Update seat inventory"/>
+    <bpmn:exclusiveGateway id="Gateway_SendInstructions" name="Send reminders and instructions?"/>
+    <bpmn:sendTask id="Task_SendInstructions" name="Send reminders and check-in or boarding instructions" messageRef="Message_TravelInstructions"/>
+    <bpmn:endEvent id="End_Company_NoInstructions" name="Ticket and inventory processing complete"/>
+    <bpmn:endEvent id="End_Company_InstructionsSent" name="Instructions sent"/>
+
+    <bpmn:sequenceFlow id="Flow_Company_1" sourceRef="Start_BookingReceived" targetRef="Task_GenerateTicket"/>
+    <bpmn:sequenceFlow id="Flow_Company_2" sourceRef="Task_GenerateTicket" targetRef="Task_SendTicket"/>
+    <bpmn:sequenceFlow id="Flow_Company_3" sourceRef="Task_SendTicket" targetRef="Task_UpdateInventory"/>
+    <bpmn:sequenceFlow id="Flow_Company_4" sourceRef="Task_UpdateInventory" targetRef="Gateway_SendInstructions"/>
+    <bpmn:sequenceFlow id="Flow_Instructions_Yes" name="Send instructions" sourceRef="Gateway_SendInstructions" targetRef="Task_SendInstructions">
+      <bpmn:conditionExpression>instructionsWillBeSent</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Instructions_No" name="No instructions" sourceRef="Gateway_SendInstructions" targetRef="End_Company_NoInstructions"/>
+    <bpmn:sequenceFlow id="Flow_Instructions_End" sourceRef="Task_SendInstructions" targetRef="End_Company_InstructionsSent"/>
+  </bpmn:process>
+</bpmn:definitions>

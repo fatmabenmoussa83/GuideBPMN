@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/inq-ip">
+  <bpmn:message id="Message_TransactionDataRequest" name="Transaction data request"/>
+  <bpmn:message id="Message_TransactionData" name="Transaction data"/>
+  <bpmn:message id="Message_Rejection" name="Rejection"/>
+
+  <bpmn:collaboration id="Collaboration_INQ_IP" name="INQ and IP collaboration">
+    <bpmn:participant id="Participant_INQ" name="INQ" processRef="Process_INQ"/>
+    <bpmn:participant id="Participant_IP" name="IP" processRef="Process_IP"/>
+    <bpmn:messageFlow id="MessageFlow_Request" name="Transaction data request"
+                      sourceRef="Task_SendRequest" targetRef="StartEvent_IPRequest"
+                      messageRef="Message_TransactionDataRequest"/>
+    <bpmn:messageFlow id="MessageFlow_Data" name="Transaction data"
+                      sourceRef="Task_AnswerWithData" targetRef="Task_ReceiveData"
+                      messageRef="Message_TransactionData"/>
+    <bpmn:messageFlow id="MessageFlow_Rejection" name="Rejection"
+                      sourceRef="Task_AnswerWithRejection" targetRef="Task_ReceiveRejection"
+                      messageRef="Message_Rejection"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_INQ" name="INQ process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_INQ" name="Request transaction data"/>
+    <bpmn:sendTask id="Task_SendRequest" name="Transmit transaction data request"
+                   messageRef="Message_TransactionDataRequest"/>
+    <bpmn:eventBasedGateway id="Gateway_WaitForAnswer" name="Wait for IP answer"
+                            eventGatewayType="Exclusive" gatewayDirection="Diverging"/>
+    <bpmn:receiveTask id="Task_ReceiveData" name="Receive transaction data"
+                      messageRef="Message_TransactionData"/>
+    <bpmn:receiveTask id="Task_ReceiveRejection" name="Receive rejection"
+                      messageRef="Message_Rejection"/>
+    <bpmn:endEvent id="EndEvent_DataReceived" name="Transaction data received"/>
+    <bpmn:endEvent id="EndEvent_RejectionReceived" name="Rejection received"/>
+
+    <bpmn:sequenceFlow id="Flow_INQ_1" sourceRef="StartEvent_INQ" targetRef="Task_SendRequest"/>
+    <bpmn:sequenceFlow id="Flow_INQ_2" sourceRef="Task_SendRequest" targetRef="Gateway_WaitForAnswer"/>
+    <bpmn:sequenceFlow id="Flow_INQ_3" sourceRef="Gateway_WaitForAnswer" targetRef="Task_ReceiveData"/>
+    <bpmn:sequenceFlow id="Flow_INQ_4" sourceRef="Gateway_WaitForAnswer" targetRef="Task_ReceiveRejection"/>
+    <bpmn:sequenceFlow id="Flow_INQ_5" sourceRef="Task_ReceiveData" targetRef="EndEvent_DataReceived"/>
+    <bpmn:sequenceFlow id="Flow_INQ_6" sourceRef="Task_ReceiveRejection" targetRef="EndEvent_RejectionReceived"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_IP" name="IP process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_IPRequest" name="Transaction data request received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_IPRequest"
+                                  messageRef="Message_TransactionDataRequest"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CheckRequest" name="Check INQ request"/>
+    <bpmn:exclusiveGateway id="Gateway_ExaminationOutcome" name="Examination outcome"
+                           gatewayDirection="Diverging"/>
+    <bpmn:sendTask id="Task_AnswerWithData" name="Answer INQ with transaction data"
+                   messageRef="Message_TransactionData"/>
+    <bpmn:sendTask id="Task_AnswerWithRejection" name="Answer INQ with rejection"
+                   messageRef="Message_Rejection"/>
+    <bpmn:endEvent id="EndEvent_DataSent" name="Transaction data transmitted"/>
+    <bpmn:endEvent id="EndEvent_RejectionSent" name="Rejection sent"/>
+
+    <bpmn:sequenceFlow id="Flow_IP_1" sourceRef="StartEvent_IPRequest" targetRef="Task_CheckRequest"/>
+    <bpmn:sequenceFlow id="Flow_IP_2" sourceRef="Task_CheckRequest" targetRef="Gateway_ExaminationOutcome"/>
+    <bpmn:sequenceFlow id="Flow_IP_3" name="Transmission of data"
+                       sourceRef="Gateway_ExaminationOutcome" targetRef="Task_AnswerWithData">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">examinationOutcome = "Transmission of data"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_IP_4" name="Rejection"
+                       sourceRef="Gateway_ExaminationOutcome" targetRef="Task_AnswerWithRejection">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">examinationOutcome = "Rejection"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_IP_5" sourceRef="Task_AnswerWithData" targetRef="EndEvent_DataSent"/>
+    <bpmn:sequenceFlow id="Flow_IP_6" sourceRef="Task_AnswerWithRejection" targetRef="EndEvent_RejectionSent"/>
+  </bpmn:process>
+</bpmn:definitions>

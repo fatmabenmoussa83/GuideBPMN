@@ -1,0 +1,58 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_ComputerRepair" targetNamespace="http://example.com/bpmn/computer-repair">
+  <bpmn:message id="Msg_DefectiveComputerBroughtIn" name="Defective computer brought in"/>
+  <bpmn:message id="Msg_RepairCostCalculation" name="Repair cost calculation"/>
+  <bpmn:message id="Msg_CostDecision" name="Cost decision"/>
+
+  <bpmn:collaboration id="Collab_ComputerRepair">
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_CRS" name="CRS" processRef="Process_CRS"/>
+    <bpmn:messageFlow id="MessageFlow_BringIn" name="Bring in defective computer" sourceRef="Participant_Customer" targetRef="StartEvent_ComputerBroughtIn"/>
+    <bpmn:messageFlow id="MessageFlow_CostCalculation" name="Repair cost calculation" sourceRef="SendTask_SendCostCalculation" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MessageFlow_CostDecision" name="Cost decision" sourceRef="Participant_Customer" targetRef="ReceiveTask_ReceiveCostDecision"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_CRS" name="CRS repair process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_ComputerBroughtIn" name="Defective computer brought in">
+      <bpmn:messageEventDefinition id="MED_ComputerBroughtIn" messageRef="Msg_DefectiveComputerBroughtIn"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CheckDefect" name="Check defect and calculate repair cost"/>
+    <bpmn:sendTask id="SendTask_SendCostCalculation" name="Send repair cost calculation" messageRef="Msg_RepairCostCalculation"/>
+    <bpmn:receiveTask id="ReceiveTask_ReceiveCostDecision" name="Receive cost decision" messageRef="Msg_CostDecision"/>
+    <bpmn:exclusiveGateway id="Gateway_CostDecision_Split" name="Costs acceptable?"/>
+    <bpmn:endEvent id="EndEvent_UnrepairedTakenHome" name="Computer taken home unrepaired"/>
+
+    <bpmn:parallelGateway id="Gateway_Repair_Split" name="Start repair"/>
+    <bpmn:task id="Task_CheckRepairHardware" name="Check and repair hardware"/>
+    <bpmn:task id="Task_TestHardware" name="Test system functionality after hardware repair"/>
+    <bpmn:task id="Task_CheckConfigureSoftware" name="Check and configure software"/>
+    <bpmn:task id="Task_TestSoftware" name="Test system functionality after software configuration"/>
+    <bpmn:parallelGateway id="Gateway_Repair_Join" name="Repair activities completed"/>
+
+    <bpmn:exclusiveGateway id="Gateway_Error_Merge" name="Repair check"/>
+    <bpmn:exclusiveGateway id="Gateway_Error_Split" name="Error detected?"/>
+    <bpmn:task id="Task_AnotherRepair" name="Execute another repair activity"/>
+    <bpmn:task id="Task_TestAfterAnotherRepair" name="Test system functionality"/>
+    <bpmn:endEvent id="EndEvent_RepairFinished" name="Repair finished"/>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_ComputerBroughtIn" targetRef="Task_CheckDefect"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_CheckDefect" targetRef="SendTask_SendCostCalculation"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="SendTask_SendCostCalculation" targetRef="ReceiveTask_ReceiveCostDecision"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="ReceiveTask_ReceiveCostDecision" targetRef="Gateway_CostDecision_Split"/>
+    <bpmn:sequenceFlow id="Flow_CostNotAcceptable" name="No" sourceRef="Gateway_CostDecision_Split" targetRef="EndEvent_UnrepairedTakenHome"/>
+    <bpmn:sequenceFlow id="Flow_CostAcceptable" name="Yes" sourceRef="Gateway_CostDecision_Split" targetRef="Gateway_Repair_Split"/>
+
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_Repair_Split" targetRef="Task_CheckRepairHardware"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_CheckRepairHardware" targetRef="Task_TestHardware"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_TestHardware" targetRef="Gateway_Repair_Join"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Gateway_Repair_Split" targetRef="Task_CheckConfigureSoftware"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_CheckConfigureSoftware" targetRef="Task_TestSoftware"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_TestSoftware" targetRef="Gateway_Repair_Join"/>
+
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Gateway_Repair_Join" targetRef="Gateway_Error_Merge"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Gateway_Error_Merge" targetRef="Gateway_Error_Split"/>
+    <bpmn:sequenceFlow id="Flow_ErrorDetected" name="Yes" sourceRef="Gateway_Error_Split" targetRef="Task_AnotherRepair"/>
+    <bpmn:sequenceFlow id="Flow_NoError" name="No" sourceRef="Gateway_Error_Split" targetRef="EndEvent_RepairFinished"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_AnotherRepair" targetRef="Task_TestAfterAnotherRepair"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_TestAfterAnotherRepair" targetRef="Gateway_Error_Merge"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Subscription" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_Subscription" name="Subscription Lifecycle" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Subscription">
+      <bpmn:lane id="Lane_Customer" name="Customer">
+        <bpmn:flowNodeRef>StartEvent_Signup</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitSignup</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_CancelDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitCancellation</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="Subscription System">
+        <bpmn:flowNodeRef>Task_GenerateAccount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TriggerBilling</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_BillingMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendNotification</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ApplyRefundCharge</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Support" name="Support Team">
+        <bpmn:flowNodeRef>Task_ProcessCancellation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DeactivateSubscription</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SettleBalance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Concluded</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_Signup" name="Customer signs up for subscription">
+      <bpmn:outgoing>Flow_SignupToSubmit</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="Task_SubmitSignup" name="Submit personal and payment information">
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="Task_GenerateAccount" name="Generate account and assign access"/>
+
+    <bpmn:serviceTask id="Task_TriggerBilling" name="Trigger automated billing cycle"/>
+
+    <bpmn:exclusiveGateway id="Gateway_BillingMerge" name="Merge"/>
+
+    <bpmn:sendTask id="Task_SendNotification" name="Send update, enhancement or renewal notification"/>
+
+    <bpmn:exclusiveGateway id="Gateway_CancelDecision" name="Customer decides to cancel?" default="Flow_Continue"/>
+
+    <bpmn:userTask id="Task_SubmitCancellation" name="Submit cancellation request"/>
+
+    <bpmn:userTask id="Task_ProcessCancellation" name="Process cancellation request"/>
+
+    <bpmn:serviceTask id="Task_ApplyRefundCharge" name="Apply refunds or charges according to terms"/>
+
+    <bpmn:userTask id="Task_DeactivateSubscription" name="Deactivate subscription"/>
+
+    <bpmn:userTask id="Task_SettleBalance" name="Settle final account balance"/>
+
+    <bpmn:endEvent id="EndEvent_Concluded" name="Subscription concluded"/>
+
+    <bpmn:sequenceFlow id="Flow_SignupToSubmit" sourceRef="StartEvent_Signup" targetRef="Task_SubmitSignup"/>
+    <bpmn:sequenceFlow id="Flow_SubmitToGenerate" sourceRef="Task_SubmitSignup" targetRef="Task_GenerateAccount"/>
+    <bpmn:sequenceFlow id="Flow_GenerateToBilling" sourceRef="Task_GenerateAccount" targetRef="Task_TriggerBilling"/>
+    <bpmn:sequenceFlow id="Flow_BillingToMerge" sourceRef="Task_TriggerBilling" targetRef="Gateway_BillingMerge"/>
+    <bpmn:sequenceFlow id="Flow_MergeToNotification" sourceRef="Gateway_BillingMerge" targetRef="Task_SendNotification"/>
+    <bpmn:sequenceFlow id="Flow_NotificationToDecision" sourceRef="Task_SendNotification" targetRef="Gateway_CancelDecision"/>
+    <bpmn:sequenceFlow id="Flow_Cancel" name="Cancel" sourceRef="Gateway_CancelDecision" targetRef="Task_SubmitCancellation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${cancellationRequested == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Continue" name="Continue subscription" sourceRef="Gateway_CancelDecision" targetRef="Gateway_BillingMerge"/>
+    <bpmn:sequenceFlow id="Flow_SubmitCancellationToProcess" sourceRef="Task_SubmitCancellation" targetRef="Task_ProcessCancellation"/>
+    <bpmn:sequenceFlow id="Flow_ProcessToApply" sourceRef="Task_ProcessCancellation" targetRef="Task_ApplyRefundCharge"/>
+    <bpmn:sequenceFlow id="Flow_ApplyToDeactivate" sourceRef="Task_ApplyRefundCharge" targetRef="Task_DeactivateSubscription"/>
+    <bpmn:sequenceFlow id="Flow_DeactivateToSettle" sourceRef="Task_DeactivateSubscription" targetRef="Task_SettleBalance"/>
+    <bpmn:sequenceFlow id="Flow_SettleToEnd" sourceRef="Task_SettleBalance" targetRef="EndEvent_Concluded"/>
+  </bpmn:process>
+</bpmn:definitions>

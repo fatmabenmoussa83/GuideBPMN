@@ -1,0 +1,769 @@
+{
+ "id": "17",
+ "kept_round": 3,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 59.5,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 105,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 10,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 39,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.441244,
+    "workflow_order_similarity": 0.470284,
+    "connection_f1": 0.304348,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.744186,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.359532,
+    "activity_semantic_similarity": 0.776589,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.8,
+    "activity_label_f1": 0.888889
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_OrderFulfillment\" targetNamespace=\"http://example.com/bpmn/order-fulfillment\">\n  <bpmn:message id=\"Msg_OrderPlaced\" name=\"Order placed\"/>\n  <bpmn:message id=\"Msg_PaymentFailed\" name=\"Payment failed notification\"/>\n  <bpmn:message id=\"Msg_BackorderDelay\" name=\"Back-order delay notification\"/>\n  <bpmn:message id=\"Msg_BackorderReceived\" name=\"Back-order received\"/>\n  <bpmn:message id=\"Msg_ShippingConfirmation\" name=\"Shipping confirmation\"/>\n  <bpmn:message id=\"Msg_DeliveryOutcome\" name=\"Delivery outcome reported\"/>\n  <bpmn:message id=\"Msg_FeedbackRequest\" name=\"Feedback follow-up email\"/>\n  <bpmn:message id=\"Msg_ReturnLabel\" name=\"Return shipping label\"/>\n  <bpmn:message id=\"Msg_ReturnedItems\" name=\"Returned items\"/>\n\n  <bpmn:collaboration id=\"Collab_OrderFulfillment\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:participant id=\"Participant_Company\" name=\"E-commerce Company\" processRef=\"Process_OrderFulfillment\"/>\n    <bpmn:messageFlow id=\"MF_OrderPlaced\" name=\"Order placed\" messageRef=\"Msg_OrderPlaced\" sourceRef=\"Participant_Customer\" targetRef=\"StartEvent_OrderPlaced\"/>\n    <bpmn:messageFlow id=\"MF_PaymentFailed\" name=\"Payment failed\" messageRef=\"Msg_PaymentFailed\" sourceRef=\"SendTask_NotifyPaymentFailure\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_BackorderDelay\" name=\"Delay notice\" messageRef=\"Msg_BackorderDelay\" sourceRef=\"SendTask_NotifyBackorderDelay\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_ShippingConfirmation\" name=\"Shipping confirmation\" messageRef=\"Msg_ShippingConfirmation\" sourceRef=\"SendTask_ShippingConfirmation\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_DeliveryOutcome\" name=\"Delivery outcome\" messageRef=\"Msg_DeliveryOutcome\" sourceRef=\"Participant_Customer\" targetRef=\"Catch_DeliveryOutcome\"/>\n    <bpmn:messageFlow id=\"MF_FeedbackRequest\" name=\"Feedback email\" messageRef=\"Msg_FeedbackRequest\" sourceRef=\"SendTask_FeedbackEmail\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_ReturnLabel\" name=\"Return label\" messageRef=\"Msg_ReturnLabel\" sourceRef=\"SendTask_ReturnLabel\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_ReturnedItems\" name=\"Returned items\" messageRef=\"Msg_ReturnedItems\" sourceRef=\"Participant_Customer\" targetRef=\"ReceiveTask_ReturnedItems\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_OrderFulfillment\" name=\"Order Fulfillment\" isExecutable=\"false\">\n\n    <bpmn:startEvent id=\"StartEvent_OrderPlaced\" name=\"Order placed\">\n      <bpmn:messageEventDefinition id=\"MED_OrderPlaced\" messageRef=\"Msg_OrderPlaced\"/>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Task_RecordOrder\" name=\"Record order details\"/>\n    <bpmn:task id=\"Task_ProcessPayment\" name=\"Process payment\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_PaymentCheck\" name=\"Payment successful?\"/>\n    <bpmn:sendTask id=\"SendTask_NotifyPaymentFailure\" name=\"Notify customer of payment failure\" messageRef=\"Msg_PaymentFailed\"/>\n    <bpmn:endEvent id=\"EndEvent_PaymentFailed\" name=\"Order ended: payment failed\"/>\n\n    <bpmn:task id=\"Task_CheckStock\" name=\"Check stock availability\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockCheck\" name=\"Items in stock?\"/>\n    <bpmn:task id=\"Task_InitiateBackorder\" name=\"Initiate back-order\"/>\n    <bpmn:sendTask id=\"SendTask_NotifyBackorderDelay\" name=\"Inform customer of delay\" messageRef=\"Msg_BackorderDelay\"/>\n    <bpmn:intermediateCatchEvent id=\"Catch_BackorderReceived\" name=\"Back-order received\">\n      <bpmn:messageEventDefinition id=\"MED_BackorderReceived\" messageRef=\"Msg_BackorderReceived\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_StockMerge\" name=\"Stock available for all items\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Fork\" name=\"Start fulfillment branches\"/>\n\n    <bpmn:task id=\"Task_Pick\" name=\"Pick in-stock items from warehouse\"/>\n    <bpmn:task id=\"Task_QualityControl\" name=\"Perform quality control check\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_GiftCheck\" name=\"Gift wrap requested?\"/>\n    <bpmn:task id=\"Task_GiftWrap\" name=\"Gift wrap items\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_GiftMerge\" name=\"Gift wrap handled\"/>\n    <bpmn:task id=\"Task_Package\" name=\"Package order\"/>\n\n    <bpmn:task id=\"Task_ShippingDocs\" name=\"Prepare shipping documents and labels\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IntlCheck\" name=\"International order?\"/>\n    <bpmn:task id=\"Task_Customs\" name=\"Prepare customs documentation\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IntlMerge\" name=\"Shipping documents complete\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Join\" name=\"Packaging and shipping documents ready\"/>\n    <bpmn:task id=\"Task_Dispatch\" name=\"Dispatch order\"/>\n    <bpmn:sendTask id=\"SendTask_ShippingConfirmation\" name=\"Send shipping confirmation to customer\" messageRef=\"Msg_ShippingConfirmation\"/>\n    <bpmn:task id=\"Task_UpdateInventory\" name=\"Update inventory levels\"/>\n    <bpmn:intermediateCatchEvent id=\"Catch_DeliveryOutcome\" name=\"Delivery outcome received\">\n      <bpmn:messageEventDefinition id=\"MED_DeliveryOutcome\" messageRef=\"Msg_DeliveryOutcome\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_DeliveryCheck\" name=\"Delivery successful without issues?\"/>\n    <bpmn:sendTask id=\"SendTask_FeedbackEmail\" name=\"Send feedback follow-up email\" messageRef=\"Msg_FeedbackRequest\"/>\n    <bpmn:endEvent id=\"EndEvent_OrderCompleted\" name=\"Order completed\"/>\n\n    <bpmn:subProcess id=\"SubProcess_Returns\" name=\"Returns process\">\n      <bpmn:startEvent id=\"StartEvent_Returns\" name=\"Return initiated\"/>\n      <bpmn:sendTask id=\"SendTask_ReturnLabel\" name=\"Send return shipping label\" messageRef=\"Msg_ReturnLabel\"/>\n      <bpmn:receiveTask id=\"ReceiveTask_ReturnedItems\" name=\"Receive returned items\" messageRef=\"Msg_ReturnedItems\"/>\n      <bpmn:task id=\"Task_InspectItems\" name=\"Inspect returned items\"/>\n      <bpmn:task id=\"Task_RefundOrReplace\" name=\"Process refund or replacement\"/>\n      <bpmn:endEvent id=\"EndEvent_ReturnsDone\" name=\"Return processed\"/>\n      <bpmn:sequenceFlow id=\"SF_R1\" sourceRef=\"StartEvent_Returns\" targetRef=\"SendTask_ReturnLabel\"/>\n      <bpmn:sequenceFlow id=\"SF_R2\" sourceRef=\"SendTask_ReturnLabel\" targetRef=\"ReceiveTask_ReturnedItems\"/>\n      <bpmn:sequenceFlow id=\"SF_R3\" sourceRef=\"ReceiveTask_ReturnedItems\" targetRef=\"Task_InspectItems\"/>\n      <bpmn:sequenceFlow id=\"SF_R4\" sourceRef=\"Task_InspectItems\" targetRef=\"Task_RefundOrReplace\"/>\n      <bpmn:sequenceFlow id=\"SF_R5\" sourceRef=\"Task_RefundOrReplace\" targetRef=\"EndEvent_ReturnsDone\"/>\n    </bpmn:subProcess>\n    <bpmn:endEvent id=\"EndEvent_ReturnCompleted\" name=\"Returns process completed\"/>\n\n    <bpmn:sequenceFlow id=\"SF_01\" sourceRef=\"StartEvent_OrderPlaced\" targetRef=\"Task_RecordOrder\"/>\n    <bpmn:sequenceFlow id=\"SF_02\" sourceRef=\"Task_RecordOrder\" targetRef=\"Task_ProcessPayment\"/>\n    <bpmn:sequenceFlow id=\"SF_03\" sourceRef=\"Task_ProcessPayment\" targetRef=\"Gateway_PaymentCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_04\" name=\"No\" sourceRef=\"Gateway_PaymentCheck\" targetRef=\"SendTask_NotifyPaymentFailure\"/>\n    <bpmn:sequenceFlow id=\"SF_05\" sourceRef=\"SendTask_NotifyPaymentFailure\" targetRef=\"EndEvent_PaymentFailed\"/>\n    <bpmn:sequenceFlow id=\"SF_06\" name=\"Yes\" sourceRef=\"Gateway_PaymentCheck\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"SF_07\" sourceRef=\"Task_CheckStock\" targetRef=\"Gateway_StockCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_08\" name=\"No\" sourceRef=\"Gateway_StockCheck\" targetRef=\"Task_InitiateBackorder\"/>\n    <bpmn:sequenceFlow id=\"SF_09\" sourceRef=\"Task_InitiateBackorder\" targetRef=\"SendTask_NotifyBackorderDelay\"/>\n    <bpmn:sequenceFlow id=\"SF_10\" sourceRef=\"SendTask_NotifyBackorderDelay\" targetRef=\"Catch_BackorderReceived\"/>\n    <bpmn:sequenceFlow id=\"SF_11\" sourceRef=\"Catch_BackorderReceived\" targetRef=\"Gateway_StockMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_12\" name=\"Yes\" sourceRef=\"Gateway_StockCheck\" targetRef=\"Gateway_StockMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_13\" sourceRef=\"Gateway_StockMerge\" targetRef=\"Gateway_Fork\"/>\n    <bpmn:sequenceFlow id=\"SF_14\" sourceRef=\"Gateway_Fork\" targetRef=\"Task_Pick\"/>\n    <bpmn:sequenceFlow id=\"SF_15\" sourceRef=\"Gateway_Fork\" targetRef=\"Task_ShippingDocs\"/>\n    <bpmn:sequenceFlow id=\"SF_16\" sourceRef=\"Task_Pick\" targetRef=\"Task_QualityControl\"/>\n    <bpmn:sequenceFlow id=\"SF_17\" sourceRef=\"Task_QualityControl\" targetRef=\"Gateway_GiftCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_18\" name=\"Yes\" sourceRef=\"Gateway_GiftCheck\" targetRef=\"Task_GiftWrap\"/>\n    <bpmn:sequenceFlow id=\"SF_19\" name=\"No\" sourceRef=\"Gateway_GiftCheck\" targetRef=\"Gateway_GiftMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_20\" sourceRef=\"Task_GiftWrap\" targetRef=\"Gateway_GiftMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_21\" sourceRef=\"Gateway_GiftMerge\" targetRef=\"Task_Package\"/>\n    <bpmn:sequenceFlow id=\"SF_22\" sourceRef=\"Task_Package\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"SF_23\" sourceRef=\"Task_ShippingDocs\" targetRef=\"Gateway_IntlCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_24\" name=\"Yes\" sourceRef=\"Gateway_IntlCheck\" targetRef=\"Task_Customs\"/>\n    <bpmn:sequenceFlow id=\"SF_25\" name=\"No\" sourceRef=\"Gateway_IntlCheck\" targetRef=\"Gateway_IntlMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_26\" sourceRef=\"Task_Customs\" targetRef=\"Gateway_IntlMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_27\" sourceRef=\"Gateway_IntlMerge\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"SF_28\" sourceRef=\"Gateway_Join\" targetRef=\"Task_Dispatch\"/>\n    <bpmn:sequenceFlow id=\"SF_29\" sourceRef=\"Task_Dispatch\" targetRef=\"SendTask_ShippingConfirmation\"/>\n    <bpmn:sequenceFlow id=\"SF_30\" sourceRef=\"SendTask_ShippingConfirmation\" targetRef=\"Task_UpdateInventory\"/>\n    <bpmn:sequenceFlow id=\"SF_31\" sourceRef=\"Task_UpdateInventory\" targetRef=\"Catch_DeliveryOutcome\"/>\n    <bpmn:sequenceFlow id=\"SF_32\" sourceRef=\"Catch_DeliveryOutcome\" targetRef=\"Gateway_DeliveryCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_33\" name=\"Delivered, no issues\" sourceRef=\"Gateway_DeliveryCheck\" targetRef=\"SendTask_FeedbackEmail\"/>\n    <bpmn:sequenceFlow id=\"SF_34\" sourceRef=\"SendTask_FeedbackEmail\" targetRef=\"EndEvent_OrderCompleted\"/>\n    <bpmn:sequenceFlow id=\"SF_35\" name=\"Issue reported\" sourceRef=\"Gateway_DeliveryCheck\" targetRef=\"SubProcess_Returns\"/>\n    <bpmn:sequenceFlow id=\"SF_36\" sourceRef=\"SubProcess_Returns\" targetRef=\"EndEvent_ReturnCompleted\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 398.9,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 93,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 10,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 39,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.507443,
+    "workflow_order_similarity": 0.522452,
+    "connection_f1": 0.326087,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.790698,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.444012,
+    "activity_semantic_similarity": 0.852503,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.88,
+    "activity_label_f1": 0.93617
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_OrderFulfillment\" targetNamespace=\"http://example.com/bpmn/order-fulfillment\">\n  <bpmn:message id=\"Msg_PaymentFailed\" name=\"Payment failed notification\"/>\n  <bpmn:message id=\"Msg_BackorderDelay\" name=\"Back-order delay notification\"/>\n  <bpmn:message id=\"Msg_ShippingConfirmation\" name=\"Shipping confirmation\"/>\n  <bpmn:message id=\"Msg_FeedbackEmail\" name=\"Feedback follow-up email\"/>\n\n  <bpmn:collaboration id=\"Collab_OrderFulfillment\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:participant id=\"Participant_Company\" name=\"E-commerce Company\" processRef=\"Process_OrderFulfillment\"/>\n    <bpmn:messageFlow id=\"MF_PaymentFailed\" name=\"Payment failed\" messageRef=\"Msg_PaymentFailed\" sourceRef=\"SendTask_NotifyPaymentFailure\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_BackorderDelay\" name=\"Delay notice\" messageRef=\"Msg_BackorderDelay\" sourceRef=\"SendTask_NotifyBackorderDelay\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_ShippingConfirmation\" name=\"Shipping confirmation\" messageRef=\"Msg_ShippingConfirmation\" sourceRef=\"SendTask_ShippingConfirmation\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_FeedbackEmail\" name=\"Feedback email\" messageRef=\"Msg_FeedbackEmail\" sourceRef=\"SendTask_FeedbackEmail\" targetRef=\"Participant_Customer\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_OrderFulfillment\" name=\"Order Fulfillment\" isExecutable=\"false\">\n\n    <bpmn:startEvent id=\"StartEvent_OrderPlaced\" name=\"Order placed\"/>\n    <bpmn:task id=\"Task_RecordOrder\" name=\"Record order details\"/>\n    <bpmn:task id=\"Task_ProcessPayment\" name=\"Process payment\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_PaymentCheck\" name=\"Payment successful?\"/>\n    <bpmn:sendTask id=\"SendTask_NotifyPaymentFailure\" name=\"Notify customer of payment failure\" messageRef=\"Msg_PaymentFailed\"/>\n    <bpmn:endEvent id=\"EndEvent_PaymentFailed\" name=\"Order ended: payment failed\"/>\n\n    <bpmn:task id=\"Task_CheckStock\" name=\"Check stock availability\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockCheck\" name=\"Items in stock?\"/>\n    <bpmn:task id=\"Task_InitiateBackorder\" name=\"Initiate back-order\"/>\n    <bpmn:sendTask id=\"SendTask_NotifyBackorderDelay\" name=\"Inform customer of delay\" messageRef=\"Msg_BackorderDelay\"/>\n    <bpmn:task id=\"Task_ReceiveBackorder\" name=\"Receive back-ordered items\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockMerge\" name=\"Stock available for all items\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Fork\" name=\"Start fulfillment branches\"/>\n\n    <bpmn:task id=\"Task_Pick\" name=\"Pick in-stock items from warehouse\"/>\n    <bpmn:task id=\"Task_QualityControl\" name=\"Perform quality control check\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_GiftCheck\" name=\"Gift wrap requested?\"/>\n    <bpmn:task id=\"Task_GiftWrap\" name=\"Gift wrap items\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_GiftMerge\" name=\"Gift wrap handled\"/>\n    <bpmn:task id=\"Task_Package\" name=\"Package order\"/>\n\n    <bpmn:task id=\"Task_ShippingDocs\" name=\"Prepare shipping documents and labels\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IntlCheck\" name=\"International order?\"/>\n    <bpmn:task id=\"Task_Customs\" name=\"Prepare customs documentation\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IntlMerge\" name=\"Shipping documents complete\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Join\" name=\"Packaging and shipping documents ready\"/>\n    <bpmn:task id=\"Task_Dispatch\" name=\"Dispatch order\"/>\n    <bpmn:sendTask id=\"SendTask_ShippingConfirmation\" name=\"Send shipping confirmation to customer\" messageRef=\"Msg_ShippingConfirmation\"/>\n    <bpmn:task id=\"Task_UpdateInventory\" name=\"Update inventory levels\"/>\n    <bpmn:task id=\"Task_ConfirmDelivery\" name=\"Confirm successful delivery\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IssueCheck\" name=\"Customer reported issues?\"/>\n    <bpmn:sendTask id=\"SendTask_FeedbackEmail\" name=\"Send feedback follow-up email\" messageRef=\"Msg_FeedbackEmail\"/>\n    <bpmn:endEvent id=\"EndEvent_OrderCompleted\" name=\"Order completed\"/>\n\n    <bpmn:subProcess id=\"SubProcess_Returns\" name=\"Returns process\">\n      <bpmn:startEvent id=\"StartEvent_Returns\" name=\"Return initiated\"/>\n      <bpmn:task id=\"Task_SendReturnLabel\" name=\"Send return shipping label\"/>\n      <bpmn:task id=\"Task_ReceiveReturnedItems\" name=\"Receive returned items\"/>\n      <bpmn:task id=\"Task_InspectItems\" name=\"Inspect returned items\"/>\n      <bpmn:task id=\"Task_RefundOrReplace\" name=\"Process refund or replacement\"/>\n      <bpmn:endEvent id=\"EndEvent_ReturnsDone\" name=\"Return processed\"/>\n      <bpmn:sequenceFlow id=\"SF_R1\" sourceRef=\"StartEvent_Returns\" targetRef=\"Task_SendReturnLabel\"/>\n      <bpmn:sequenceFlow id=\"SF_R2\" sourceRef=\"Task_SendReturnLabel\" targetRef=\"Task_ReceiveReturnedItems\"/>\n      <bpmn:sequenceFlow id=\"SF_R3\" sourceRef=\"Task_ReceiveReturnedItems\" targetRef=\"Task_InspectItems\"/>\n      <bpmn:sequenceFlow id=\"SF_R4\" sourceRef=\"Task_InspectItems\" targetRef=\"Task_RefundOrReplace\"/>\n      <bpmn:sequenceFlow id=\"SF_R5\" sourceRef=\"Task_RefundOrReplace\" targetRef=\"EndEvent_ReturnsDone\"/>\n    </bpmn:subProcess>\n    <bpmn:endEvent id=\"EndEvent_ReturnCompleted\" name=\"Returns process completed\"/>\n\n    <bpmn:sequenceFlow id=\"SF_01\" sourceRef=\"StartEvent_OrderPlaced\" targetRef=\"Task_RecordOrder\"/>\n    <bpmn:sequenceFlow id=\"SF_02\" sourceRef=\"Task_RecordOrder\" targetRef=\"Task_ProcessPayment\"/>\n    <bpmn:sequenceFlow id=\"SF_03\" sourceRef=\"Task_ProcessPayment\" targetRef=\"Gateway_PaymentCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_04\" name=\"No\" sourceRef=\"Gateway_PaymentCheck\" targetRef=\"SendTask_NotifyPaymentFailure\"/>\n    <bpmn:sequenceFlow id=\"SF_05\" sourceRef=\"SendTask_NotifyPaymentFailure\" targetRef=\"EndEvent_PaymentFailed\"/>\n    <bpmn:sequenceFlow id=\"SF_06\" name=\"Yes\" sourceRef=\"Gateway_PaymentCheck\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"SF_07\" sourceRef=\"Task_CheckStock\" targetRef=\"Gateway_StockCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_08\" name=\"No\" sourceRef=\"Gateway_StockCheck\" targetRef=\"Task_InitiateBackorder\"/>\n    <bpmn:sequenceFlow id=\"SF_09\" sourceRef=\"Task_InitiateBackorder\" targetRef=\"SendTask_NotifyBackorderDelay\"/>\n    <bpmn:sequenceFlow id=\"SF_10\" sourceRef=\"SendTask_NotifyBackorderDelay\" targetRef=\"Task_ReceiveBackorder\"/>\n    <bpmn:sequenceFlow id=\"SF_11\" sourceRef=\"Task_ReceiveBackorder\" targetRef=\"Gateway_StockMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_12\" name=\"Yes\" sourceRef=\"Gateway_StockCheck\" targetRef=\"Gateway_StockMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_13\" sourceRef=\"Gateway_StockMerge\" targetRef=\"Gateway_Fork\"/>\n    <bpmn:sequenceFlow id=\"SF_14\" sourceRef=\"Gateway_Fork\" targetRef=\"Task_Pick\"/>\n    <bpmn:sequenceFlow id=\"SF_15\" sourceRef=\"Gateway_Fork\" targetRef=\"Task_ShippingDocs\"/>\n    <bpmn:sequenceFlow id=\"SF_16\" sourceRef=\"Task_Pick\" targetRef=\"Task_QualityControl\"/>\n    <bpmn:sequenceFlow id=\"SF_17\" sourceRef=\"Task_QualityControl\" targetRef=\"Gateway_GiftCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_18\" name=\"Yes\" sourceRef=\"Gateway_GiftCheck\" targetRef=\"Task_GiftWrap\"/>\n    <bpmn:sequenceFlow id=\"SF_19\" name=\"No\" sourceRef=\"Gateway_GiftCheck\" targetRef=\"Gateway_GiftMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_20\" sourceRef=\"Task_GiftWrap\" targetRef=\"Gateway_GiftMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_21\" sourceRef=\"Gateway_GiftMerge\" targetRef=\"Task_Package\"/>\n    <bpmn:sequenceFlow id=\"SF_22\" sourceRef=\"Task_Package\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"SF_23\" sourceRef=\"Task_ShippingDocs\" targetRef=\"Gateway_IntlCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_24\" name=\"Yes\" sourceRef=\"Gateway_IntlCheck\" targetRef=\"Task_Customs\"/>\n    <bpmn:sequenceFlow id=\"SF_25\" name=\"No\" sourceRef=\"Gateway_IntlCheck\" targetRef=\"Gateway_IntlMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_26\" sourceRef=\"Task_Customs\" targetRef=\"Gateway_IntlMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_27\" sourceRef=\"Gateway_IntlMerge\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"SF_28\" sourceRef=\"Gateway_Join\" targetRef=\"Task_Dispatch\"/>\n    <bpmn:sequenceFlow id=\"SF_29\" sourceRef=\"Task_Dispatch\" targetRef=\"SendTask_ShippingConfirmation\"/>\n    <bpmn:sequenceFlow id=\"SF_30\" sourceRef=\"SendTask_ShippingConfirmation\" targetRef=\"Task_UpdateInventory\"/>\n    <bpmn:sequenceFlow id=\"SF_31\" sourceRef=\"Task_UpdateInventory\" targetRef=\"Task_ConfirmDelivery\"/>\n    <bpmn:sequenceFlow id=\"SF_32\" sourceRef=\"Task_ConfirmDelivery\" targetRef=\"Gateway_IssueCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_33\" name=\"Issue reported\" sourceRef=\"Gateway_IssueCheck\" targetRef=\"SubProcess_Returns\"/>\n    <bpmn:sequenceFlow id=\"SF_34\" sourceRef=\"SubProcess_Returns\" targetRef=\"EndEvent_ReturnCompleted\"/>\n    <bpmn:sequenceFlow id=\"SF_35\" name=\"No issues\" sourceRef=\"Gateway_IssueCheck\" targetRef=\"SendTask_FeedbackEmail\"/>\n    <bpmn:sequenceFlow id=\"SF_36\" sourceRef=\"SendTask_FeedbackEmail\" targetRef=\"EndEvent_OrderCompleted\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 951.8,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 95,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 10,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 40,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.549199,
+    "workflow_order_similarity": 0.551574,
+    "connection_f1": 0.365591,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.813953,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.480549,
+    "activity_semantic_similarity": 0.892503,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.92,
+    "activity_label_f1": 0.958333
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_OrderFulfillment\" targetNamespace=\"http://example.com/bpmn/order-fulfillment\">\n  <bpmn:message id=\"Msg_PaymentFailed\" name=\"Payment failed notification\"/>\n  <bpmn:message id=\"Msg_BackorderDelay\" name=\"Back-order delay notification\"/>\n  <bpmn:message id=\"Msg_ShippingConfirmation\" name=\"Shipping confirmation\"/>\n  <bpmn:message id=\"Msg_FeedbackEmail\" name=\"Feedback follow-up email\"/>\n\n  <bpmn:collaboration id=\"Collab_OrderFulfillment\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:participant id=\"Participant_Company\" name=\"E-commerce Company\" processRef=\"Process_OrderFulfillment\"/>\n    <bpmn:messageFlow id=\"MF_PaymentFailed\" name=\"Payment failed\" messageRef=\"Msg_PaymentFailed\" sourceRef=\"SendTask_NotifyPaymentFailure\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_BackorderDelay\" name=\"Delay notice\" messageRef=\"Msg_BackorderDelay\" sourceRef=\"SendTask_NotifyBackorderDelay\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_ShippingConfirmation\" name=\"Shipping confirmation\" messageRef=\"Msg_ShippingConfirmation\" sourceRef=\"SendTask_ShippingConfirmation\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_FeedbackEmail\" name=\"Feedback email\" messageRef=\"Msg_FeedbackEmail\" sourceRef=\"SendTask_FeedbackEmail\" targetRef=\"Participant_Customer\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_OrderFulfillment\" name=\"Order Fulfillment\" isExecutable=\"false\">\n\n    <bpmn:startEvent id=\"StartEvent_OrderProcessStarted\" name=\"Process started\"/>\n    <bpmn:task id=\"Task_PlaceOrder\" name=\"Place order\"/>\n    <bpmn:task id=\"Task_RecordOrder\" name=\"Record order details\"/>\n    <bpmn:task id=\"Task_ProcessPayment\" name=\"Process payment\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_PaymentCheck\" name=\"Payment successful?\"/>\n    <bpmn:sendTask id=\"SendTask_NotifyPaymentFailure\" name=\"Notify customer of payment failure\" messageRef=\"Msg_PaymentFailed\"/>\n    <bpmn:endEvent id=\"EndEvent_PaymentFailed\" name=\"Order ended: payment failed\"/>\n\n    <bpmn:task id=\"Task_CheckStock\" name=\"Check stock availability\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockCheck\" name=\"Items in stock?\"/>\n    <bpmn:task id=\"Task_InitiateBackorder\" name=\"Initiate back-order\"/>\n    <bpmn:sendTask id=\"SendTask_NotifyBackorderDelay\" name=\"Inform customer of delay\" messageRef=\"Msg_BackorderDelay\"/>\n    <bpmn:task id=\"Task_ReceiveBackorder\" name=\"Receive back-ordered items\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockMerge\" name=\"Stock available for all items\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Fork\" name=\"Start fulfillment and shipping preparation\"/>\n\n    <bpmn:task id=\"Task_Pick\" name=\"Pick in-stock items from warehouse\"/>\n    <bpmn:task id=\"Task_QualityControl\" name=\"Perform quality control check\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_GiftCheck\" name=\"Gift wrap requested?\"/>\n    <bpmn:task id=\"Task_GiftWrap\" name=\"Gift wrap items\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_GiftMerge\" name=\"Gift wrap handled\"/>\n    <bpmn:task id=\"Task_Package\" name=\"Package order\"/>\n\n    <bpmn:task id=\"Task_ShippingDocs\" name=\"Prepare shipping documents and labels\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IntlCheck\" name=\"International order?\"/>\n    <bpmn:task id=\"Task_Customs\" name=\"Prepare customs documentation\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IntlMerge\" name=\"Shipping documents complete\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Join\" name=\"Packaging and shipping documents ready\"/>\n    <bpmn:task id=\"Task_Dispatch\" name=\"Dispatch order\"/>\n    <bpmn:sendTask id=\"SendTask_ShippingConfirmation\" name=\"Send shipping confirmation to customer\" messageRef=\"Msg_ShippingConfirmation\"/>\n    <bpmn:task id=\"Task_UpdateInventory\" name=\"Update inventory levels\"/>\n    <bpmn:task id=\"Task_ConfirmDelivery\" name=\"Confirm successful delivery\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IssueCheck\" name=\"Customer reported issues?\"/>\n    <bpmn:sendTask id=\"SendTask_FeedbackEmail\" name=\"Send feedback follow-up email\" messageRef=\"Msg_FeedbackEmail\"/>\n    <bpmn:endEvent id=\"EndEvent_OrderCompleted\" name=\"Order completed\"/>\n\n    <bpmn:subProcess id=\"SubProcess_Returns\" name=\"Returns process\">\n      <bpmn:startEvent id=\"StartEvent_Returns\" name=\"Return initiated\"/>\n      <bpmn:task id=\"Task_SendReturnLabel\" name=\"Send return shipping label\"/>\n      <bpmn:task id=\"Task_ReceiveReturnedItems\" name=\"Receive returned items\"/>\n      <bpmn:task id=\"Task_InspectItems\" name=\"Inspect returned items\"/>\n      <bpmn:task id=\"Task_RefundOrReplace\" name=\"Process refund or replacement\"/>\n      <bpmn:endEvent id=\"EndEvent_ReturnsDone\" name=\"Return processed\"/>\n      <bpmn:sequenceFlow id=\"SF_R1\" sourceRef=\"StartEvent_Returns\" targetRef=\"Task_SendReturnLabel\"/>\n      <bpmn:sequenceFlow id=\"SF_R2\" sourceRef=\"Task_SendReturnLabel\" targetRef=\"Task_ReceiveReturnedItems\"/>\n      <bpmn:sequenceFlow id=\"SF_R3\" sourceRef=\"Task_ReceiveReturnedItems\" targetRef=\"Task_InspectItems\"/>\n      <bpmn:sequenceFlow id=\"SF_R4\" sourceRef=\"Task_InspectItems\" targetRef=\"Task_RefundOrReplace\"/>\n      <bpmn:sequenceFlow id=\"SF_R5\" sourceRef=\"Task_RefundOrReplace\" targetRef=\"EndEvent_ReturnsDone\"/>\n    </bpmn:subProcess>\n    <bpmn:endEvent id=\"EndEvent_ReturnCompleted\" name=\"Returns process completed\"/>\n\n    <bpmn:sequenceFlow id=\"SF_01\" sourceRef=\"StartEvent_OrderProcessStarted\" targetRef=\"Task_PlaceOrder\"/>\n    <bpmn:sequenceFlow id=\"SF_02\" sourceRef=\"Task_PlaceOrder\" targetRef=\"Task_RecordOrder\"/>\n    <bpmn:sequenceFlow id=\"SF_03\" sourceRef=\"Task_RecordOrder\" targetRef=\"Task_ProcessPayment\"/>\n    <bpmn:sequenceFlow id=\"SF_04\" sourceRef=\"Task_ProcessPayment\" targetRef=\"Gateway_PaymentCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_05\" name=\"No\" sourceRef=\"Gateway_PaymentCheck\" targetRef=\"SendTask_NotifyPaymentFailure\"/>\n    <bpmn:sequenceFlow id=\"SF_06\" sourceRef=\"SendTask_NotifyPaymentFailure\" targetRef=\"EndEvent_PaymentFailed\"/>\n    <bpmn:sequenceFlow id=\"SF_07\" name=\"Yes\" sourceRef=\"Gateway_PaymentCheck\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"SF_08\" sourceRef=\"Task_CheckStock\" targetRef=\"Gateway_StockCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_09\" name=\"No\" sourceRef=\"Gateway_StockCheck\" targetRef=\"Task_InitiateBackorder\"/>\n    <bpmn:sequenceFlow id=\"SF_10\" sourceRef=\"Task_InitiateBackorder\" targetRef=\"SendTask_NotifyBackorderDelay\"/>\n    <bpmn:sequenceFlow id=\"SF_11\" sourceRef=\"SendTask_NotifyBackorderDelay\" targetRef=\"Task_ReceiveBackorder\"/>\n    <bpmn:sequenceFlow id=\"SF_12\" sourceRef=\"Task_ReceiveBackorder\" targetRef=\"Gateway_StockMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_13\" name=\"Yes\" sourceRef=\"Gateway_StockCheck\" targetRef=\"Gateway_StockMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_14\" sourceRef=\"Gateway_StockMerge\" targetRef=\"Gateway_Fork\"/>\n    <bpmn:sequenceFlow id=\"SF_15\" sourceRef=\"Gateway_Fork\" targetRef=\"Task_Pick\"/>\n    <bpmn:sequenceFlow id=\"SF_16\" sourceRef=\"Gateway_Fork\" targetRef=\"Task_ShippingDocs\"/>\n    <bpmn:sequenceFlow id=\"SF_17\" sourceRef=\"Task_Pick\" targetRef=\"Task_QualityControl\"/>\n    <bpmn:sequenceFlow id=\"SF_18\" sourceRef=\"Task_QualityControl\" targetRef=\"Gateway_GiftCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_19\" name=\"Yes\" sourceRef=\"Gateway_GiftCheck\" targetRef=\"Task_GiftWrap\"/>\n    <bpmn:sequenceFlow id=\"SF_20\" name=\"No\" sourceRef=\"Gateway_GiftCheck\" targetRef=\"Gateway_GiftMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_21\" sourceRef=\"Task_GiftWrap\" targetRef=\"Gateway_GiftMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_22\" sourceRef=\"Gateway_GiftMerge\" targetRef=\"Task_Package\"/>\n    <bpmn:sequenceFlow id=\"SF_23\" sourceRef=\"Task_Package\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"SF_24\" sourceRef=\"Task_ShippingDocs\" targetRef=\"Gateway_IntlCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_25\" name=\"Yes\" sourceRef=\"Gateway_IntlCheck\" targetRef=\"Task_Customs\"/>\n    <bpmn:sequenceFlow id=\"SF_26\" name=\"No\" sourceRef=\"Gateway_IntlCheck\" targetRef=\"Gateway_IntlMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_27\" sourceRef=\"Task_Customs\" targetRef=\"Gateway_IntlMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_28\" sourceRef=\"Gateway_IntlMerge\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"SF_29\" sourceRef=\"Gateway_Join\" targetRef=\"Task_Dispatch\"/>\n    <bpmn:sequenceFlow id=\"SF_30\" sourceRef=\"Task_Dispatch\" targetRef=\"SendTask_ShippingConfirmation\"/>\n    <bpmn:sequenceFlow id=\"SF_31\" sourceRef=\"SendTask_ShippingConfirmation\" targetRef=\"Task_UpdateInventory\"/>\n    <bpmn:sequenceFlow id=\"SF_32\" sourceRef=\"Task_UpdateInventory\" targetRef=\"Task_ConfirmDelivery\"/>\n    <bpmn:sequenceFlow id=\"SF_33\" sourceRef=\"Task_ConfirmDelivery\" targetRef=\"Gateway_IssueCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_34\" name=\"Issue reported\" sourceRef=\"Gateway_IssueCheck\" targetRef=\"SubProcess_Returns\"/>\n    <bpmn:sequenceFlow id=\"SF_35\" sourceRef=\"SubProcess_Returns\" targetRef=\"EndEvent_ReturnCompleted\"/>\n    <bpmn:sequenceFlow id=\"SF_36\" name=\"No issues\" sourceRef=\"Gateway_IssueCheck\" targetRef=\"SendTask_FeedbackEmail\"/>\n    <bpmn:sequenceFlow id=\"SF_37\" sourceRef=\"SendTask_FeedbackEmail\" targetRef=\"EndEvent_OrderCompleted\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1545.4,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 90,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 10,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 37,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.572118,
+    "workflow_order_similarity": 0.684711,
+    "connection_f1": 0.395604,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.813953,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.495835,
+    "activity_semantic_similarity": 0.892503,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.92,
+    "activity_label_f1": 0.958333
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_OrderFulfillment\" targetNamespace=\"http://example.com/bpmn/order-fulfillment\">\n  <bpmn:message id=\"Msg_PaymentFailed\" name=\"Payment failed notification\"/>\n  <bpmn:message id=\"Msg_BackorderDelay\" name=\"Back-order delay notification\"/>\n  <bpmn:message id=\"Msg_ShippingConfirmation\" name=\"Shipping confirmation\"/>\n  <bpmn:message id=\"Msg_FeedbackEmail\" name=\"Feedback follow-up email\"/>\n\n  <bpmn:collaboration id=\"Collab_OrderFulfillment\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:participant id=\"Participant_Company\" name=\"E-commerce Company\" processRef=\"Process_OrderFulfillment\"/>\n    <bpmn:messageFlow id=\"MF_PaymentFailed\" name=\"Payment failed\" messageRef=\"Msg_PaymentFailed\" sourceRef=\"SendTask_NotifyPaymentFailure\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_BackorderDelay\" name=\"Delay notice\" messageRef=\"Msg_BackorderDelay\" sourceRef=\"SendTask_NotifyBackorderDelay\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_ShippingConfirmation\" name=\"Shipping confirmation\" messageRef=\"Msg_ShippingConfirmation\" sourceRef=\"SendTask_ShippingConfirmation\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MF_FeedbackEmail\" name=\"Feedback email\" messageRef=\"Msg_FeedbackEmail\" sourceRef=\"SendTask_FeedbackEmail\" targetRef=\"Participant_Customer\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_OrderFulfillment\" name=\"Order Fulfillment\" isExecutable=\"false\">\n\n    <bpmn:startEvent id=\"StartEvent_OrderProcessStarted\" name=\"Order process started\"/>\n    <bpmn:task id=\"Task_PlaceOrder\" name=\"Place order\"/>\n    <bpmn:task id=\"Task_RecordOrder\" name=\"Record order details\"/>\n    <bpmn:task id=\"Task_ProcessPayment\" name=\"Process payment\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_PaymentCheck\" name=\"Payment successful?\"/>\n    <bpmn:sendTask id=\"SendTask_NotifyPaymentFailure\" name=\"Notify customer of payment failure\" messageRef=\"Msg_PaymentFailed\"/>\n    <bpmn:endEvent id=\"EndEvent_PaymentFailed\" name=\"Order ended: payment failed\"/>\n\n    <bpmn:task id=\"Task_CheckStock\" name=\"Check stock availability\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockCheck\" name=\"Items in stock?\"/>\n    <bpmn:task id=\"Task_InitiateBackorder\" name=\"Initiate back-order\"/>\n    <bpmn:sendTask id=\"SendTask_NotifyBackorderDelay\" name=\"Inform customer of delay\" messageRef=\"Msg_BackorderDelay\"/>\n    <bpmn:task id=\"Task_ReceiveBackorder\" name=\"Receive back-ordered items\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockMerge\" name=\"Stock available for all items\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Fork\" name=\"Start fulfillment and shipping preparation\"/>\n\n    <bpmn:task id=\"Task_Pick\" name=\"Pick in-stock items from warehouse\"/>\n    <bpmn:task id=\"Task_QualityControl\" name=\"Perform quality control check\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_GiftCheck\" name=\"Gift wrap requested?\"/>\n    <bpmn:task id=\"Task_GiftWrap\" name=\"Gift wrap items\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_GiftMerge\" name=\"Gift wrap handled\"/>\n    <bpmn:task id=\"Task_Package\" name=\"Package order\"/>\n\n    <bpmn:task id=\"Task_ShippingDocs\" name=\"Prepare shipping documents and labels\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IntlCheck\" name=\"International order?\"/>\n    <bpmn:task id=\"Task_Customs\" name=\"Prepare customs documentation\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IntlMerge\" name=\"Shipping documents complete\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Join\" name=\"Packaging and shipping documents ready\"/>\n    <bpmn:task id=\"Task_Dispatch\" name=\"Dispatch order\"/>\n    <bpmn:sendTask id=\"SendTask_ShippingConfirmation\" name=\"Send shipping confirmation to customer\" messageRef=\"Msg_ShippingConfirmation\"/>\n    <bpmn:task id=\"Task_UpdateInventory\" name=\"Update inventory levels\"/>\n    <bpmn:task id=\"Task_ConfirmDelivery\" name=\"Confirm successful delivery\"/>\n    <bpmn:sendTask id=\"SendTask_FeedbackEmail\" name=\"Send feedback follow-up email\" messageRef=\"Msg_FeedbackEmail\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_IssueCheck\" name=\"Customer reported issues?\"/>\n    <bpmn:endEvent id=\"EndEvent_OrderCompleted\" name=\"Order completed\"/>\n\n    <bpmn:task id=\"Task_SendReturnLabel\" name=\"Send return shipping label\"/>\n    <bpmn:task id=\"Task_ReceiveReturnedItems\" name=\"Receive returned items\"/>\n    <bpmn:task id=\"Task_InspectItems\" name=\"Inspect returned items\"/>\n    <bpmn:task id=\"Task_RefundOrReplace\" name=\"Process refund or replacement\"/>\n    <bpmn:endEvent id=\"EndEvent_ReturnsCompleted\" name=\"Returns process completed\"/>\n\n    <bpmn:sequenceFlow id=\"SF_01\" sourceRef=\"StartEvent_OrderProcessStarted\" targetRef=\"Task_PlaceOrder\"/>\n    <bpmn:sequenceFlow id=\"SF_02\" sourceRef=\"Task_PlaceOrder\" targetRef=\"Task_RecordOrder\"/>\n    <bpmn:sequenceFlow id=\"SF_03\" sourceRef=\"Task_RecordOrder\" targetRef=\"Task_ProcessPayment\"/>\n    <bpmn:sequenceFlow id=\"SF_04\" sourceRef=\"Task_ProcessPayment\" targetRef=\"Gateway_PaymentCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_05\" name=\"No\" sourceRef=\"Gateway_PaymentCheck\" targetRef=\"SendTask_NotifyPaymentFailure\"/>\n    <bpmn:sequenceFlow id=\"SF_06\" sourceRef=\"SendTask_NotifyPaymentFailure\" targetRef=\"EndEvent_PaymentFailed\"/>\n    <bpmn:sequenceFlow id=\"SF_07\" name=\"Yes\" sourceRef=\"Gateway_PaymentCheck\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"SF_08\" sourceRef=\"Task_CheckStock\" targetRef=\"Gateway_StockCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_09\" name=\"No\" sourceRef=\"Gateway_StockCheck\" targetRef=\"Task_InitiateBackorder\"/>\n    <bpmn:sequenceFlow id=\"SF_10\" sourceRef=\"Task_InitiateBackorder\" targetRef=\"SendTask_NotifyBackorderDelay\"/>\n    <bpmn:sequenceFlow id=\"SF_11\" sourceRef=\"SendTask_NotifyBackorderDelay\" targetRef=\"Task_ReceiveBackorder\"/>\n    <bpmn:sequenceFlow id=\"SF_12\" sourceRef=\"Task_ReceiveBackorder\" targetRef=\"Gateway_StockMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_13\" name=\"Yes\" sourceRef=\"Gateway_StockCheck\" targetRef=\"Gateway_StockMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_14\" sourceRef=\"Gateway_StockMerge\" targetRef=\"Gateway_Fork\"/>\n    <bpmn:sequenceFlow id=\"SF_15\" sourceRef=\"Gateway_Fork\" targetRef=\"Task_Pick\"/>\n    <bpmn:sequenceFlow id=\"SF_16\" sourceRef=\"Gateway_Fork\" targetRef=\"Task_ShippingDocs\"/>\n    <bpmn:sequenceFlow id=\"SF_17\" sourceRef=\"Task_Pick\" targetRef=\"Task_QualityControl\"/>\n    <bpmn:sequenceFlow id=\"SF_18\" sourceRef=\"Task_QualityControl\" targetRef=\"Gateway_GiftCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_19\" name=\"Yes\" sourceRef=\"Gateway_GiftCheck\" targetRef=\"Task_GiftWrap\"/>\n    <bpmn:sequenceFlow id=\"SF_20\" name=\"No\" sourceRef=\"Gateway_GiftCheck\" targetRef=\"Gateway_GiftMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_21\" sourceRef=\"Task_GiftWrap\" targetRef=\"Gateway_GiftMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_22\" sourceRef=\"Gateway_GiftMerge\" targetRef=\"Task_Package\"/>\n    <bpmn:sequenceFlow id=\"SF_23\" sourceRef=\"Task_Package\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"SF_24\" sourceRef=\"Task_ShippingDocs\" targetRef=\"Gateway_IntlCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_25\" name=\"Yes\" sourceRef=\"Gateway_IntlCheck\" targetRef=\"Task_Customs\"/>\n    <bpmn:sequenceFlow id=\"SF_26\" name=\"No\" sourceRef=\"Gateway_IntlCheck\" targetRef=\"Gateway_IntlMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_27\" sourceRef=\"Task_Customs\" targetRef=\"Gateway_IntlMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_28\" sourceRef=\"Gateway_IntlMerge\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"SF_29\" sourceRef=\"Gateway_Join\" targetRef=\"Task_Dispatch\"/>\n    <bpmn:sequenceFlow id=\"SF_30\" sourceRef=\"Task_Dispatch\" targetRef=\"SendTask_ShippingConfirmation\"/>\n    <bpmn:sequenceFlow id=\"SF_31\" sourceRef=\"SendTask_ShippingConfirmation\" targetRef=\"Task_UpdateInventory\"/>\n    <bpmn:sequenceFlow id=\"SF_32\" sourceRef=\"Task_UpdateInventory\" targetRef=\"Task_ConfirmDelivery\"/>\n    <bpmn:sequenceFlow id=\"SF_33\" sourceRef=\"Task_ConfirmDelivery\" targetRef=\"SendTask_FeedbackEmail\"/>\n    <bpmn:sequenceFlow id=\"SF_34\" sourceRef=\"SendTask_FeedbackEmail\" targetRef=\"Gateway_IssueCheck\"/>\n    <bpmn:sequenceFlow id=\"SF_35\" name=\"No issues\" sourceRef=\"Gateway_IssueCheck\" targetRef=\"EndEvent_OrderCompleted\"/>\n    <bpmn:sequenceFlow id=\"SF_36\" name=\"Issue reported\" sourceRef=\"Gateway_IssueCheck\" targetRef=\"Task_SendReturnLabel\"/>\n    <bpmn:sequenceFlow id=\"SF_37\" sourceRef=\"Task_SendReturnLabel\" targetRef=\"Task_ReceiveReturnedItems\"/>\n    <bpmn:sequenceFlow id=\"SF_38\" sourceRef=\"Task_ReceiveReturnedItems\" targetRef=\"Task_InspectItems\"/>\n    <bpmn:sequenceFlow id=\"SF_39\" sourceRef=\"Task_InspectItems\" targetRef=\"Task_RefundOrReplace\"/>\n    <bpmn:sequenceFlow id=\"SF_40\" sourceRef=\"Task_RefundOrReplace\" targetRef=\"EndEvent_ReturnsCompleted\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": true,
+  "failed_levels": [],
+  "metrics": {
+   "semantic_similarity": 0.441244,
+   "activity_semantic_similarity": 0.776589,
+   "activity_label_precision": 1.0,
+   "activity_label_recall": 0.8,
+   "activity_label_f1": 0.888889,
+   "activity_matched": 20,
+   "activity_reference": 25,
+   "activity_generated": 20,
+   "alignment_coverage": 0.744186,
+   "connection_precision": 0.341463,
+   "connection_recall": 0.27451,
+   "connection_f1": 0.304348,
+   "connection_tp": 14,
+   "connection_fp": 27,
+   "connection_fn": 37,
+   "workflow_order_similarity": 0.470284,
+   "order_consistency": 0.722222,
+   "order_coverage": 0.651163,
+   "order_tp": 273,
+   "order_fp": 37,
+   "order_fn": 68,
+   "collaboration_similarity": null,
+   "collaboration_applicable": false,
+   "collaboration_tp": 0,
+   "collaboration_fp": 0,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 0.8205,
+   "type_recall_diagnostic": 0.7442,
+   "type_f1_diagnostic": 0.7805,
+   "counts": {
+    "gold_nodes": 43,
+    "generated_nodes": 39,
+    "gold_flows": 51,
+    "generated_flows": 41
+   },
+   "collaboration_ignored": true,
+   "semantic_similarity_strict": 0.359532,
+   "activity_semantic_similarity_strict": 0.776589,
+   "alignment_coverage_strict": 0.744186,
+   "connection_precision_strict": 0.341463,
+   "connection_recall_strict": 0.27451,
+   "connection_f1_strict": 0.304348,
+   "workflow_order_similarity_strict": 0.470284,
+   "collaboration_similarity_strict": 0.0,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T5",
+   "T6"
+  ],
+  "error_counts": {
+   "T5": 64,
+   "T6": 5
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-025",
+    "instruction": "When the description says a party performs a named action (for example filing, submitting or giving something) and does not say that a message is sent to or awaited from another party: Model that action as a plain task labeled with the description's own wording for the action. Do not model it as a send task or an intermediate message catch event. Use a send task or a message catch event only when the description states a message being sent or awaited.",
+    "situation": "the description says that a participant receives, confirms or completes a physical or business outcome (for example an item arriving from a supplier, or a delivery being confirmed), and it does not say that a message is sent to or awaited from an external party",
+    "source": "learned guideline (refines ACT-05)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-019",
+    "instruction": "When the description states that one activity is followed by two or more separate actions that all must happen, with no order stated between them, and the process continues only after all of them are done: Model a parallel gateway that splits the flow after the preceding activity into one branch per action, with each action as its own task. Close the branches with a parallel gateway before the next activity that needs all of them. Also place a parallel gateway around any activity the description lists as a separate, unordered step within such a group, so that each stated step keeps its own position in the flow. Do not use an exclusive gateway for branches that must all complete.",
+    "situation": "the description marks an activity as running 'meanwhile', or at the same time as an earlier activity, and a later step is described as following only once both are ready or done",
+    "source": "learned guideline (refines ACT-07)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-008",
+    "instruction": "When the description says the process begins when a participant performs an action (an activity it names), rather than when an external message, signal, time or condition occurs: Model a start event for the process beginning, with no incoming flow, followed by a task labeled with that participant's action in the description's own wording. Do not label the start event with the action, and do not replace the action with the start event.",
+    "situation": "the description opens a process with a participant's action introduced by 'When' (the action itself starts the process), and the following sentence states what the system does with it",
+    "source": "learned guideline (refines EVT-01)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-032",
+    "instruction": "When the description states a conditional sentence ('If <condition>, <consequence>') whose consequence is a list of several steps (for example introduced by 'which includes'), and the generated model replaces the condition and its steps with one container, subprocess or single task: Model the condition as an exclusive split with one outgoing flow into the first listed step and one flow for the case where the condition does not hold. Model each listed step as its own task, in the order given in the description, and rejoin the paths with an exclusive merge before the next step that follows the conditional. Do not collapse the condition and its listed steps into a single subprocess or task unless the description names them as one.",
+    "situation": "the description states a conditional sentence ('If <condition>, <consequence>') whose consequence is a list of several steps (for example introduced by 'which includes'), and the generated model replaces the condition and its steps with one container, subprocess or single task",
+    "source": "learned guideline (refines GW-02)",
+    "failure_type": "T6"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-025"
+   ],
+   "before": {
+    "semantic_similarity": 0.441244,
+    "workflow_order_similarity": 0.470284,
+    "connection_f1": 0.304348,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.744186,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.359532,
+    "activity_semantic_similarity": 0.776589,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.8,
+    "activity_label_f1": 0.888889
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 64,
+    "T6": 5
+   },
+   "after": {
+    "semantic_similarity": 0.507443,
+    "workflow_order_similarity": 0.522452,
+    "connection_f1": 0.326087,
+    "alignment_coverage": 0.790698
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.066199,
+    "workflow_order_similarity": 0.052168,
+    "connection_f1": 0.021739,
+    "alignment_coverage": 0.046512
+   },
+   "mean_change": 0.046655,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 62,
+    "T6": 3
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.507443,
+    "activity_semantic_similarity": 0.852503,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.88,
+    "activity_label_f1": 0.93617,
+    "activity_matched": 22,
+    "activity_reference": 25,
+    "activity_generated": 22,
+    "alignment_coverage": 0.790698,
+    "connection_precision": 0.365854,
+    "connection_recall": 0.294118,
+    "connection_f1": 0.326087,
+    "connection_tp": 15,
+    "connection_fp": 26,
+    "connection_fn": 36,
+    "workflow_order_similarity": 0.522452,
+    "order_consistency": 0.748848,
+    "order_coverage": 0.697674,
+    "order_tp": 325,
+    "order_fp": 38,
+    "order_fn": 71,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.8718,
+    "type_recall_diagnostic": 0.7907,
+    "type_f1_diagnostic": 0.8293,
+    "counts": {
+     "gold_nodes": 43,
+     "generated_nodes": 39,
+     "gold_flows": 51,
+     "generated_flows": 41
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.444012,
+    "activity_semantic_similarity_strict": 0.852503,
+    "alignment_coverage_strict": 0.790698,
+    "connection_precision_strict": 0.365854,
+    "connection_recall_strict": 0.294118,
+    "connection_f1_strict": 0.326087,
+    "workflow_order_similarity_strict": 0.522452,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 93,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 10,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 39,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-025": {
+     "failure_type": "T6",
+     "errors_before": 5,
+     "errors_after": 3,
+     "removed": 2
+    }
+   },
+   "confirmed": true,
+   "promoted": [],
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "LRN-019",
+    "LRN-008"
+   ],
+   "before": {
+    "semantic_similarity": 0.507443,
+    "workflow_order_similarity": 0.522452,
+    "connection_f1": 0.326087,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.790698,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.444012,
+    "activity_semantic_similarity": 0.852503,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.88,
+    "activity_label_f1": 0.93617
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 62,
+    "T6": 3
+   },
+   "after": {
+    "semantic_similarity": 0.549199,
+    "workflow_order_similarity": 0.551574,
+    "connection_f1": 0.365591,
+    "alignment_coverage": 0.813953
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.041756,
+    "workflow_order_similarity": 0.029122,
+    "connection_f1": 0.039504,
+    "alignment_coverage": 0.023255
+   },
+   "mean_change": 0.033409,
+   "kept_round": 2,
+   "errors_after": {
+    "T5": 59,
+    "T6": 2
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.549199,
+    "activity_semantic_similarity": 0.892503,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.92,
+    "activity_label_f1": 0.958333,
+    "activity_matched": 23,
+    "activity_reference": 25,
+    "activity_generated": 23,
+    "alignment_coverage": 0.813953,
+    "connection_precision": 0.404762,
+    "connection_recall": 0.333333,
+    "connection_f1": 0.365591,
+    "connection_tp": 17,
+    "connection_fp": 25,
+    "connection_fn": 34,
+    "workflow_order_similarity": 0.551574,
+    "order_consistency": 0.765086,
+    "order_coverage": 0.72093,
+    "order_tp": 355,
+    "order_fp": 38,
+    "order_fn": 71,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.875,
+    "type_recall_diagnostic": 0.814,
+    "type_f1_diagnostic": 0.8434,
+    "counts": {
+     "gold_nodes": 43,
+     "generated_nodes": 40,
+     "gold_flows": 51,
+     "generated_flows": 42
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.480549,
+    "activity_semantic_similarity_strict": 0.892503,
+    "alignment_coverage_strict": 0.813953,
+    "connection_precision_strict": 0.404762,
+    "connection_recall_strict": 0.333333,
+    "connection_f1_strict": 0.365591,
+    "workflow_order_similarity_strict": 0.551574,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 95,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 10,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 40,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-008": {
+     "failure_type": "T5",
+     "errors_before": 62,
+     "errors_after": 59,
+     "removed": 3
+    },
+    "LRN-019": {
+     "failure_type": "T5",
+     "errors_before": 62,
+     "errors_after": 59,
+     "removed": 3
+    }
+   },
+   "confirmed": true,
+   "promoted": [],
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [
+    "LRN-032"
+   ],
+   "before": {
+    "semantic_similarity": 0.549199,
+    "workflow_order_similarity": 0.551574,
+    "connection_f1": 0.365591,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.813953,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.480549,
+    "activity_semantic_similarity": 0.892503,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.92,
+    "activity_label_f1": 0.958333
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 59,
+    "T6": 2
+   },
+   "after": {
+    "semantic_similarity": 0.572118,
+    "workflow_order_similarity": 0.684711,
+    "connection_f1": 0.395604,
+    "alignment_coverage": 0.813953
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.022919,
+    "workflow_order_similarity": 0.133137,
+    "connection_f1": 0.030013,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.046517,
+   "kept_round": 3,
+   "errors_after": {
+    "T5": 55,
+    "T6": 2
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.572118,
+    "activity_semantic_similarity": 0.892503,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.92,
+    "activity_label_f1": 0.958333,
+    "activity_matched": 23,
+    "activity_reference": 25,
+    "activity_generated": 23,
+    "alignment_coverage": 0.813953,
+    "connection_precision": 0.45,
+    "connection_recall": 0.352941,
+    "connection_f1": 0.395604,
+    "connection_tp": 18,
+    "connection_fp": 22,
+    "connection_fn": 33,
+    "workflow_order_similarity": 0.684711,
+    "order_consistency": 0.841216,
+    "order_coverage": 0.813953,
+    "order_tp": 498,
+    "order_fp": 40,
+    "order_fn": 54,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.9459,
+    "type_recall_diagnostic": 0.814,
+    "type_f1_diagnostic": 0.875,
+    "counts": {
+     "gold_nodes": 43,
+     "generated_nodes": 37,
+     "gold_flows": 51,
+     "generated_flows": 40
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.495835,
+    "activity_semantic_similarity_strict": 0.892503,
+    "alignment_coverage_strict": 0.813953,
+    "connection_precision_strict": 0.45,
+    "connection_recall_strict": 0.352941,
+    "connection_f1_strict": 0.395604,
+    "workflow_order_similarity_strict": 0.684711,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 90,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 10,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 37,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-032": {
+     "failure_type": "T6",
+     "errors_before": 2,
+     "errors_after": 2,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.572118,
+  "activity_semantic_similarity": 0.892503,
+  "activity_label_precision": 1.0,
+  "activity_label_recall": 0.92,
+  "activity_label_f1": 0.958333,
+  "activity_matched": 23,
+  "activity_reference": 25,
+  "activity_generated": 23,
+  "alignment_coverage": 0.813953,
+  "connection_precision": 0.45,
+  "connection_recall": 0.352941,
+  "connection_f1": 0.395604,
+  "connection_tp": 18,
+  "connection_fp": 22,
+  "connection_fn": 33,
+  "workflow_order_similarity": 0.684711,
+  "order_consistency": 0.841216,
+  "order_coverage": 0.813953,
+  "order_tp": 498,
+  "order_fp": 40,
+  "order_fn": 54,
+  "collaboration_similarity": null,
+  "collaboration_applicable": false,
+  "collaboration_tp": 0,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 0.9459,
+  "type_recall_diagnostic": 0.814,
+  "type_f1_diagnostic": 0.875,
+  "counts": {
+   "gold_nodes": 43,
+   "generated_nodes": 37,
+   "gold_flows": 51,
+   "generated_flows": 40
+  },
+  "collaboration_ignored": true,
+  "semantic_similarity_strict": 0.495835,
+  "activity_semantic_similarity_strict": 0.892503,
+  "alignment_coverage_strict": 0.813953,
+  "connection_precision_strict": 0.45,
+  "connection_recall_strict": 0.352941,
+  "connection_f1_strict": 0.395604,
+  "workflow_order_similarity_strict": 0.684711,
+  "collaboration_similarity_strict": 0.0,
+  "collaboration_applicable_strict": true
+ }
+}

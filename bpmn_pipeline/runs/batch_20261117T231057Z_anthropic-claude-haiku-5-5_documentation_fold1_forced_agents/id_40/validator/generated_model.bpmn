@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_OEE"
+                  targetNamespace="http://example.org/bpmn/oee">
+  <bpmn:message id="Message_MachineDisconnected" name="Machine disconnected"/>
+  <bpmn:message id="Message_MachineRestarted" name="Machine restarted"/>
+  <bpmn:process id="Process_OEE" name="OEE" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_OEE" name="Process started">
+      <bpmn:outgoing>Flow_Start_Merge</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="StartEvent_Restarted" name="Machine restarted">
+      <bpmn:outgoing>Flow_Restarted_Merge</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Restarted" messageRef="Message_MachineRestarted"/>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_Measure_Merge" name="Measurement cycle" gatewayDirection="Converging">
+      <bpmn:incoming>Flow_Start_Merge</bpmn:incoming>
+      <bpmn:incoming>Flow_Restarted_Merge</bpmn:incoming>
+      <bpmn:incoming>Flow_OEE_Acceptable</bpmn:incoming>
+      <bpmn:outgoing>Flow_Merge_Collect</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_CollectData" name="Collect information from machine">
+      <bpmn:incoming>Flow_Merge_Collect</bpmn:incoming>
+      <bpmn:outgoing>Flow_Collect_Calculate</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:task id="Task_CalculateOEE" name="Calculate OEE">
+      <bpmn:incoming>Flow_Collect_Calculate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Calculate_Split</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_OEE_Split" name="OEE below threshold?" default="Flow_OEE_Acceptable" gatewayDirection="Diverging">
+      <bpmn:incoming>Flow_Calculate_Split</bpmn:incoming>
+      <bpmn:outgoing>Flow_OEE_Below</bpmn:outgoing>
+      <bpmn:outgoing>Flow_OEE_Acceptable</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_StopMachine" name="Stop machine">
+      <bpmn:incoming>Flow_OEE_Below</bpmn:incoming>
+      <bpmn:outgoing>Flow_Stop_Email</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="Task_SendEmail" name="Send email to engineer">
+      <bpmn:incoming>Flow_Stop_Email</bpmn:incoming>
+      <bpmn:outgoing>Flow_Email_End</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_MachineStopped" name="Machine stopped">
+      <bpmn:incoming>Flow_Email_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="SubProcess_Disconnected" name="Machine disconnected" triggeredByEvent="true">
+      <bpmn:startEvent id="StartEvent_Disconnected" name="Machine disconnected" isInterrupting="true">
+        <bpmn:outgoing>Flow_Disconnect_End</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="MED_Disconnected" messageRef="Message_MachineDisconnected"/>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="EndEvent_ProcessStopped" name="Process stopped">
+        <bpmn:incoming>Flow_Disconnect_End</bpmn:incoming>
+        <bpmn:terminateEventDefinition id="TED_Stopped"/>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_Disconnect_End" sourceRef="StartEvent_Disconnected" targetRef="EndEvent_ProcessStopped"/>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="Flow_Start_Merge" sourceRef="StartEvent_OEE" targetRef="Gateway_Measure_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Restarted_Merge" sourceRef="StartEvent_Restarted" targetRef="Gateway_Measure_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Merge_Collect" sourceRef="Gateway_Measure_Merge" targetRef="Task_CollectData"/>
+    <bpmn:sequenceFlow id="Flow_Collect_Calculate" sourceRef="Task_CollectData" targetRef="Task_CalculateOEE"/>
+    <bpmn:sequenceFlow id="Flow_Calculate_Split" sourceRef="Task_CalculateOEE" targetRef="Gateway_OEE_Split"/>
+    <bpmn:sequenceFlow id="Flow_OEE_Below" name="OEE below threshold" sourceRef="Gateway_OEE_Split" targetRef="Task_StopMachine">
+      <bpmn:conditionExpression>OEE below threshold</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_OEE_Acceptable" name="OEE at or above threshold" sourceRef="Gateway_OEE_Split" targetRef="Gateway_Measure_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Stop_Email" sourceRef="Task_StopMachine" targetRef="Task_SendEmail"/>
+    <bpmn:sequenceFlow id="Flow_Email_End" sourceRef="Task_SendEmail" targetRef="EndEvent_MachineStopped"/>
+  </bpmn:process>
+</bpmn:definitions>

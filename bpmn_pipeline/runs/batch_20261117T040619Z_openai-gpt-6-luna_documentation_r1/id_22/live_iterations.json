@@ -1,0 +1,58 @@
+{
+ "id": "22",
+ "live": true,
+ "kept_round": null,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 53.2,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 54,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 18,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.38956,
+    "workflow_order_similarity": 0.611765,
+    "connection_f1": 0.5,
+    "collaboration_similarity": 0.142857,
+    "alignment_coverage": 0.65,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.38956,
+    "activity_semantic_similarity": 0.740222,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.777778,
+    "activity_label_f1": 0.875
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  targetNamespace=\"http://example.com/bpmn/recourse\">\n  <bpmn:message id=\"Message_PaymentRequest\" name=\"Payment request\"/>\n  <bpmn:message id=\"Message_Payment\" name=\"Payment\"/>\n  <bpmn:message id=\"Message_Disagreement\" name=\"Disagreement\"/>\n  <bpmn:message id=\"Message_ForwardedCase\" name=\"Forwarded case\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Recourse\">\n    <bpmn:participant id=\"Participant_CaseHandler\" name=\"Case handler\" processRef=\"Process_Recourse\"/>\n    <bpmn:participant id=\"Participant_Insurant\" name=\"Insurant\"/>\n    <bpmn:participant id=\"Participant_CollectionAgency\" name=\"Collection agency\"/>\n    <bpmn:messageFlow id=\"MessageFlow_PaymentRequest\" name=\"Payment request\" sourceRef=\"Task_SendRequest\" targetRef=\"Participant_Insurant\" messageRef=\"Message_PaymentRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Payment\" name=\"Payment\" sourceRef=\"Participant_Insurant\" targetRef=\"Event_PaymentReceived\" messageRef=\"Message_Payment\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Disagreement\" name=\"Disagreement\" sourceRef=\"Participant_Insurant\" targetRef=\"Event_DisagreementReceived\" messageRef=\"Message_Disagreement\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ForwardedCase\" name=\"Forwarded case\" sourceRef=\"Task_ForwardCase\" targetRef=\"Participant_CollectionAgency\" messageRef=\"Message_ForwardedCase\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Recourse\" name=\"Recourse case handling\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_InformationReceived\" name=\"Information about possible subrogation received\"/>\n    <bpmn:task id=\"Task_CheckCase\" name=\"Check case\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_RecoursePossible\" name=\"Is recourse possible?\"/>\n    <bpmn:sendTask id=\"Task_SendRequest\" name=\"Send request for payment\" messageRef=\"Message_PaymentRequest\"/>\n    <bpmn:task id=\"Task_MakeReminder\" name=\"Make a reminder\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForOutcome\" name=\"Wait for payment, disagreement, or deadline\" eventGatewayType=\"Exclusive\" gatewayDirection=\"Diverging\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_PaymentReceived\" name=\"Money received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_PaymentReceived\" messageRef=\"Message_Payment\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"Event_DisagreementReceived\" name=\"Disagreement received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_DisagreementReceived\" messageRef=\"Message_Disagreement\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"Event_DisagreementDeadline\" name=\"Deadline for disagreement reached\">\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_DisagreementDeadline\">\n        <bpmn:timeDate xsi:type=\"bpmn:tFormalExpression\">disagreement deadline</bpmn:timeDate>\n      </bpmn:timerEventDefinition>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_MakeBooking\" name=\"Make a booking\"/>\n    <bpmn:task id=\"Task_CheckReasoning\" name=\"Check reasoning\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ReasoningValid\" name=\"Is the insurant right?\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_CloseCaseMerge\" gatewayDirection=\"Converging\"/>\n    <bpmn:task id=\"Task_CloseCase\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"EndEvent_CaseClosed\" name=\"Case closed\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ForwardCaseMerge\" gatewayDirection=\"Converging\"/>\n    <bpmn:sendTask id=\"Task_ForwardCase\" name=\"Forward case to collection agency\" messageRef=\"Message_ForwardedCase\"/>\n    <bpmn:endEvent id=\"EndEvent_CaseForwarded\" name=\"Case forwarded to collection agency\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Check\" sourceRef=\"StartEvent_InformationReceived\" targetRef=\"Task_CheckCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Check_Recourse\" sourceRef=\"Task_CheckCase\" targetRef=\"Gateway_RecoursePossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_Recourse_No\" name=\"No\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Gateway_CloseCaseMerge\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recourse is not possible</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Recourse_Yes\" name=\"Yes\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_SendRequest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recourse is possible</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SendRequest_Reminder\" sourceRef=\"Task_SendRequest\" targetRef=\"Task_MakeReminder\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reminder_Wait\" sourceRef=\"Task_MakeReminder\" targetRef=\"Gateway_WaitForOutcome\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Payment\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_PaymentReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Disagreement\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DisagreementReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Deadline\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DisagreementDeadline\"/>\n    <bpmn:sequenceFlow id=\"Flow_Payment_Booking\" sourceRef=\"Event_PaymentReceived\" targetRef=\"Task_MakeBooking\"/>\n    <bpmn:sequenceFlow id=\"Flow_Booking_CloseMerge\" sourceRef=\"Task_MakeBooking\" targetRef=\"Gateway_CloseCaseMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Disagreement_Check\" sourceRef=\"Event_DisagreementReceived\" targetRef=\"Task_CheckReasoning\"/>\n    <bpmn:sequenceFlow id=\"Flow_Check_ReasoningDecision\" sourceRef=\"Task_CheckReasoning\" targetRef=\"Gateway_ReasoningValid\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reasoning_Right\" name=\"Insurant is right\" sourceRef=\"Gateway_ReasoningValid\" targetRef=\"Gateway_CloseCaseMerge\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">reasoning is valid</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Reasoning_Wrong\" name=\"Insurant is wrong\" sourceRef=\"Gateway_ReasoningValid\" targetRef=\"Gateway_ForwardCaseMerge\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">reasoning is not valid</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Deadline_ForwardMerge\" sourceRef=\"Event_DisagreementDeadline\" targetRef=\"Gateway_ForwardCaseMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ForwardMerge_Forward\" sourceRef=\"Gateway_ForwardCaseMerge\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Forward_End\" sourceRef=\"Task_ForwardCase\" targetRef=\"EndEvent_CaseForwarded\"/>\n    <bpmn:sequenceFlow id=\"Flow_CloseMerge_Close\" sourceRef=\"Gateway_CloseCaseMerge\" targetRef=\"Task_CloseCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Close_End\" sourceRef=\"Task_CloseCase\" targetRef=\"EndEvent_CaseClosed\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  }
+ ]
+}

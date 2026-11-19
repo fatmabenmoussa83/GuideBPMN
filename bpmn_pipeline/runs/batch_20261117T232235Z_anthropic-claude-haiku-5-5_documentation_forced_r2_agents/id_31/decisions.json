@@ -1,0 +1,312 @@
+{
+ "id": "31",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 47,
+  "T6": 3
+ },
+ "first_pass_error_counts": {
+  "T5": 43,
+  "T6": 7
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-011 (M8 shows that the reference joins the character-name activity with a parallel gateway before the name-trying loop, while the generated model lacks that join. S2 describes the name activity as running alongside account setup, and the description's 'until now, you should have come up with some good names' implies the loop may only start once that activity is complete. LRN-011 already requires a para)",
+   "guideline_id": "LRN-011",
+   "ref": "LRN-011",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-022 (The generated model merged 'select realm, race and class' into one task labeled 'Select realm, race and class', so the reference tasks 'Select race' and 'Select class' have no counterpart (M3, M4), and the label pair P6 shows the same merge. The mismatch comes from a modeling choice, not from wording. The learned guideline LRN-022 already covers this pattern, so the proposed guideline reinforces i)",
+   "guideline_id": "LRN-022",
+   "ref": "LRN-022",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-010 (cosine 0.91)",
+   "guideline_id": "LRN-010",
+   "ref": "LRN-010",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-074 (M1 shows the reference has a user task for entering account information that exists only on the 'no account' route, and the generated model has no counterpart. S4 states that this entry happens only when the account does not yet exist, and that the confirmation-link click is a separate action. LRN-074 already requires an explicit activity for an item that must be obtained when a stated condition i)",
+   "guideline_id": "LRN-074",
+   "ref": "LRN-074",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-010 (The generated model chains several unordered activities (e.g., the IBAN and BIC entries, the realm, race and class selections) in sequence, whereas the reference splits and joins them with parallel gateways. The missing gateways in M2 and M3 show this is a recurring gap. LRN-010 already requires a parallel split and join for unordered actions that must all be carried out before a later step, and t)",
+   "guideline_id": "LRN-010",
+   "ref": "LRN-010",
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines FID-01 (In S4 the description states that on the no-account branch the user first enters the account information and then clicks the link from the confirmation mail. The generated model starts that branch directly at the click task (P3), so the entering activity is missing (M1). The reference models it as a separate user task before the later step. Modeling each stated action on the branch as its own task)",
+   "guideline_id": "LRN-080",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-011",
+   "instruction": "When the description lists two or more activities that are performed without a stated order and must all be completed before a later step begins: Model a parallel gateway that splits into one outgoing branch per listed activity, and a parallel gateway that joins those branches before the next step. Do not chain the activities in sequence, and do not use an exclusive gateway for them.",
+   "situation": "the description says that an activity is started alongside another activity, and that a later repeated step (such as trying items one after another) may only begin once the concurrent activity has been completed",
+   "source": "learned guideline (refines GW-04)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-022",
+   "instruction": "When the description states one action in a sentence whose object is a list of distinct items joined by commas or 'and' (for example, an actor selects several things, or provides several kinds of information, in one phrase): Model each distinct item in that list as its own activity, in the order the description gives them, instead of merging the list into a single activity. Keep the activities in sequence and do not add gateways unless the description states a choice or concurrency.",
+   "situation": "the description states one user action in a sentence whose object is a list of distinct items joined by commas and 'and' (for example, several attributes chosen together in one phrase)",
+   "source": "learned guideline (refines FID-01)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-010",
+   "instruction": "When the description lists two or more actions that must all be carried out after a common point, with no order or alternative stated between them, and only then leads to a later step: Model a parallel gateway that splits into one task per listed action, keeping each action as its own task with the description's wording, in a separate branch. Join all branches with a parallel gateway before the later step, so the later step waits for every action. Do not chain the actions in sequence, do not use an exclusive gateway for them, and do not leave any branch without a connecting flow to the join.",
+   "situation": "the description states that two or more activities can be started together, with no order given between them, from a common starting point",
+   "source": "learned guideline (refines ACT-07)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-074",
+   "instruction": "When the description lists several items or conditions that a request must satisfy before it can be decided, gives no order between them, and some of them are to be checked by a system or an external institution while others must be supplied by the applicant: Model each listed item or condition as its own activity, keeping the description's wording, in a parallel split placed after the common starting point. Model items checked by a system or an external institution as service or manual activities in their own branch, and items the applicant must supply as user activities. When the description says an item must be obtained or renewed if it does not meet a stated condition, add an explicit activity for obtaining it on that route. Join all branches with a parallel gateway before the decision or the next step, so the next step waits for every item. Do not merge the items into one combined activity and do not chain them in sequence.",
+   "situation": "the description states that an activity is done only when a preceding yes/no check is negative (for example, 'if you do not have one yet, you enter the information and complete a verification step'), and the check is followed by a further step that depends on it",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-080",
+   "instruction": "When the description states that, on one branch of a decision, the performer first provides or enters data and then performs a further action on something received afterwards, in that stated order: Model each described action on that branch as its own user task, in the stated order: first a user task for providing the data, then a separate user task for the later action. Place both after the outgoing flow of the decision for that branch and before the next step. Do not merge them into one task, and do not start the branch directly at the later action.",
+   "situation": "the description states that, on one branch of a decision, the performer first provides or enters data and then performs a further action on something received afterwards, in that stated order",
+   "source": "learned guideline (refines FID-01)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

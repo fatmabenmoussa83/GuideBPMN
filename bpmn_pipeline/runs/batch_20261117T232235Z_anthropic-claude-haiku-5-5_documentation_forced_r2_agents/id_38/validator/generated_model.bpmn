@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_BuildingTreeHouse"
+                  targetNamespace="http://example.org/bpmn/tree-house">
+  <bpmn:message id="Message_Draft" name="Draft plan"/>
+  <bpmn:message id="Message_RevisedDraft" name="Revised draft plan"/>
+
+  <bpmn:collaboration id="Collaboration_TreeHouse">
+    <bpmn:participant id="Participant_You" name="You" processRef="Process_BuildTreeHouse"/>
+    <bpmn:participant id="Participant_Architect" name="Tree house architect"/>
+    <bpmn:participant id="Participant_OnlineStores" name="Online stores"/>
+    <bpmn:participant id="Participant_Friends" name="Friends"/>
+
+    <bpmn:messageFlow id="MessageFlow_RequirementsToArchitect" name="Requirements" sourceRef="SendTask_SendRequirements" targetRef="Participant_Architect"/>
+    <bpmn:messageFlow id="MessageFlow_DraftFromArchitect" name="Draft" sourceRef="Participant_Architect" targetRef="IntermediateCatch_DraftReceived"/>
+    <bpmn:messageFlow id="MessageFlow_AdditionalRequirementsToArchitect" name="Additional requirements" sourceRef="SendTask_SendAdditionalRequirements" targetRef="Participant_Architect"/>
+    <bpmn:messageFlow id="MessageFlow_RevisedDraftFromArchitect" name="Revised draft" sourceRef="Participant_Architect" targetRef="IntermediateCatch_RevisedDraftReceived"/>
+    <bpmn:messageFlow id="MessageFlow_OrdersToStores" name="Material orders" sourceRef="UserTask_PlaceOrders" targetRef="Participant_OnlineStores"/>
+    <bpmn:messageFlow id="MessageFlow_BuildRequestsToFriends" name="Build request" sourceRef="SendTask_SendBuildRequests" targetRef="Participant_Friends"/>
+    <bpmn:messageFlow id="MessageFlow_InvitationsToFriends" name="Party invitation" sourceRef="SendTask_SendInvitations" targetRef="Participant_Friends"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_BuildTreeHouse" name="Building a tree house" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Idea" name="Decided to build a tree house"/>
+    <bpmn:task id="Task_CollectRequirements" name="Collect requirements"/>
+    <bpmn:sendTask id="SendTask_SendRequirements" name="Send requirements to architect"/>
+    <bpmn:intermediateCatchEvent id="IntermediateCatch_DraftReceived" name="Draft received">
+      <bpmn:messageEventDefinition id="MessageEventDef_DraftReceived" messageRef="Message_Draft"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_DraftMerge" name="Draft version available"/>
+    <bpmn:exclusiveGateway id="Gateway_RefinementDecision" name="Further refinement needed?" default="Flow_PlanFinal"/>
+    <bpmn:task id="Task_RefineDraft" name="Refine draft with additional requirements"/>
+    <bpmn:sendTask id="SendTask_SendAdditionalRequirements" name="Send additional requirements to architect"/>
+    <bpmn:intermediateCatchEvent id="IntermediateCatch_RevisedDraftReceived" name="Revised draft received">
+      <bpmn:messageEventDefinition id="MessageEventDef_RevisedDraftReceived" messageRef="Message_RevisedDraft"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_CreateMaterialsList" name="Create list of needed materials from plan"/>
+    <bpmn:userTask id="UserTask_PlaceOrders" name="Place orders with online stores"/>
+    <bpmn:parallelGateway id="Gateway_OrderSplit" name="Order processing starts"/>
+    <bpmn:sendTask id="SendTask_SendBuildRequests" name="Send messages to friends to build house"/>
+    <bpmn:intermediateCatchEvent id="IntermediateCatch_OrdersProcessed" name="Orders processed"/>
+    <bpmn:parallelGateway id="Gateway_BuildJoin" name="Orders processed and build requests sent"/>
+    <bpmn:intermediateCatchEvent id="IntermediateCatch_HouseBuilt" name="House is built"/>
+    <bpmn:sendTask id="SendTask_SendInvitations" name="Send party invitations to friends"/>
+    <bpmn:task id="Task_CreateAttendeeList" name="Create list of party attendees"/>
+    <bpmn:endEvent id="EndEvent_AttendeeListCreated" name="Attendee list created"/>
+
+    <bpmn:sequenceFlow id="Flow_Start" sourceRef="StartEvent_Idea" targetRef="Task_CollectRequirements"/>
+    <bpmn:sequenceFlow id="Flow_CollectToSend" sourceRef="Task_CollectRequirements" targetRef="SendTask_SendRequirements"/>
+    <bpmn:sequenceFlow id="Flow_SendToDraft" sourceRef="SendTask_SendRequirements" targetRef="IntermediateCatch_DraftReceived"/>
+    <bpmn:sequenceFlow id="Flow_DraftToMerge" sourceRef="IntermediateCatch_DraftReceived" targetRef="Gateway_DraftMerge"/>
+    <bpmn:sequenceFlow id="Flow_MergeToDecision" sourceRef="Gateway_DraftMerge" targetRef="Gateway_RefinementDecision"/>
+    <bpmn:sequenceFlow id="Flow_Refine" name="Yes" sourceRef="Gateway_RefinementDecision" targetRef="Task_RefineDraft">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${refinementNeeded}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_PlanFinal" name="No" sourceRef="Gateway_RefinementDecision" targetRef="Task_CreateMaterialsList"/>
+    <bpmn:sequenceFlow id="Flow_RefineToSend" sourceRef="Task_RefineDraft" targetRef="SendTask_SendAdditionalRequirements"/>
+    <bpmn:sequenceFlow id="Flow_SendAdditionalToRevised" sourceRef="SendTask_SendAdditionalRequirements" targetRef="IntermediateCatch_RevisedDraftReceived"/>
+    <bpmn:sequenceFlow id="Flow_RevisedToMerge" sourceRef="IntermediateCatch_RevisedDraftReceived" targetRef="Gateway_DraftMerge"/>
+    <bpmn:sequenceFlow id="Flow_MaterialsToOrder" sourceRef="Task_CreateMaterialsList" targetRef="UserTask_PlaceOrders"/>
+    <bpmn:sequenceFlow id="Flow_OrderToSplit" sourceRef="UserTask_PlaceOrders" targetRef="Gateway_OrderSplit"/>
+    <bpmn:sequenceFlow id="Flow_SplitToBuildRequests" sourceRef="Gateway_OrderSplit" targetRef="SendTask_SendBuildRequests"/>
+    <bpmn:sequenceFlow id="Flow_SplitToOrdersProcessed" sourceRef="Gateway_OrderSplit" targetRef="IntermediateCatch_OrdersProcessed"/>
+    <bpmn:sequenceFlow id="Flow_BuildRequestsToJoin" sourceRef="SendTask_SendBuildRequests" targetRef="Gateway_BuildJoin"/>
+    <bpmn:sequenceFlow id="Flow_OrdersProcessedToJoin" sourceRef="IntermediateCatch_OrdersProcessed" targetRef="Gateway_BuildJoin"/>
+    <bpmn:sequenceFlow id="Flow_JoinToBuilt" sourceRef="Gateway_BuildJoin" targetRef="IntermediateCatch_HouseBuilt"/>
+    <bpmn:sequenceFlow id="Flow_BuiltToInvitations" sourceRef="IntermediateCatch_HouseBuilt" targetRef="SendTask_SendInvitations"/>
+    <bpmn:sequenceFlow id="Flow_InvitationsToAttendees" sourceRef="SendTask_SendInvitations" targetRef="Task_CreateAttendeeList"/>
+    <bpmn:sequenceFlow id="Flow_AttendeesToEnd" sourceRef="Task_CreateAttendeeList" targetRef="EndEvent_AttendeeListCreated"/>
+  </bpmn:process>
+</bpmn:definitions>

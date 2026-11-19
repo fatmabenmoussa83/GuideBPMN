@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Supplier" targetNamespace="http://example.com/bpmn/supplier-onboarding">
+  <bpmn:message id="Msg_RFP" name="Request for Proposals"/>
+  <bpmn:message id="Msg_Proposal" name="Supplier Proposal"/>
+  <bpmn:collaboration id="Collab_Supplier">
+    <bpmn:participant id="Participant_Company" name="Company Procurement" processRef="Process_Supplier"/>
+    <bpmn:participant id="Participant_Supplier" name="Supplier"/>
+    <bpmn:messageFlow id="MessageFlow_RFP" name="Send RFP" sourceRef="Task_IssueRFP" targetRef="Participant_Supplier" messageRef="Msg_RFP"/>
+    <bpmn:messageFlow id="MessageFlow_Proposal" name="Submit proposal" sourceRef="Participant_Supplier" targetRef="Task_ReceiveProposals" messageRef="Msg_Proposal"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Supplier" name="Supplier Selection and Onboarding" isExecutable="false">
+    <bpmn:startEvent id="Start_NeedExists" name="New supplier need exists">
+      <bpmn:outgoing>Flow_0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_IdentifyNeed" name="Identify need for new supplier or vendor">
+      <bpmn:incoming>Flow_0</bpmn:incoming>
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_IssueRFP" name="Issue request for proposals (RFP)" messageRef="Msg_RFP">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="Task_ReceiveProposals" name="Receive supplier proposals" messageRef="Msg_Proposal">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:userTask id="Task_EvaluateProposals" name="Evaluate proposals on cost, quality and delivery time">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_VisitSplit" name="Site visits or interviews conducted?" default="Flow_SkipVisit">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_VisitYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SkipVisit</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_SiteVisits" name="Conduct site visits or interviews with suppliers">
+      <bpmn:incoming>Flow_VisitYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_VisitDone</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_VisitJoin" name="Evaluation continues">
+      <bpmn:incoming>Flow_VisitDone</bpmn:incoming>
+      <bpmn:incoming>Flow_SkipVisit</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_SelectSupplier" name="Select supplier after analysis">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_NegotiateContract" name="Negotiate contract terms">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_SignContract" name="Sign contract once both parties agree on terms">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_OnboardSupplier" name="Onboard supplier">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:task id="Task_ExecuteContract" name="Execute contract">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_OnboardedExecuted" name="Supplier onboarded and contract executed">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0" sourceRef="Start_NeedExists" targetRef="Task_IdentifyNeed"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Task_IdentifyNeed" targetRef="Task_IssueRFP"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_IssueRFP" targetRef="Task_ReceiveProposals"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_ReceiveProposals" targetRef="Task_EvaluateProposals"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_EvaluateProposals" targetRef="Gateway_VisitSplit"/>
+    <bpmn:sequenceFlow id="Flow_VisitYes" name="Yes" sourceRef="Gateway_VisitSplit" targetRef="Task_SiteVisits"/>
+    <bpmn:sequenceFlow id="Flow_SkipVisit" name="No" sourceRef="Gateway_VisitSplit" targetRef="Gateway_VisitJoin"/>
+    <bpmn:sequenceFlow id="Flow_VisitDone" sourceRef="Task_SiteVisits" targetRef="Gateway_VisitJoin"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_VisitJoin" targetRef="Task_SelectSupplier"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_SelectSupplier" targetRef="Task_NegotiateContract"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_NegotiateContract" targetRef="Task_SignContract"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_SignContract" targetRef="Task_OnboardSupplier"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_OnboardSupplier" targetRef="Task_ExecuteContract"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_ExecuteContract" targetRef="End_OnboardedExecuted"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,817 @@
+{
+ "id": "43",
+ "kept_round": 0,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 58.6,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 72,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 23,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.159007,
+    "workflow_order_similarity": 0.079051,
+    "connection_f1": 0.085106,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.26087,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.117163,
+    "activity_semantic_similarity": 0.207313,
+    "activity_label_precision": 0.333333,
+    "activity_label_recall": 0.230769,
+    "activity_label_f1": 0.272727
+   },
+   "xml": "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_CarService\" targetNamespace=\"http://example.org/bpmn/car-service\">\n  <bpmn:message id=\"Msg_ServiceCompleted\" name=\"Successful service and next service time entered\"/>\n  <bpmn:message id=\"Msg_CarArrived\" name=\"Car arrives for service\"/>\n  <bpmn:message id=\"Msg_ServiceRecord\" name=\"Service visit recorded\"/>\n  <bpmn:message id=\"Msg_Payment\" name=\"Payment made via app\"/>\n  <bpmn:message id=\"Msg_StatusUpdate\" name=\"Repair status update\"/>\n  <bpmn:message id=\"Msg_Reminder\" name=\"Service reminder\"/>\n  <bpmn:message id=\"Msg_Fine\" name=\"Fine for missed service\"/>\n\n  <bpmn:collaboration id=\"Collab_CarService\">\n    <bpmn:participant id=\"Participant_PoliceApp\" name=\"Police Reminder App\" processRef=\"Process_PoliceApp\"/>\n    <bpmn:participant id=\"Participant_CarOwner\" name=\"Car Owner\"/>\n    <bpmn:participant id=\"Participant_ServiceFacility\" name=\"Car Service Facility\" processRef=\"Process_ServiceFacility\"/>\n\n    <bpmn:messageFlow id=\"MF_CarArrives\" name=\"Car brought in\" sourceRef=\"Participant_CarOwner\" targetRef=\"StartEvent_CarArrives\"/>\n    <bpmn:messageFlow id=\"MF_Payment\" name=\"Pay via app\" sourceRef=\"Participant_CarOwner\" targetRef=\"IntermediateCatch_Payment\"/>\n    <bpmn:messageFlow id=\"MF_StatusUpdate\" name=\"Status update email\" sourceRef=\"Task_SendStatusUpdate\" targetRef=\"Participant_CarOwner\"/>\n    <bpmn:messageFlow id=\"MF_ServiceRecord\" name=\"Service record\" sourceRef=\"Task_SendServiceRecord\" targetRef=\"IntermediateCatch_ServiceRecorded\"/>\n    <bpmn:messageFlow id=\"MF_NextServiceTime\" name=\"Successful service\" sourceRef=\"Task_EnterNextService\" targetRef=\"StartEvent_ServiceCompleted\"/>\n    <bpmn:messageFlow id=\"MF_Reminder\" name=\"Service reminder\" sourceRef=\"Task_NotifyOwner\" targetRef=\"Participant_CarOwner\"/>\n    <bpmn:messageFlow id=\"MF_Fine\" name=\"Fine\" sourceRef=\"Task_IssueFine\" targetRef=\"Participant_CarOwner\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_PoliceApp\" name=\"Police Reminder App\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_ServiceCompleted\" name=\"Service completed successfully\">\n      <bpmn:messageEventDefinition id=\"MED_ServiceCompleted\" messageRef=\"Msg_ServiceCompleted\"/>\n    </bpmn:startEvent>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_ServiceNecessary\" name=\"Service becomes necessary\">\n      <bpmn:messageEventDefinition id=\"MED_ServiceNecessary\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:serviceTask id=\"Task_CheckRegistration\" name=\"Check if car is still registered\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Registered\" name=\"Car still registered?\"/>\n    <bpmn:sendTask id=\"Task_NotifyOwner\" name=\"Notify car owner\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_VisitOrFine\" name=\"Service visit or 30 days elapsed?\"/>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_ServiceRecorded\" name=\"Service visit recorded\">\n      <bpmn:messageEventDefinition id=\"MED_ServiceRecorded\" messageRef=\"Msg_ServiceRecord\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_30Days\" name=\"30 days after reminder\">\n      <bpmn:timerEventDefinition id=\"TED_30Days\">\n        <bpmn:timeDuration xsi:type=\"bpmn:tFormalExpression\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">P30D</bpmn:timeDuration>\n      </bpmn:timerEventDefinition>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:sendTask id=\"Task_IssueFine\" name=\"Issue fine to car owner\"/>\n    <bpmn:endEvent id=\"End_VisitRecorded\" name=\"Service visit done\"/>\n    <bpmn:endEvent id=\"End_Fined\" name=\"Owner fined\"/>\n    <bpmn:endEvent id=\"End_NotRegistered\" name=\"No reminder: car not registered\"/>\n\n    <bpmn:sequenceFlow id=\"SF_P1\" sourceRef=\"StartEvent_ServiceCompleted\" targetRef=\"IntermediateCatch_ServiceNecessary\"/>\n    <bpmn:sequenceFlow id=\"SF_P2\" sourceRef=\"IntermediateCatch_ServiceNecessary\" targetRef=\"Task_CheckRegistration\"/>\n    <bpmn:sequenceFlow id=\"SF_P3\" sourceRef=\"Task_CheckRegistration\" targetRef=\"Gateway_Registered\"/>\n    <bpmn:sequenceFlow id=\"SF_P4\" name=\"Yes\" sourceRef=\"Gateway_Registered\" targetRef=\"Task_NotifyOwner\"/>\n    <bpmn:sequenceFlow id=\"SF_P5\" name=\"No\" sourceRef=\"Gateway_Registered\" targetRef=\"End_NotRegistered\"/>\n    <bpmn:sequenceFlow id=\"SF_P6\" sourceRef=\"Task_NotifyOwner\" targetRef=\"Gateway_VisitOrFine\"/>\n    <bpmn:sequenceFlow id=\"SF_P7\" sourceRef=\"Gateway_VisitOrFine\" targetRef=\"IntermediateCatch_ServiceRecorded\"/>\n    <bpmn:sequenceFlow id=\"SF_P8\" sourceRef=\"Gateway_VisitOrFine\" targetRef=\"IntermediateCatch_30Days\"/>\n    <bpmn:sequenceFlow id=\"SF_P9\" sourceRef=\"IntermediateCatch_ServiceRecorded\" targetRef=\"End_VisitRecorded\"/>\n    <bpmn:sequenceFlow id=\"SF_P10\" sourceRef=\"IntermediateCatch_30Days\" targetRef=\"Task_IssueFine\"/>\n    <bpmn:sequenceFlow id=\"SF_P11\" sourceRef=\"Task_IssueFine\" targetRef=\"End_Fined\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_ServiceFacility\" name=\"Car Service Facility\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_CarArrives\" name=\"Car arrives at facility\">\n      <bpmn:messageEventDefinition id=\"MED_CarArrives\" messageRef=\"Msg_CarArrived\"/>\n    </bpmn:startEvent>\n    <bpmn:userTask id=\"Task_EnterProblems\" name=\"Mechanic enters car problems for reference\"/>\n    <bpmn:sendTask id=\"Task_SendServiceRecord\" name=\"Send service visit record to app\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_WaitMerge\" name=\"Waiting for repair\"/>\n    <bpmn:userTask id=\"Task_Repair\" name=\"Perform repair\"/>\n    <bpmn:sendTask id=\"Task_SendStatusUpdate\" name=\"Send status update via email\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_RepairDone\" name=\"Repair done?\"/>\n    <bpmn:userTask id=\"Task_EnterSuccess\" name=\"Mechanic enters successful repair and issues Pickerl\"/>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_Payment\" name=\"Payment received\">\n      <bpmn:messageEventDefinition id=\"MED_Payment\" messageRef=\"Msg_Payment\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:userTask id=\"Task_EnterNextService\" name=\"Mechanic enters time of next service\"/>\n    <bpmn:endEvent id=\"End_ServiceDone\" name=\"Service completed\"/>\n\n    <bpmn:sequenceFlow id=\"SF_F1\" sourceRef=\"StartEvent_CarArrives\" targetRef=\"Task_EnterProblems\"/>\n    <bpmn:sequenceFlow id=\"SF_F2\" sourceRef=\"Task_EnterProblems\" targetRef=\"Task_SendServiceRecord\"/>\n    <bpmn:sequenceFlow id=\"SF_F3\" sourceRef=\"Task_SendServiceRecord\" targetRef=\"Gateway_WaitMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_F4\" sourceRef=\"Gateway_WaitMerge\" targetRef=\"Task_Repair\"/>\n    <bpmn:sequenceFlow id=\"SF_F5\" sourceRef=\"Task_Repair\" targetRef=\"Task_SendStatusUpdate\"/>\n    <bpmn:sequenceFlow id=\"SF_F6\" sourceRef=\"Task_SendStatusUpdate\" targetRef=\"Gateway_RepairDone\"/>\n    <bpmn:sequenceFlow id=\"SF_F7\" name=\"No\" sourceRef=\"Gateway_RepairDone\" targetRef=\"Gateway_WaitMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_F8\" name=\"Yes\" sourceRef=\"Gateway_RepairDone\" targetRef=\"Task_EnterSuccess\"/>\n    <bpmn:sequenceFlow id=\"SF_F9\" sourceRef=\"Task_EnterSuccess\" targetRef=\"IntermediateCatch_Payment\"/>\n    <bpmn:sequenceFlow id=\"SF_F10\" sourceRef=\"IntermediateCatch_Payment\" targetRef=\"Task_EnterNextService\"/>\n    <bpmn:sequenceFlow id=\"SF_F11\" sourceRef=\"Task_EnterNextService\" targetRef=\"End_ServiceDone\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": false,
+   "failed_levels": [
+    "L3"
+   ],
+   "seconds": 296.5,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 59,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": false,
+     "correct": 19,
+     "incorrect": 1,
+     "accuracy": 0.95,
+     "incorrect_elements": [
+      {
+       "id": "Task_IssueFine",
+       "tag": "sendTask",
+       "line": 33,
+       "reason": "no outgoing connection"
+      }
+     ]
+    },
+    "L4": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.209843,
+    "workflow_order_similarity": 0.08658,
+    "connection_f1": 0.090909,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.333333,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.154297,
+    "activity_semantic_similarity": 0.207313,
+    "activity_label_precision": 0.375,
+    "activity_label_recall": 0.230769,
+    "activity_label_f1": 0.285714
+   },
+   "xml": "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_CarService\" targetNamespace=\"http://example.org/bpmn/car-service\">\n  <bpmn:message id=\"Msg_ServiceCompleted\" name=\"Service completed successfully\"/>\n  <bpmn:message id=\"Msg_CarArrived\" name=\"Car arrives for service\"/>\n  <bpmn:message id=\"Msg_Payment\" name=\"Payment made via app\"/>\n\n  <bpmn:collaboration id=\"Collab_CarService\">\n    <bpmn:participant id=\"Participant_PoliceApp\" name=\"Police Reminder App\" processRef=\"Process_PoliceApp\"/>\n    <bpmn:participant id=\"Participant_CarOwner\" name=\"Car Owner\"/>\n    <bpmn:participant id=\"Participant_ServiceFacility\" name=\"Car Service Facility\" processRef=\"Process_ServiceFacility\"/>\n\n    <bpmn:messageFlow id=\"MF_CarArrives\" name=\"Car brought in\" sourceRef=\"Participant_CarOwner\" targetRef=\"StartEvent_CarArrives\"/>\n    <bpmn:messageFlow id=\"MF_Payment\" name=\"Pay via app\" sourceRef=\"Participant_CarOwner\" targetRef=\"IntermediateCatch_Payment\"/>\n    <bpmn:messageFlow id=\"MF_StatusUpdate\" name=\"Status update email\" sourceRef=\"Task_SendStatusUpdate\" targetRef=\"Participant_CarOwner\"/>\n    <bpmn:messageFlow id=\"MF_ServiceCompleted\" name=\"Service completed\" sourceRef=\"Task_EnterNextService\" targetRef=\"StartEvent_ServiceCompleted\"/>\n    <bpmn:messageFlow id=\"MF_Reminder\" name=\"Service reminder\" sourceRef=\"Task_NotifyOwner\" targetRef=\"Participant_CarOwner\"/>\n    <bpmn:messageFlow id=\"MF_Fine\" name=\"Fine notice\" sourceRef=\"Task_IssueFine\" targetRef=\"Participant_CarOwner\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_PoliceApp\" name=\"Police Reminder App\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_ServiceCompleted\" name=\"Service completed successfully\">\n      <bpmn:messageEventDefinition id=\"MED_ServiceCompleted\" messageRef=\"Msg_ServiceCompleted\"/>\n    </bpmn:startEvent>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_ServiceNecessary\" name=\"Service becomes necessary\"/>\n    <bpmn:serviceTask id=\"Task_CheckRegistration\" name=\"Check if car is still registered\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Registered\" name=\"Car still registered?\"/>\n    <bpmn:sendTask id=\"Task_NotifyOwner\" name=\"Notify car owner\"/>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_30Days\" name=\"30 days after notification\">\n      <bpmn:timerEventDefinition id=\"TED_30Days\">\n        <bpmn:timeDuration xsi:type=\"bpmn:tFormalExpression\">P30D</bpmn:timeDuration>\n      </bpmn:timerEventDefinition>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_VisitCarriedOut\" name=\"Service visit carried out within 30 days?\"/>\n    <bpmn:sendTask id=\"Task_IssueFine\" name=\"Issue fine to car owner\"/>\n    <bpmn:endEvent id=\"End_VisitDone\" name=\"Service visit done\"/>\n    <bpmn:endEvent id=\"End_NotRegistered\" name=\"No reminder: car not registered\"/>\n\n    <bpmn:sequenceFlow id=\"SF_P1\" sourceRef=\"StartEvent_ServiceCompleted\" targetRef=\"IntermediateCatch_ServiceNecessary\"/>\n    <bpmn:sequenceFlow id=\"SF_P2\" sourceRef=\"IntermediateCatch_ServiceNecessary\" targetRef=\"Task_CheckRegistration\"/>\n    <bpmn:sequenceFlow id=\"SF_P3\" sourceRef=\"Task_CheckRegistration\" targetRef=\"Gateway_Registered\"/>\n    <bpmn:sequenceFlow id=\"SF_P4\" name=\"Yes\" sourceRef=\"Gateway_Registered\" targetRef=\"Task_NotifyOwner\"/>\n    <bpmn:sequenceFlow id=\"SF_P5\" name=\"No\" sourceRef=\"Gateway_Registered\" targetRef=\"End_NotRegistered\"/>\n    <bpmn:sequenceFlow id=\"SF_P6\" sourceRef=\"Task_NotifyOwner\" targetRef=\"IntermediateCatch_30Days\"/>\n    <bpmn:sequenceFlow id=\"SF_P7\" sourceRef=\"IntermediateCatch_30Days\" targetRef=\"Gateway_VisitCarriedOut\"/>\n    <bpmn:sequenceFlow id=\"SF_P8\" name=\"Yes\" sourceRef=\"Gateway_VisitCarriedOut\" targetRef=\"End_VisitDone\"/>\n    <bpmn:sequenceFlow id=\"SF_P9\" name=\"No\" sourceRef=\"Gateway_VisitCarriedOut\" targetRef=\"Task_IssueFine\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_ServiceFacility\" name=\"Car Service Facility\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_CarArrives\" name=\"Car arrives at facility\">\n      <bpmn:messageEventDefinition id=\"MED_CarArrives\" messageRef=\"Msg_CarArrived\"/>\n    </bpmn:startEvent>\n    <bpmn:userTask id=\"Task_EnterProblems\" name=\"Mechanic enters car problems for reference\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_WaitMerge\" name=\"Waiting for repair\"/>\n    <bpmn:userTask id=\"Task_Repair\" name=\"Perform repair\"/>\n    <bpmn:sendTask id=\"Task_SendStatusUpdate\" name=\"Send status update via email\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_RepairDone\" name=\"Repair done?\"/>\n    <bpmn:userTask id=\"Task_EnterSuccess\" name=\"Mechanic enters successful repair and issues Pickerl\"/>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_Payment\" name=\"Payment received\">\n      <bpmn:messageEventDefinition id=\"MED_Payment\" messageRef=\"Msg_Payment\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:userTask id=\"Task_EnterNextService\" name=\"Mechanic enters time of next service\"/>\n    <bpmn:endEvent id=\"End_ServiceDone\" name=\"Service completed\"/>\n\n    <bpmn:sequenceFlow id=\"SF_F1\" sourceRef=\"StartEvent_CarArrives\" targetRef=\"Task_EnterProblems\"/>\n    <bpmn:sequenceFlow id=\"SF_F2\" sourceRef=\"Task_EnterProblems\" targetRef=\"Gateway_WaitMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_F3\" sourceRef=\"Gateway_WaitMerge\" targetRef=\"Task_Repair\"/>\n    <bpmn:sequenceFlow id=\"SF_F4\" sourceRef=\"Task_Repair\" targetRef=\"Task_SendStatusUpdate\"/>\n    <bpmn:sequenceFlow id=\"SF_F5\" sourceRef=\"Task_SendStatusUpdate\" targetRef=\"Gateway_RepairDone\"/>\n    <bpmn:sequenceFlow id=\"SF_F6\" name=\"No\" sourceRef=\"Gateway_RepairDone\" targetRef=\"Gateway_WaitMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_F7\" name=\"Yes\" sourceRef=\"Gateway_RepairDone\" targetRef=\"Task_EnterSuccess\"/>\n    <bpmn:sequenceFlow id=\"SF_F8\" sourceRef=\"Task_EnterSuccess\" targetRef=\"IntermediateCatch_Payment\"/>\n    <bpmn:sequenceFlow id=\"SF_F9\" sourceRef=\"IntermediateCatch_Payment\" targetRef=\"Task_EnterNextService\"/>\n    <bpmn:sequenceFlow id=\"SF_F10\" sourceRef=\"Task_EnterNextService\" targetRef=\"End_ServiceDone\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": false,
+   "failed_levels": [
+    "L3"
+   ],
+   "seconds": 892.6,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 68,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": false,
+     "correct": 20,
+     "incorrect": 2,
+     "accuracy": 0.9091,
+     "incorrect_elements": [
+      {
+       "id": "IntermediateCatch_30Days",
+       "tag": "intermediateCatchEvent",
+       "line": 51,
+       "reason": "cannot reach an endEvent"
+      },
+      {
+       "id": "Task_IssueFine",
+       "tag": "serviceTask",
+       "line": 56,
+       "reason": "no outgoing connection"
+      }
+     ]
+    },
+    "L4": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.164897,
+    "workflow_order_similarity": 0.082645,
+    "connection_f1": 0.086957,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.272727,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.117163,
+    "activity_semantic_similarity": 0.207313,
+    "activity_label_precision": 0.333333,
+    "activity_label_recall": 0.230769,
+    "activity_label_f1": 0.272727
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_CarService\" targetNamespace=\"http://example.org/bpmn/car-service\">\n\n  <bpmn:message id=\"Msg_ServiceCompleted\" name=\"Successful service and next service time entered\"/>\n  <bpmn:message id=\"Msg_CarArrived\" name=\"Car arrives for service\"/>\n  <bpmn:message id=\"Msg_ServiceRecord\" name=\"Service visit recorded\"/>\n  <bpmn:message id=\"Msg_Payment\" name=\"Payment made via app\"/>\n\n  <bpmn:collaboration id=\"Collab_CarService\">\n    <bpmn:participant id=\"Participant_PoliceApp\" name=\"Police Reminder App\" processRef=\"Process_PoliceApp\"/>\n    <bpmn:participant id=\"Participant_CarOwner\" name=\"Car Owner\"/>\n    <bpmn:participant id=\"Participant_ServiceFacility\" name=\"Car Service Facility\" processRef=\"Process_ServiceFacility\"/>\n\n    <bpmn:messageFlow id=\"MF_CarArrives\" name=\"Car brought in\" sourceRef=\"Participant_CarOwner\" targetRef=\"StartEvent_CarArrives\"/>\n    <bpmn:messageFlow id=\"MF_Payment\" name=\"Pay via app\" sourceRef=\"Participant_CarOwner\" targetRef=\"IntermediateCatch_Payment\"/>\n    <bpmn:messageFlow id=\"MF_StatusUpdate\" name=\"Status update email\" sourceRef=\"Task_SendStatusUpdate\" targetRef=\"Participant_CarOwner\"/>\n    <bpmn:messageFlow id=\"MF_ServiceRecord\" name=\"Service record\" sourceRef=\"Task_SendServiceRecord\" targetRef=\"IntermediateCatch_ServiceRecorded\"/>\n    <bpmn:messageFlow id=\"MF_NextServiceTime\" name=\"Successful service\" sourceRef=\"Task_EnterNextService\" targetRef=\"StartEvent_ServiceCompleted\"/>\n    <bpmn:messageFlow id=\"MF_Reminder\" name=\"Service reminder\" sourceRef=\"Task_NotifyOwner\" targetRef=\"Participant_CarOwner\"/>\n    <bpmn:messageFlow id=\"MF_Fine\" name=\"Fine\" sourceRef=\"Task_IssueFine\" targetRef=\"Participant_CarOwner\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_PoliceApp\" name=\"Police Reminder App\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_PoliceApp\">\n      <bpmn:lane id=\"Lane_ReminderSystem\" name=\"Police Reminder System\">\n        <bpmn:flowNodeRef>StartEvent_ServiceCompleted</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>IntermediateCatch_ServiceNecessary</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_CheckRegistration</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Registered</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_NotifyOwner</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_VisitOrFine</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>IntermediateCatch_ServiceRecorded</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>IntermediateCatch_30Days</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_IssueFine</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_VisitRecorded</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_NotRegistered</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n\n    <bpmn:startEvent id=\"StartEvent_ServiceCompleted\" name=\"Service completed successfully\">\n      <bpmn:messageEventDefinition id=\"MED_ServiceCompleted\" messageRef=\"Msg_ServiceCompleted\"/>\n    </bpmn:startEvent>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_ServiceNecessary\" name=\"Service becomes necessary\"/>\n    <bpmn:serviceTask id=\"Task_CheckRegistration\" name=\"Check if car is still registered\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Registered\" name=\"Car still registered?\"/>\n    <bpmn:sendTask id=\"Task_NotifyOwner\" name=\"Notify car owner\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_VisitOrFine\" name=\"Service visit within 30 days?\"/>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_ServiceRecorded\" name=\"Service visit recorded\">\n      <bpmn:messageEventDefinition id=\"MED_ServiceRecorded\" messageRef=\"Msg_ServiceRecord\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_30Days\" name=\"30 days after reminder\">\n      <bpmn:timerEventDefinition id=\"TED_30Days\">\n        <bpmn:timeDuration xsi:type=\"bpmn:tFormalExpression\">P30D</bpmn:timeDuration>\n      </bpmn:timerEventDefinition>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:serviceTask id=\"Task_IssueFine\" name=\"Issue fine to car owner\"/>\n    <bpmn:endEvent id=\"End_VisitRecorded\" name=\"Service visit done\"/>\n    <bpmn:endEvent id=\"End_NotRegistered\" name=\"No reminder: car not registered\"/>\n\n    <bpmn:sequenceFlow id=\"SF_P1\" sourceRef=\"StartEvent_ServiceCompleted\" targetRef=\"IntermediateCatch_ServiceNecessary\"/>\n    <bpmn:sequenceFlow id=\"SF_P2\" sourceRef=\"IntermediateCatch_ServiceNecessary\" targetRef=\"Task_CheckRegistration\"/>\n    <bpmn:sequenceFlow id=\"SF_P3\" sourceRef=\"Task_CheckRegistration\" targetRef=\"Gateway_Registered\"/>\n    <bpmn:sequenceFlow id=\"SF_P4\" name=\"Yes\" sourceRef=\"Gateway_Registered\" targetRef=\"Task_NotifyOwner\"/>\n    <bpmn:sequenceFlow id=\"SF_P5\" name=\"No\" sourceRef=\"Gateway_Registered\" targetRef=\"End_NotRegistered\"/>\n    <bpmn:sequenceFlow id=\"SF_P6\" sourceRef=\"Task_NotifyOwner\" targetRef=\"Gateway_VisitOrFine\"/>\n    <bpmn:sequenceFlow id=\"SF_P7\" sourceRef=\"Gateway_VisitOrFine\" targetRef=\"IntermediateCatch_ServiceRecorded\"/>\n    <bpmn:sequenceFlow id=\"SF_P8\" sourceRef=\"Gateway_VisitOrFine\" targetRef=\"IntermediateCatch_30Days\"/>\n    <bpmn:sequenceFlow id=\"SF_P9\" sourceRef=\"IntermediateCatch_ServiceRecorded\" targetRef=\"End_VisitRecorded\"/>\n    <bpmn:sequenceFlow id=\"SF_P10\" sourceRef=\"IntermediateCatch_30Days\" targetRef=\"Task_IssueFine\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_ServiceFacility\" name=\"Car Service Facility\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_CarArrives\" name=\"Car arrives at facility\">\n      <bpmn:messageEventDefinition id=\"MED_CarArrives\" messageRef=\"Msg_CarArrived\"/>\n    </bpmn:startEvent>\n    <bpmn:userTask id=\"Task_EnterProblems\" name=\"Mechanic enters car problems for reference\"/>\n    <bpmn:sendTask id=\"Task_SendServiceRecord\" name=\"Send service visit record to app\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_WaitMerge\" name=\"Waiting for repair\"/>\n    <bpmn:userTask id=\"Task_Repair\" name=\"Perform repair\"/>\n    <bpmn:sendTask id=\"Task_SendStatusUpdate\" name=\"Send status update via email\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_RepairDone\" name=\"Repair done?\"/>\n    <bpmn:userTask id=\"Task_EnterSuccess\" name=\"Mechanic enters successful repair and issues Pickerl\"/>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_Payment\" name=\"Payment received\">\n      <bpmn:messageEventDefinition id=\"MED_Payment\" messageRef=\"Msg_Payment\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:userTask id=\"Task_EnterNextService\" name=\"Mechanic enters time of next service\"/>\n    <bpmn:endEvent id=\"End_ServiceDone\" name=\"Service completed\"/>\n\n    <bpmn:sequenceFlow id=\"SF_F1\" sourceRef=\"StartEvent_CarArrives\" targetRef=\"Task_EnterProblems\"/>\n    <bpmn:sequenceFlow id=\"SF_F2\" sourceRef=\"Task_EnterProblems\" targetRef=\"Task_SendServiceRecord\"/>\n    <bpmn:sequenceFlow id=\"SF_F3\" sourceRef=\"Task_SendServiceRecord\" targetRef=\"Gateway_WaitMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_F4\" sourceRef=\"Gateway_WaitMerge\" targetRef=\"Task_Repair\"/>\n    <bpmn:sequenceFlow id=\"SF_F5\" sourceRef=\"Task_Repair\" targetRef=\"Task_SendStatusUpdate\"/>\n    <bpmn:sequenceFlow id=\"SF_F6\" sourceRef=\"Task_SendStatusUpdate\" targetRef=\"Gateway_RepairDone\"/>\n    <bpmn:sequenceFlow id=\"SF_F7\" name=\"No\" sourceRef=\"Gateway_RepairDone\" targetRef=\"Gateway_WaitMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_F8\" name=\"Yes\" sourceRef=\"Gateway_RepairDone\" targetRef=\"Task_EnterSuccess\"/>\n    <bpmn:sequenceFlow id=\"SF_F9\" sourceRef=\"Task_EnterSuccess\" targetRef=\"IntermediateCatch_Payment\"/>\n    <bpmn:sequenceFlow id=\"SF_F10\" sourceRef=\"IntermediateCatch_Payment\" targetRef=\"Task_EnterNextService\"/>\n    <bpmn:sequenceFlow id=\"SF_F11\" sourceRef=\"Task_EnterNextService\" targetRef=\"End_ServiceDone\"/>\n  </bpmn:process>\n\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1458.1,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 70,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 23,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.192741,
+    "workflow_order_similarity": 0.108696,
+    "connection_f1": 0.042553,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.217391,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.140649,
+    "activity_semantic_similarity": 0.265144,
+    "activity_label_precision": 0.4,
+    "activity_label_recall": 0.307692,
+    "activity_label_f1": 0.347826
+   },
+   "xml": "<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_CarService\" targetNamespace=\"http://example.org/bpmn/car-service\">\n  <bpmn:message id=\"Msg_ServiceCompleted\" name=\"Successful service and next service time entered\"/>\n  <bpmn:message id=\"Msg_CarArrived\" name=\"Car arrives for service\"/>\n  <bpmn:message id=\"Msg_ServiceRecord\" name=\"Service visit recorded\"/>\n  <bpmn:message id=\"Msg_StatusUpdate\" name=\"Repair status update\"/>\n  <bpmn:message id=\"Msg_Reminder\" name=\"Service reminder\"/>\n\n  <bpmn:collaboration id=\"Collab_CarService\">\n    <bpmn:participant id=\"Participant_PoliceApp\" name=\"Police Reminder App\" processRef=\"Process_PoliceApp\"/>\n    <bpmn:participant id=\"Participant_CarOwner\" name=\"Car Owner\"/>\n    <bpmn:participant id=\"Participant_ServiceFacility\" name=\"Car Service Facility\" processRef=\"Process_ServiceFacility\"/>\n\n    <bpmn:messageFlow id=\"MF_CarArrives\" name=\"Car brought in\" sourceRef=\"Participant_CarOwner\" targetRef=\"StartEvent_CarArrives\"/>\n    <bpmn:messageFlow id=\"MF_ServiceRecord\" name=\"Service visit record\" sourceRef=\"Task_SendServiceRecord\" targetRef=\"IntermediateCatch_ServiceRecorded\"/>\n    <bpmn:messageFlow id=\"MF_StatusUpdate\" name=\"Status update email\" sourceRef=\"Task_SendStatusUpdate\" targetRef=\"Participant_CarOwner\"/>\n    <bpmn:messageFlow id=\"MF_Reminder\" name=\"Service reminder\" sourceRef=\"Task_NotifyOwner\" targetRef=\"Participant_CarOwner\"/>\n    <bpmn:messageFlow id=\"MF_NextService\" name=\"Successful service\" sourceRef=\"Task_EnterNextService\" targetRef=\"StartEvent_ServiceCompleted\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_PoliceApp\" name=\"Police Reminder App\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_ServiceCompleted\" name=\"Service completed successfully\">\n      <bpmn:messageEventDefinition id=\"MED_ServiceCompleted\" messageRef=\"Msg_ServiceCompleted\"/>\n    </bpmn:startEvent>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_ServiceNecessary\" name=\"Service becomes necessary\">\n      <bpmn:messageEventDefinition id=\"MED_ServiceNecessary\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:serviceTask id=\"Task_CheckRegistration\" name=\"Check if car is still registered\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Registered\" name=\"Car still registered?\"/>\n    <bpmn:sendTask id=\"Task_NotifyOwner\" name=\"Notify car owner\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_VisitOrFine\" name=\"Service visit or 30 days elapsed?\"/>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_ServiceRecorded\" name=\"Service visit recorded\">\n      <bpmn:messageEventDefinition id=\"MED_ServiceRecorded\" messageRef=\"Msg_ServiceRecord\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"IntermediateCatch_30Days\" name=\"30 days after reminder\">\n      <bpmn:timerEventDefinition id=\"TED_30Days\">\n        <bpmn:timeDuration xsi:type=\"bpmn:tFormalExpression\">P30D</bpmn:timeDuration>\n      </bpmn:timerEventDefinition>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:serviceTask id=\"Task_IssueFine\" name=\"Issue fine for missed service\"/>\n    <bpmn:endEvent id=\"End_VisitRecorded\" name=\"Service visit done\"/>\n    <bpmn:endEvent id=\"End_Fined\" name=\"Owner fined\"/>\n    <bpmn:endEvent id=\"End_NotRegistered\" name=\"No reminder: car not registered\"/>\n\n    <bpmn:sequenceFlow id=\"SF_P1\" sourceRef=\"StartEvent_ServiceCompleted\" targetRef=\"IntermediateCatch_ServiceNecessary\"/>\n    <bpmn:sequenceFlow id=\"SF_P2\" sourceRef=\"IntermediateCatch_ServiceNecessary\" targetRef=\"Task_CheckRegistration\"/>\n    <bpmn:sequenceFlow id=\"SF_P3\" sourceRef=\"Task_CheckRegistration\" targetRef=\"Gateway_Registered\"/>\n    <bpmn:sequenceFlow id=\"SF_P4\" name=\"Yes\" sourceRef=\"Gateway_Registered\" targetRef=\"Task_NotifyOwner\"/>\n    <bpmn:sequenceFlow id=\"SF_P5\" name=\"No\" sourceRef=\"Gateway_Registered\" targetRef=\"End_NotRegistered\"/>\n    <bpmn:sequenceFlow id=\"SF_P6\" sourceRef=\"Task_NotifyOwner\" targetRef=\"Gateway_VisitOrFine\"/>\n    <bpmn:sequenceFlow id=\"SF_P7\" sourceRef=\"Gateway_VisitOrFine\" targetRef=\"IntermediateCatch_ServiceRecorded\"/>\n    <bpmn:sequenceFlow id=\"SF_P8\" sourceRef=\"Gateway_VisitOrFine\" targetRef=\"IntermediateCatch_30Days\"/>\n    <bpmn:sequenceFlow id=\"SF_P9\" sourceRef=\"IntermediateCatch_ServiceRecorded\" targetRef=\"End_VisitRecorded\"/>\n    <bpmn:sequenceFlow id=\"SF_P10\" sourceRef=\"IntermediateCatch_30Days\" targetRef=\"Task_IssueFine\"/>\n    <bpmn:sequenceFlow id=\"SF_P11\" sourceRef=\"Task_IssueFine\" targetRef=\"End_Fined\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_ServiceFacility\" name=\"Car Service Facility\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Facility\">\n      <bpmn:lane id=\"Lane_Mechanic\" name=\"Mechanic\">\n        <bpmn:flowNodeRef>StartEvent_CarArrives</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_EnterProblems</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_SendServiceRecord</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_WaitMerge</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Repair</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_SendStatusUpdate</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_RepairDone</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_EnterSuccess</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_EnterNextService</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_ServiceDone</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_CarOwner\" name=\"Car Owner\">\n        <bpmn:flowNodeRef>Task_PayViaApp</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n\n    <bpmn:startEvent id=\"StartEvent_CarArrives\" name=\"Car arrives at facility\">\n      <bpmn:messageEventDefinition id=\"MED_CarArrives\" messageRef=\"Msg_CarArrived\"/>\n    </bpmn:startEvent>\n    <bpmn:userTask id=\"Task_EnterProblems\" name=\"Mechanic enters car problems for reference\"/>\n    <bpmn:sendTask id=\"Task_SendServiceRecord\" name=\"Send service visit record to app\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_WaitMerge\" name=\"Waiting for repair\"/>\n    <bpmn:userTask id=\"Task_Repair\" name=\"Perform repair\"/>\n    <bpmn:sendTask id=\"Task_SendStatusUpdate\" name=\"Send status update via email\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_RepairDone\" name=\"Repair done?\"/>\n    <bpmn:userTask id=\"Task_EnterSuccess\" name=\"Mechanic enters successful repair and issues Pickerl\"/>\n    <bpmn:userTask id=\"Task_PayViaApp\" name=\"Pay repair via app\"/>\n    <bpmn:userTask id=\"Task_EnterNextService\" name=\"Mechanic enters time of next service\"/>\n    <bpmn:endEvent id=\"End_ServiceDone\" name=\"Service completed\"/>\n\n    <bpmn:sequenceFlow id=\"SF_F1\" sourceRef=\"StartEvent_CarArrives\" targetRef=\"Task_EnterProblems\"/>\n    <bpmn:sequenceFlow id=\"SF_F2\" sourceRef=\"Task_EnterProblems\" targetRef=\"Task_SendServiceRecord\"/>\n    <bpmn:sequenceFlow id=\"SF_F3\" sourceRef=\"Task_SendServiceRecord\" targetRef=\"Gateway_WaitMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_F4\" sourceRef=\"Gateway_WaitMerge\" targetRef=\"Task_Repair\"/>\n    <bpmn:sequenceFlow id=\"SF_F5\" sourceRef=\"Task_Repair\" targetRef=\"Task_SendStatusUpdate\"/>\n    <bpmn:sequenceFlow id=\"SF_F6\" sourceRef=\"Task_SendStatusUpdate\" targetRef=\"Gateway_RepairDone\"/>\n    <bpmn:sequenceFlow id=\"SF_F7\" name=\"No\" sourceRef=\"Gateway_RepairDone\" targetRef=\"Gateway_WaitMerge\"/>\n    <bpmn:sequenceFlow id=\"SF_F8\" name=\"Yes\" sourceRef=\"Gateway_RepairDone\" targetRef=\"Task_EnterSuccess\"/>\n    <bpmn:sequenceFlow id=\"SF_F9\" sourceRef=\"Task_EnterSuccess\" targetRef=\"Task_PayViaApp\"/>\n    <bpmn:sequenceFlow id=\"SF_F10\" sourceRef=\"Task_PayViaApp\" targetRef=\"Task_EnterNextService\"/>\n    <bpmn:sequenceFlow id=\"SF_F11\" sourceRef=\"Task_EnterNextService\" targetRef=\"End_ServiceDone\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": true,
+  "failed_levels": [],
+  "metrics": {
+   "semantic_similarity": 0.159007,
+   "activity_semantic_similarity": 0.207313,
+   "activity_label_precision": 0.333333,
+   "activity_label_recall": 0.230769,
+   "activity_label_f1": 0.272727,
+   "activity_matched": 3,
+   "activity_reference": 13,
+   "activity_generated": 9,
+   "alignment_coverage": 0.26087,
+   "connection_precision": 0.090909,
+   "connection_recall": 0.08,
+   "connection_f1": 0.085106,
+   "connection_tp": 2,
+   "connection_fp": 20,
+   "connection_fn": 23,
+   "workflow_order_similarity": 0.079051,
+   "order_consistency": 0.454545,
+   "order_coverage": 0.173913,
+   "order_tp": 5,
+   "order_fp": 4,
+   "order_fn": 2,
+   "collaboration_similarity": null,
+   "collaboration_applicable": false,
+   "collaboration_tp": 0,
+   "collaboration_fp": 0,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 0.6087,
+   "type_recall_diagnostic": 0.6667,
+   "type_f1_diagnostic": 0.6364,
+   "counts": {
+    "gold_nodes": 21,
+    "generated_nodes": 23,
+    "gold_flows": 25,
+    "generated_flows": 22
+   },
+   "collaboration_ignored": true,
+   "semantic_similarity_strict": 0.117163,
+   "activity_semantic_similarity_strict": 0.207313,
+   "alignment_coverage_strict": 0.26087,
+   "connection_precision_strict": 0.090909,
+   "connection_recall_strict": 0.08,
+   "connection_f1_strict": 0.085106,
+   "workflow_order_similarity_strict": 0.079051,
+   "collaboration_similarity_strict": 0.0,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T5",
+   "T6"
+  ],
+  "error_counts": {
+   "T5": 43,
+   "T6": 16
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-094",
+    "instruction": "When the description states that a penalty or sanction follows when a required action is not carried out within a stated deadline: Model the penalty or sanction as a bpmn:task labelled with its verb and object, placed on the branch of an exclusive gateway whose question asks whether the required action was carried out (or whether the deadline has passed). Do not model the penalty as an end event carrying the penalty's label. Give the branch where the action was done its own path, and end the penalty task with an end event only if the description states that the process ends there.",
+    "situation": "the description states that a penalty or sanction follows when a required action is not carried out within a stated deadline",
+    "source": "learned guideline (new)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-095",
+    "instruction": "When the description states that a required obligation must be fulfilled within a given number of days, and that an automated consequence (for example a penalty) follows when it is not fulfilled in that period: Model the waiting period as a bpmn:intermediateCatchEvent with a timer event definition, placed in the flow where the period begins. After the timer, model the automated consequence as its own bpmn:serviceTask, labelled with its verb and object, in the lane of the automated actor. Do not model the consequence as an endEvent, and do not fold it into the timer or into a gateway condition.",
+    "situation": "the description states that a required obligation must be fulfilled within a given number of days, and that an automated consequence (for example a penalty) follows when it is not fulfilled in that period",
+    "source": "learned guideline (refines EVT-03)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-096",
+    "instruction": "When the description states that after a decision (gateway) outcome, a further described action is performed on that branch (such as an automated check, a sent message, a recorded result, or an imposed consequence) before the flow reaches its end or rejoins a later step: Model each such described action as its own task on the branch of the decision that leads to it: a serviceTask for an automated system step, or a sendTask when the action sends a message. Connect it by sequence flows before the branch's end event or join. Do not drop the action, do not connect the decision branch straight to the end or join, and do not replace the action with an end event carrying its label.",
+    "situation": "the description states that after a decision (gateway) outcome, a further described action is performed on that branch (such as an automated check, a sent message, a recorded result, or an imposed consequence) before the flow reaches its end or rejoins a later step",
+    "source": "learned guideline (refines FID-02), generalized from EXS-069",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-097",
+    "instruction": "When the description says that, after a work step is completed, a party carries out a further action through a software interface (for example a payment or a confirmation), and that action is stated as a separate step of the flow: Model that interface action as a bpmn:userTask in the lane of the party that performs it, placed in the sequence flow after the completed work step and before the next step that depends on it. Keep it as its own task rather than merging it into the work step or leaving it out.",
+    "situation": "the description says that, after a work step is completed, a party carries out a further action through a software interface (for example a payment or a confirmation), and that action is stated as a separate step of the flow",
+    "source": "learned guideline (refines FID-02)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-090",
+    "instruction": "When the description states a yes/no outcome check after an attempt, where a follow-up depends on whether the attempt succeeded or failed, and the description names the result or the alternative in words: Model the exclusive gateway with a short question label that names the outcome being checked, phrased as in the description (for example 'Is the result successful?'), with one outgoing branch for each answer and conditions that match those answers.",
+    "situation": "the description states a consequence that depends on whether a party performed a required action, with a time limit or deadline (for example, a penalty applies if the action is not done within a number of days), and the gateway would test that action",
+    "source": "learned guideline (refines GW-02)",
+    "failure_type": "T6"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-094"
+   ],
+   "before": {
+    "semantic_similarity": 0.159007,
+    "workflow_order_similarity": 0.079051,
+    "connection_f1": 0.085106,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.26087,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.117163,
+    "activity_semantic_similarity": 0.207313,
+    "activity_label_precision": 0.333333,
+    "activity_label_recall": 0.230769,
+    "activity_label_f1": 0.272727
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 43,
+    "T6": 16
+   },
+   "after": {
+    "semantic_similarity": 0.159007,
+    "workflow_order_similarity": 0.079051,
+    "connection_f1": 0.085106,
+    "alignment_coverage": 0.26087
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 0,
+   "errors_after": {
+    "T5": 43,
+    "T6": 16
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.159007,
+    "activity_semantic_similarity": 0.207313,
+    "activity_label_precision": 0.333333,
+    "activity_label_recall": 0.230769,
+    "activity_label_f1": 0.272727,
+    "activity_matched": 3,
+    "activity_reference": 13,
+    "activity_generated": 9,
+    "alignment_coverage": 0.26087,
+    "connection_precision": 0.090909,
+    "connection_recall": 0.08,
+    "connection_f1": 0.085106,
+    "connection_tp": 2,
+    "connection_fp": 20,
+    "connection_fn": 23,
+    "workflow_order_similarity": 0.079051,
+    "order_consistency": 0.454545,
+    "order_coverage": 0.173913,
+    "order_tp": 5,
+    "order_fp": 4,
+    "order_fn": 2,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.6087,
+    "type_recall_diagnostic": 0.6667,
+    "type_f1_diagnostic": 0.6364,
+    "counts": {
+     "gold_nodes": 21,
+     "generated_nodes": 23,
+     "gold_flows": 25,
+     "generated_flows": 22
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.117163,
+    "activity_semantic_similarity_strict": 0.207313,
+    "alignment_coverage_strict": 0.26087,
+    "connection_precision_strict": 0.090909,
+    "connection_recall_strict": 0.08,
+    "connection_f1_strict": 0.085106,
+    "workflow_order_similarity_strict": 0.079051,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 72,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 23,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-094": {
+     "failure_type": "T6",
+     "errors_before": 16,
+     "errors_after": 16,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "LRN-095",
+    "LRN-096"
+   ],
+   "before": {
+    "semantic_similarity": 0.159007,
+    "workflow_order_similarity": 0.079051,
+    "connection_f1": 0.085106,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.26087,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.117163,
+    "activity_semantic_similarity": 0.207313,
+    "activity_label_precision": 0.333333,
+    "activity_label_recall": 0.230769,
+    "activity_label_f1": 0.272727
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 43,
+    "T6": 16
+   },
+   "after": {
+    "semantic_similarity": 0.159007,
+    "workflow_order_similarity": 0.079051,
+    "connection_f1": 0.085106,
+    "alignment_coverage": 0.26087
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 0,
+   "errors_after": {
+    "T5": 43,
+    "T6": 16
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.159007,
+    "activity_semantic_similarity": 0.207313,
+    "activity_label_precision": 0.333333,
+    "activity_label_recall": 0.230769,
+    "activity_label_f1": 0.272727,
+    "activity_matched": 3,
+    "activity_reference": 13,
+    "activity_generated": 9,
+    "alignment_coverage": 0.26087,
+    "connection_precision": 0.090909,
+    "connection_recall": 0.08,
+    "connection_f1": 0.085106,
+    "connection_tp": 2,
+    "connection_fp": 20,
+    "connection_fn": 23,
+    "workflow_order_similarity": 0.079051,
+    "order_consistency": 0.454545,
+    "order_coverage": 0.173913,
+    "order_tp": 5,
+    "order_fp": 4,
+    "order_fn": 2,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.6087,
+    "type_recall_diagnostic": 0.6667,
+    "type_f1_diagnostic": 0.6364,
+    "counts": {
+     "gold_nodes": 21,
+     "generated_nodes": 23,
+     "gold_flows": 25,
+     "generated_flows": 22
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.117163,
+    "activity_semantic_similarity_strict": 0.207313,
+    "alignment_coverage_strict": 0.26087,
+    "connection_precision_strict": 0.090909,
+    "connection_recall_strict": 0.08,
+    "connection_f1_strict": 0.085106,
+    "workflow_order_similarity_strict": 0.079051,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 72,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 23,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-095": {
+     "failure_type": "T5",
+     "errors_before": 43,
+     "errors_after": 43,
+     "removed": 0
+    },
+    "LRN-096": {
+     "failure_type": "T6",
+     "errors_before": 16,
+     "errors_after": 16,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [
+    "LRN-097",
+    "LRN-090"
+   ],
+   "before": {
+    "semantic_similarity": 0.159007,
+    "workflow_order_similarity": 0.079051,
+    "connection_f1": 0.085106,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.26087,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.117163,
+    "activity_semantic_similarity": 0.207313,
+    "activity_label_precision": 0.333333,
+    "activity_label_recall": 0.230769,
+    "activity_label_f1": 0.272727
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 43,
+    "T6": 16
+   },
+   "reverted": {
+    "draft": 3,
+    "errors": {
+     "T5": 45,
+     "T6": 15
+    },
+    "errors_before": {
+     "T5": 43,
+     "T6": 16
+    },
+    "mean_change": -0.005663
+   },
+   "after": {
+    "semantic_similarity": 0.159007,
+    "workflow_order_similarity": 0.079051,
+    "connection_f1": 0.085106,
+    "alignment_coverage": 0.26087
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 0,
+   "errors_after": {
+    "T5": 43,
+    "T6": 16
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.159007,
+    "activity_semantic_similarity": 0.207313,
+    "activity_label_precision": 0.333333,
+    "activity_label_recall": 0.230769,
+    "activity_label_f1": 0.272727,
+    "activity_matched": 3,
+    "activity_reference": 13,
+    "activity_generated": 9,
+    "alignment_coverage": 0.26087,
+    "connection_precision": 0.090909,
+    "connection_recall": 0.08,
+    "connection_f1": 0.085106,
+    "connection_tp": 2,
+    "connection_fp": 20,
+    "connection_fn": 23,
+    "workflow_order_similarity": 0.079051,
+    "order_consistency": 0.454545,
+    "order_coverage": 0.173913,
+    "order_tp": 5,
+    "order_fp": 4,
+    "order_fn": 2,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.6087,
+    "type_recall_diagnostic": 0.6667,
+    "type_f1_diagnostic": 0.6364,
+    "counts": {
+     "gold_nodes": 21,
+     "generated_nodes": 23,
+     "gold_flows": 25,
+     "generated_flows": 22
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.117163,
+    "activity_semantic_similarity_strict": 0.207313,
+    "alignment_coverage_strict": 0.26087,
+    "connection_precision_strict": 0.090909,
+    "connection_recall_strict": 0.08,
+    "connection_f1_strict": 0.085106,
+    "workflow_order_similarity_strict": 0.079051,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 72,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 23,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-090": {
+     "failure_type": "T6",
+     "errors_before": 16,
+     "errors_after": 16,
+     "removed": 0
+    },
+    "LRN-097": {
+     "failure_type": "T5",
+     "errors_before": 43,
+     "errors_after": 43,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.159007,
+  "activity_semantic_similarity": 0.207313,
+  "activity_label_precision": 0.333333,
+  "activity_label_recall": 0.230769,
+  "activity_label_f1": 0.272727,
+  "activity_matched": 3,
+  "activity_reference": 13,
+  "activity_generated": 9,
+  "alignment_coverage": 0.26087,
+  "connection_precision": 0.090909,
+  "connection_recall": 0.08,
+  "connection_f1": 0.085106,
+  "connection_tp": 2,
+  "connection_fp": 20,
+  "connection_fn": 23,
+  "workflow_order_similarity": 0.079051,
+  "order_consistency": 0.454545,
+  "order_coverage": 0.173913,
+  "order_tp": 5,
+  "order_fp": 4,
+  "order_fn": 2,
+  "collaboration_similarity": null,
+  "collaboration_applicable": false,
+  "collaboration_tp": 0,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 0.6087,
+  "type_recall_diagnostic": 0.6667,
+  "type_f1_diagnostic": 0.6364,
+  "counts": {
+   "gold_nodes": 21,
+   "generated_nodes": 23,
+   "gold_flows": 25,
+   "generated_flows": 22
+  },
+  "collaboration_ignored": true,
+  "semantic_similarity_strict": 0.117163,
+  "activity_semantic_similarity_strict": 0.207313,
+  "alignment_coverage_strict": 0.26087,
+  "connection_precision_strict": 0.090909,
+  "connection_recall_strict": 0.08,
+  "connection_f1_strict": 0.085106,
+  "workflow_order_similarity_strict": 0.079051,
+  "collaboration_similarity_strict": 0.0,
+  "collaboration_applicable_strict": true
+ }
+}

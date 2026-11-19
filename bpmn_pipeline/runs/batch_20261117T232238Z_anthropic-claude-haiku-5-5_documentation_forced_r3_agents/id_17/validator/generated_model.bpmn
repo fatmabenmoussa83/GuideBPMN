@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_OrderFulfillment" targetNamespace="http://example.com/bpmn/order-fulfillment">
+  <bpmn:message id="Msg_OrderPlaced" name="Order placed"/>
+  <bpmn:message id="Msg_BackorderReceived" name="Back-order received"/>
+  <bpmn:message id="Msg_DeliveryConfirmed" name="Delivery confirmed"/>
+  <bpmn:process id="Process_OrderFulfillment" name="E-commerce Order Fulfillment" isExecutable="false">
+    <bpmn:startEvent id="Start_OrderPlaced" name="Customer places order">
+      <bpmn:messageEventDefinition id="MED_OrderPlaced" messageRef="Msg_OrderPlaced"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_RecordOrder" name="Record order details"/>
+    <bpmn:task id="Task_ProcessPayment" name="Process payment"/>
+    <bpmn:exclusiveGateway id="Gw_PaymentResult_Split" name="Payment successful?"/>
+    <bpmn:task id="Task_NotifyPaymentFailure" name="Notify customer of payment failure"/>
+    <bpmn:endEvent id="End_PaymentFailed" name="Order ended: payment failed"/>
+    <bpmn:serviceTask id="Task_CheckStock" name="Check stock availability"/>
+    <bpmn:exclusiveGateway id="Gw_Stock_Split" name="Items in stock?"/>
+    <bpmn:task id="Task_InitiateBackorder" name="Initiate back-order"/>
+    <bpmn:task id="Task_InformDelay" name="Inform customer of delay"/>
+    <bpmn:intermediateCatchEvent id="Evt_BackorderReceived" name="Back-order received">
+      <bpmn:messageEventDefinition id="MED_BackorderReceived" messageRef="Msg_BackorderReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gw_Stock_Merge" name="Items available"/>
+    <bpmn:task id="Task_PickItems" name="Pick items from warehouse"/>
+    <bpmn:task id="Task_QualityCheck" name="Perform quality control check"/>
+    <bpmn:parallelGateway id="Gw_Prep_Split" name="Start packaging and shipping preparation"/>
+    <bpmn:exclusiveGateway id="Gw_Gift_Split" name="Gift wrapping requested?"/>
+    <bpmn:task id="Task_GiftWrap" name="Gift wrap items"/>
+    <bpmn:exclusiveGateway id="Gw_Gift_Merge" name="Gift wrapping decided"/>
+    <bpmn:task id="Task_PackItems" name="Package items"/>
+    <bpmn:task id="Task_PrepareShippingDocs" name="Prepare shipping documents and labels"/>
+    <bpmn:exclusiveGateway id="Gw_International_Split" name="International order?"/>
+    <bpmn:task id="Task_CustomsDocs" name="Prepare customs documentation"/>
+    <bpmn:exclusiveGateway id="Gw_International_Merge" name="Shipping documents complete"/>
+    <bpmn:parallelGateway id="Gw_Ready_Join" name="Packaging and documents ready"/>
+    <bpmn:task id="Task_DispatchOrder" name="Dispatch order"/>
+    <bpmn:parallelGateway id="Gw_Dispatch_Split" name="Start post-dispatch actions"/>
+    <bpmn:serviceTask id="Task_SendShippingConfirmation" name="Send shipping confirmation to customer"/>
+    <bpmn:serviceTask id="Task_UpdateInventory" name="Update inventory levels"/>
+    <bpmn:parallelGateway id="Gw_Dispatch_Join" name="Post-dispatch actions done"/>
+    <bpmn:intermediateCatchEvent id="Evt_DeliveryConfirmed" name="Delivery confirmed">
+      <bpmn:messageEventDefinition id="MED_DeliveryConfirmed" messageRef="Msg_DeliveryConfirmed"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gw_Delivery_Split" name="Issue reported upon delivery?"/>
+    <bpmn:task id="Task_SendFeedbackEmail" name="Send feedback follow-up email"/>
+    <bpmn:endEvent id="End_OrderCompleted" name="Order completed"/>
+    <bpmn:subProcess id="Sub_ReturnsProcess" name="Returns process">
+      <bpmn:startEvent id="Start_Return" name="Return initiated"/>
+      <bpmn:serviceTask id="Task_SendReturnLabel" name="Send return shipping label"/>
+      <bpmn:task id="Task_ReceiveReturnedItems" name="Receive returned items"/>
+      <bpmn:task id="Task_InspectReturnedItems" name="Inspect returned items"/>
+      <bpmn:exclusiveGateway id="Gw_Resolution_Split" name="Refund or replacement?"/>
+      <bpmn:task id="Task_ProcessRefund" name="Process refund"/>
+      <bpmn:task id="Task_ProcessReplacement" name="Process replacement"/>
+      <bpmn:exclusiveGateway id="Gw_Resolution_Merge" name="Resolution processed"/>
+      <bpmn:endEvent id="End_Return" name="Return processed"/>
+      <bpmn:sequenceFlow id="Flow_R01" sourceRef="Start_Return" targetRef="Task_SendReturnLabel"/>
+      <bpmn:sequenceFlow id="Flow_R02" sourceRef="Task_SendReturnLabel" targetRef="Task_ReceiveReturnedItems"/>
+      <bpmn:sequenceFlow id="Flow_R03" sourceRef="Task_ReceiveReturnedItems" targetRef="Task_InspectReturnedItems"/>
+      <bpmn:sequenceFlow id="Flow_R04" sourceRef="Task_InspectReturnedItems" targetRef="Gw_Resolution_Split"/>
+      <bpmn:sequenceFlow id="Flow_R05" name="Refund" sourceRef="Gw_Resolution_Split" targetRef="Task_ProcessRefund"/>
+      <bpmn:sequenceFlow id="Flow_R06" name="Replacement" sourceRef="Gw_Resolution_Split" targetRef="Task_ProcessReplacement"/>
+      <bpmn:sequenceFlow id="Flow_R07" sourceRef="Task_ProcessRefund" targetRef="Gw_Resolution_Merge"/>
+      <bpmn:sequenceFlow id="Flow_R08" sourceRef="Task_ProcessReplacement" targetRef="Gw_Resolution_Merge"/>
+      <bpmn:sequenceFlow id="Flow_R09" sourceRef="Gw_Resolution_Merge" targetRef="End_Return"/>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="End_ReturnHandled" name="Order ended: return handled"/>
+
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="Start_OrderPlaced" targetRef="Task_RecordOrder"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_RecordOrder" targetRef="Task_ProcessPayment"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_ProcessPayment" targetRef="Gw_PaymentResult_Split"/>
+    <bpmn:sequenceFlow id="Flow_04" name="Payment failed" sourceRef="Gw_PaymentResult_Split" targetRef="Task_NotifyPaymentFailure">
+      <bpmn:conditionExpression>${!paymentSuccessful}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_NotifyPaymentFailure" targetRef="End_PaymentFailed"/>
+    <bpmn:sequenceFlow id="Flow_06" name="Payment successful" sourceRef="Gw_PaymentResult_Split" targetRef="Task_CheckStock">
+      <bpmn:conditionExpression>${paymentSuccessful}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_CheckStock" targetRef="Gw_Stock_Split"/>
+    <bpmn:sequenceFlow id="Flow_08" name="Out of stock" sourceRef="Gw_Stock_Split" targetRef="Task_InitiateBackorder">
+      <bpmn:conditionExpression>${!inStock}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_InitiateBackorder" targetRef="Task_InformDelay"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_InformDelay" targetRef="Evt_BackorderReceived"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Evt_BackorderReceived" targetRef="Gw_Stock_Merge"/>
+    <bpmn:sequenceFlow id="Flow_12" name="In stock" sourceRef="Gw_Stock_Split" targetRef="Gw_Stock_Merge">
+      <bpmn:conditionExpression>${inStock}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Gw_Stock_Merge" targetRef="Task_PickItems"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_PickItems" targetRef="Task_QualityCheck"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_QualityCheck" targetRef="Gw_Prep_Split"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Gw_Prep_Split" targetRef="Gw_Gift_Split"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Gw_Prep_Split" targetRef="Task_PrepareShippingDocs"/>
+    <bpmn:sequenceFlow id="Flow_18" name="Gift wrap requested" sourceRef="Gw_Gift_Split" targetRef="Task_GiftWrap">
+      <bpmn:conditionExpression>${giftWrapRequested}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_19" name="No gift wrap" sourceRef="Gw_Gift_Split" targetRef="Gw_Gift_Merge">
+      <bpmn:conditionExpression>${!giftWrapRequested}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_20" sourceRef="Task_GiftWrap" targetRef="Gw_Gift_Merge"/>
+    <bpmn:sequenceFlow id="Flow_21" sourceRef="Gw_Gift_Merge" targetRef="Task_PackItems"/>
+    <bpmn:sequenceFlow id="Flow_22" sourceRef="Task_PackItems" targetRef="Gw_Ready_Join"/>
+    <bpmn:sequenceFlow id="Flow_23" sourceRef="Task_PrepareShippingDocs" targetRef="Gw_International_Split"/>
+    <bpmn:sequenceFlow id="Flow_24" name="International" sourceRef="Gw_International_Split" targetRef="Task_CustomsDocs">
+      <bpmn:conditionExpression>${isInternational}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_25" name="Domestic" sourceRef="Gw_International_Split" targetRef="Gw_International_Merge">
+      <bpmn:conditionExpression>${!isInternational}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_26" sourceRef="Task_CustomsDocs" targetRef="Gw_International_Merge"/>
+    <bpmn:sequenceFlow id="Flow_27" sourceRef="Gw_International_Merge" targetRef="Gw_Ready_Join"/>
+    <bpmn:sequenceFlow id="Flow_28" sourceRef="Gw_Ready_Join" targetRef="Task_DispatchOrder"/>
+    <bpmn:sequenceFlow id="Flow_29" sourceRef="Task_DispatchOrder" targetRef="Gw_Dispatch_Split"/>
+    <bpmn:sequenceFlow id="Flow_30" sourceRef="Gw_Dispatch_Split" targetRef="Task_SendShippingConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_31" sourceRef="Gw_Dispatch_Split" targetRef="Task_UpdateInventory"/>
+    <bpmn:sequenceFlow id="Flow_32" sourceRef="Task_SendShippingConfirmation" targetRef="Gw_Dispatch_Join"/>
+    <bpmn:sequenceFlow id="Flow_33" sourceRef="Task_UpdateInventory" targetRef="Gw_Dispatch_Join"/>
+    <bpmn:sequenceFlow id="Flow_34" sourceRef="Gw_Dispatch_Join" targetRef="Evt_DeliveryConfirmed"/>
+    <bpmn:sequenceFlow id="Flow_35" sourceRef="Evt_DeliveryConfirmed" targetRef="Gw_Delivery_Split"/>
+    <bpmn:sequenceFlow id="Flow_36" name="Delivered without issues" sourceRef="Gw_Delivery_Split" targetRef="Task_SendFeedbackEmail">
+      <bpmn:conditionExpression>${!issueReported}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_37" sourceRef="Task_SendFeedbackEmail" targetRef="End_OrderCompleted"/>
+    <bpmn:sequenceFlow id="Flow_38" name="Issue reported" sourceRef="Gw_Delivery_Split" targetRef="Sub_ReturnsProcess">
+      <bpmn:conditionExpression>${issueReported}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_39" sourceRef="Sub_ReturnsProcess" targetRef="End_ReturnHandled"/>
+  </bpmn:process>
+</bpmn:definitions>

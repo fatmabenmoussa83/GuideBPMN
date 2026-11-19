@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_CreditScoring" targetNamespace="http://example.com/bpmn/credit-scoring">
+  <bpmn:message id="Msg_ScoringRequestFromClerk" name="Credit scoring requested by clerk"/>
+  <bpmn:message id="Msg_ScoringRequest" name="Scoring request"/>
+  <bpmn:message id="Msg_ImmediateResult" name="Immediate scoring result"/>
+  <bpmn:message id="Msg_DelayNotice" name="Scoring delay notice"/>
+  <bpmn:message id="Msg_FinalResult" name="Final scoring result"/>
+
+  <bpmn:collaboration id="Collaboration_CreditScoring">
+    <bpmn:participant id="Participant_Banking" name="Banking System" processRef="Process_Banking"/>
+    <bpmn:participant id="Participant_Agency" name="Credit Scoring Agency" processRef="Process_Agency"/>
+    <bpmn:messageFlow id="MessageFlow_RequestToAgency" name="Scoring request" sourceRef="SendTask_SendRequest" targetRef="StartEvent_AgencyRequest"/>
+    <bpmn:messageFlow id="MessageFlow_ImmediateResult" name="Immediate result" sourceRef="SendTask_SendImmediateResult" targetRef="Event_ImmediateResult"/>
+    <bpmn:messageFlow id="MessageFlow_DelayNotice" name="Delay notice" sourceRef="SendTask_SendDelayNotice" targetRef="Event_DelayNotice"/>
+    <bpmn:messageFlow id="MessageFlow_FinalResult" name="Final result" sourceRef="SendTask_SendFinalResult" targetRef="Event_FinalResult"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Banking" name="Banking System Credit Scoring" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_ClerkRequest" name="Credit scoring requested by clerk">
+      <bpmn:messageEventDefinition id="MED_ClerkRequest" messageRef="Msg_ScoringRequestFromClerk"/>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="SendTask_SendRequest" name="Send scoring request to agency" messageRef="Msg_ScoringRequest"/>
+    <bpmn:eventBasedGateway id="Gateway_ResultOrDelay" name="Immediate result or delay?"/>
+    <bpmn:intermediateCatchEvent id="Event_ImmediateResult" name="Immediate result received">
+      <bpmn:messageEventDefinition id="MED_ImmediateResult" messageRef="Msg_ImmediateResult"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_DelayNotice" name="Delay notice received">
+      <bpmn:messageEventDefinition id="MED_DelayNotice" messageRef="Msg_DelayNotice"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_ShowResultImmediate" name="Show result to clerk"/>
+    <bpmn:endEvent id="EndEvent_ImmediateShown" name="Result shown"/>
+    <bpmn:task id="Task_DisplayDelayMessage" name="Display message to clerk to check again later"/>
+    <bpmn:intermediateCatchEvent id="Event_FinalResult" name="Final result received">
+      <bpmn:messageEventDefinition id="MED_FinalResult" messageRef="Msg_FinalResult"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_ShowResultFinal" name="Show result to clerk"/>
+    <bpmn:endEvent id="EndEvent_FinalShown" name="Result shown"/>
+
+    <bpmn:sequenceFlow id="Flow_B1" sourceRef="StartEvent_ClerkRequest" targetRef="SendTask_SendRequest"/>
+    <bpmn:sequenceFlow id="Flow_B2" sourceRef="SendTask_SendRequest" targetRef="Gateway_ResultOrDelay"/>
+    <bpmn:sequenceFlow id="Flow_B3" sourceRef="Gateway_ResultOrDelay" targetRef="Event_ImmediateResult"/>
+    <bpmn:sequenceFlow id="Flow_B4" sourceRef="Gateway_ResultOrDelay" targetRef="Event_DelayNotice"/>
+    <bpmn:sequenceFlow id="Flow_B5" sourceRef="Event_ImmediateResult" targetRef="Task_ShowResultImmediate"/>
+    <bpmn:sequenceFlow id="Flow_B6" sourceRef="Task_ShowResultImmediate" targetRef="EndEvent_ImmediateShown"/>
+    <bpmn:sequenceFlow id="Flow_B7" sourceRef="Event_DelayNotice" targetRef="Task_DisplayDelayMessage"/>
+    <bpmn:sequenceFlow id="Flow_B8" sourceRef="Task_DisplayDelayMessage" targetRef="Event_FinalResult"/>
+    <bpmn:sequenceFlow id="Flow_B9" sourceRef="Event_FinalResult" targetRef="Task_ShowResultFinal"/>
+    <bpmn:sequenceFlow id="Flow_B10" sourceRef="Task_ShowResultFinal" targetRef="EndEvent_FinalShown"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Agency" name="Credit Scoring Agency Process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_AgencyRequest" name="Scoring request received">
+      <bpmn:messageEventDefinition id="MED_AgencyRequest" messageRef="Msg_ScoringRequest"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Level1Scoring" name="Perform level 1 scoring"/>
+    <bpmn:exclusiveGateway id="Gateway_Level1Result" name="Result determined immediately?" default="Flow_A4"/>
+    <bpmn:sendTask id="SendTask_SendImmediateResult" name="Send immediate result to banking system" messageRef="Msg_ImmediateResult"/>
+    <bpmn:endEvent id="EndEvent_ImmediateSent" name="Immediate result sent"/>
+    <bpmn:sendTask id="SendTask_SendDelayNotice" name="Inform banking system of delay" messageRef="Msg_DelayNotice"/>
+    <bpmn:task id="Task_Level2Scoring" name="Perform level 2 scoring"/>
+    <bpmn:sendTask id="SendTask_SendFinalResult" name="Send scoring result to banking system" messageRef="Msg_FinalResult"/>
+    <bpmn:endEvent id="EndEvent_FinalSent" name="Final result sent"/>
+
+    <bpmn:sequenceFlow id="Flow_A1" sourceRef="StartEvent_AgencyRequest" targetRef="Task_Level1Scoring"/>
+    <bpmn:sequenceFlow id="Flow_A2" sourceRef="Task_Level1Scoring" targetRef="Gateway_Level1Result"/>
+    <bpmn:sequenceFlow id="Flow_A3" name="Yes" sourceRef="Gateway_Level1Result" targetRef="SendTask_SendImmediateResult"/>
+    <bpmn:sequenceFlow id="Flow_A4" name="No" sourceRef="Gateway_Level1Result" targetRef="SendTask_SendDelayNotice"/>
+    <bpmn:sequenceFlow id="Flow_A5" sourceRef="SendTask_SendImmediateResult" targetRef="EndEvent_ImmediateSent"/>
+    <bpmn:sequenceFlow id="Flow_A6" sourceRef="SendTask_SendDelayNotice" targetRef="Task_Level2Scoring"/>
+    <bpmn:sequenceFlow id="Flow_A7" sourceRef="Task_Level2Scoring" targetRef="SendTask_SendFinalResult"/>
+    <bpmn:sequenceFlow id="Flow_A8" sourceRef="SendTask_SendFinalResult" targetRef="EndEvent_FinalSent"/>
+  </bpmn:process>
+</bpmn:definitions>

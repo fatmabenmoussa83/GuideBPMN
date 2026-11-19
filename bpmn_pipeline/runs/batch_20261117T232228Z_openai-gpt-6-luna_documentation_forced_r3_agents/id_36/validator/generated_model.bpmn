@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_LuxuryAirplane"
+                  targetNamespace="https://example.com/bpmn/luxury-airplane">
+  <bpmn:message id="Message_Specifications" name="Airplane specifications"/>
+  <bpmn:message id="Message_Requirements" name="Manufacturing requirements"/>
+  <bpmn:message id="Message_Parts" name="Manufactured parts"/>
+  <bpmn:message id="Message_TestProtocol" name="Test protocol"/>
+  <bpmn:message id="Message_Delivery" name="Plane delivery"/>
+  <bpmn:message id="Message_Confirmation" name="Delivery confirmation"/>
+
+  <bpmn:collaboration id="Collaboration_LuxuryAirplane">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_Producer" name="Airplane producer" processRef="Process_Producer"/>
+    <bpmn:participant id="Participant_ManufacturingTeams" name="Manufacturing teams"/>
+    <bpmn:messageFlow id="MessageFlow_Specifications" name="Send specifications" sourceRef="Task_SendSpecifications" targetRef="Start_ReceiveSpecifications" messageRef="Message_Specifications"/>
+    <bpmn:messageFlow id="MessageFlow_Requirements" name="Send manufacturing requirements" sourceRef="Task_SendRequirements" targetRef="Participant_ManufacturingTeams" messageRef="Message_Requirements"/>
+    <bpmn:messageFlow id="MessageFlow_Parts" name="Return manufactured parts" sourceRef="Participant_ManufacturingTeams" targetRef="Task_ReceiveParts" messageRef="Message_Parts"/>
+    <bpmn:messageFlow id="MessageFlow_TestProtocol" name="Send test protocol to customer" sourceRef="Task_SendTestProtocol" targetRef="Task_ReceiveTestProtocol" messageRef="Message_TestProtocol"/>
+    <bpmn:messageFlow id="MessageFlow_Delivery" name="Deliver plane" sourceRef="Task_DeliverPlane" targetRef="Task_ReceiveDelivery" messageRef="Message_Delivery"/>
+    <bpmn:messageFlow id="MessageFlow_Confirmation" name="Send delivery confirmation" sourceRef="Task_SendConfirmation" targetRef="Event_ReceiveConfirmation" messageRef="Message_Confirmation"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Customer" name="Specify and receive luxury airplane" isExecutable="false">
+    <bpmn:startEvent id="Start_Customer" name="Begin customization"/>
+    <bpmn:task id="Task_SpecifyInterior" name="Choose one of five bars and specify seat count, color, and toilet water amount"/>
+    <bpmn:sendTask id="Task_SendSpecifications" name="Send specifications" messageRef="Message_Specifications"/>
+    <bpmn:receiveTask id="Task_ReceiveTestProtocol" name="Receive test protocol" messageRef="Message_TestProtocol"/>
+    <bpmn:receiveTask id="Task_ReceiveDelivery" name="Receive plane delivery" messageRef="Message_Delivery"/>
+    <bpmn:sendTask id="Task_SendConfirmation" name="Confirm delivery" messageRef="Message_Confirmation"/>
+    <bpmn:endEvent id="End_Customer" name="Delivery confirmed"/>
+
+    <bpmn:sequenceFlow id="Flow_Customer_1" sourceRef="Start_Customer" targetRef="Task_SpecifyInterior"/>
+    <bpmn:sequenceFlow id="Flow_Customer_2" sourceRef="Task_SpecifyInterior" targetRef="Task_SendSpecifications"/>
+    <bpmn:sequenceFlow id="Flow_Customer_3" sourceRef="Task_SendSpecifications" targetRef="Task_ReceiveTestProtocol"/>
+    <bpmn:sequenceFlow id="Flow_Customer_4" sourceRef="Task_ReceiveTestProtocol" targetRef="Task_ReceiveDelivery"/>
+    <bpmn:sequenceFlow id="Flow_Customer_5" sourceRef="Task_ReceiveDelivery" targetRef="Task_SendConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_Customer_6" sourceRef="Task_SendConfirmation" targetRef="End_Customer"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Producer" name="Produce luxury airplane" isExecutable="false">
+    <bpmn:startEvent id="Start_ReceiveSpecifications" name="Specifications received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Specifications" messageRef="Message_Specifications"/>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_SendRequirements" name="Send requirements to manufacturing teams" messageRef="Message_Requirements"/>
+    <bpmn:receiveTask id="Task_ReceiveParts" name="Receive individual manufactured parts" messageRef="Message_Parts"/>
+    <bpmn:task id="Task_AssembleInterior" name="Assemble airplane interior"/>
+    <bpmn:parallelGateway id="Gateway_TestSplit" name="Conduct flight and prepare protocol"/>
+    <bpmn:task id="Task_TestFlight" name="Conduct test flight"/>
+    <bpmn:task id="Task_CreateTestProtocol" name="Create test protocol during flight"/>
+    <bpmn:parallelGateway id="Gateway_TestJoin" name="Flight and protocol ready"/>
+    <bpmn:sendTask id="Task_SendTestProtocol" name="Send test protocol to customer" messageRef="Message_TestProtocol"/>
+    <bpmn:sendTask id="Task_DeliverPlane" name="Deliver plane to customer" messageRef="Message_Delivery"/>
+    <bpmn:intermediateCatchEvent id="Event_ReceiveConfirmation" name="Delivery confirmation received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Confirmation" messageRef="Message_Confirmation"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End_Producer" name="Delivery confirmed"/>
+
+    <bpmn:sequenceFlow id="Flow_Producer_1" sourceRef="Start_ReceiveSpecifications" targetRef="Task_SendRequirements"/>
+    <bpmn:sequenceFlow id="Flow_Producer_2" sourceRef="Task_SendRequirements" targetRef="Task_ReceiveParts"/>
+    <bpmn:sequenceFlow id="Flow_Producer_3" sourceRef="Task_ReceiveParts" targetRef="Task_AssembleInterior"/>
+    <bpmn:sequenceFlow id="Flow_Producer_4" sourceRef="Task_AssembleInterior" targetRef="Gateway_TestSplit"/>
+    <bpmn:sequenceFlow id="Flow_Producer_5" sourceRef="Gateway_TestSplit" targetRef="Task_TestFlight"/>
+    <bpmn:sequenceFlow id="Flow_Producer_6" sourceRef="Gateway_TestSplit" targetRef="Task_CreateTestProtocol"/>
+    <bpmn:sequenceFlow id="Flow_Producer_7" sourceRef="Task_TestFlight" targetRef="Gateway_TestJoin"/>
+    <bpmn:sequenceFlow id="Flow_Producer_8" sourceRef="Task_CreateTestProtocol" targetRef="Gateway_TestJoin"/>
+    <bpmn:sequenceFlow id="Flow_Producer_9" sourceRef="Gateway_TestJoin" targetRef="Task_SendTestProtocol"/>
+    <bpmn:sequenceFlow id="Flow_Producer_10" sourceRef="Task_SendTestProtocol" targetRef="Task_DeliverPlane"/>
+    <bpmn:sequenceFlow id="Flow_Producer_11" sourceRef="Task_DeliverPlane" targetRef="Event_ReceiveConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_Producer_12" sourceRef="Event_ReceiveConfirmation" targetRef="End_Producer"/>
+  </bpmn:process>
+</bpmn:definitions>

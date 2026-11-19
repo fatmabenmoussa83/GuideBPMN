@@ -1,0 +1,305 @@
+{
+ "id": "16",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 28,
+  "T6": 7
+ },
+ "first_pass_error_counts": {
+  "T5": 40,
+  "T6": 7
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines SUB-01 (The reference models the unordered, must-complete risk activities and the investigation's activities as flat tasks joined by two parallel gateways, with the conditional activity behind an exclusive gateway. The generated model instead wrapped the investigation in an embedded subprocess (X3), replaced the parallel gateways with sequence or no joins (M7, M8), and lost the conditional sub-branch (M3))",
+   "guideline_id": "LRN-040",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines SUB-03 (The generated model replaces the reference's follow-up task after the 'High risk identified?' decision with an embedded subprocess carrying its own start and end events (X3, X4, X5), so the reference task is reported missing (M3). The same pattern appears where the reference has a plain closing task that the generated model turns into an end event (M4, X6). The reference decision branches for revi)",
+   "guideline_id": "LRN-041",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-041 (The records show the generator dropped the described outcome actions ('Approve report', 'Send report for revision', 'Launch detailed investigation') and their flows from the exclusive gateways, while the description (S10, S14, S15) states each action on its own outcome. LRN-041 already requires a described follow-up action on an exclusive branch to be modeled as its own task on that branch, so the)",
+   "guideline_id": "LRN-041",
+   "ref": "LRN-041",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines FID-01 (Six reference tasks are missing, and most of them are actions that follow a gateway branch: approval, sending back for revision, launching an investigation, and completing risk mitigation. In the generated model these branches end at the gateway or at an end event. The end-of-process closing action was also replaced by an end event (X3). The pattern is consistent across the description, so a gener)",
+   "guideline_id": "LRN-042",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-042 (Four reference tasks sit on exclusive gateway branches (M1, M3, M5, M6) and are missing from the generated model, while the description states a named action for each branch (S10, S14). The generator instead left the gateway flows bare or replaced the branch with a different element. The corresponding learned guideline already covers this, so the proposal restates its trigger in general terms with)",
+   "guideline_id": "LRN-042",
+   "ref": "LRN-042",
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-030 (Reference task \"Close audit process\" has no counterpart, and the generator used an end event \"Audit process closed\" in its place (X3). The description states closing as a distinct action after archiving. Replacing a described action with an end event loses that step, which is the pattern LRN-030 already covers. The missing branch tasks (M1, M3, M5, M6) follow the pattern of LRN-041 and LRN-042 and)",
+   "guideline_id": "LRN-030",
+   "ref": "LRN-030",
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-040",
+   "instruction": "When the description lists several activities that are performed together with no stated order and must all be finished before a later step, and one of those activities happens only in certain cases, so it is conditional: Model each fixed activity as its own task in a separate branch of a parallel gateway split. Place the conditional activity behind an exclusive gateway inside its own branch, with one outgoing flow for the case where it happens and one for the case where it does not. Join all branches with a parallel gateway before the later step. Do not wrap these activities in an embedded subprocess, and do not chain them in sequence.",
+   "situation": "the description lists several activities that are performed together with no stated order and must all be finished before a later step, and one of those activities happens only in certain cases, so it is conditional",
+   "source": "learned guideline (refines SUB-01)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-041",
+   "instruction": "When the description states that an exclusive decision leads to one follow-up action on one outgoing branch, and that action is described as a single step with no further steps or outcomes of its own: Model the follow-up action as a single task placed on the outgoing branch of the exclusive gateway, named for the action it performs. Do not replace it with an embedded subprocess carrying its own start and end events, and do not omit it. Route the branch onward to the shared continuation.",
+   "situation": "the description states that an exclusive decision leads to one follow-up action on one outgoing branch, and that action is described as a single step with no further steps or outcomes of its own",
+   "source": "learned guideline (refines SUB-03)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-042",
+   "instruction": "When the description states that a branch of a decision or condition is followed by a named action that a participant performs on that branch (for example an action taken when a condition holds, or one of several options the participant may choose), and the generated model leaves that branch with only the gateway flow, replaces the action with an event or a bare outcome label, or drops it: Model each such action as a task on the branch of the gateway it belongs to, labeled with the action's verb phrase from the description and keeping its stated object and qualifiers, and place it before the next step that depends on it. Do not replace the action with an end event, a start event, or a bare outcome label, and do not leave the branch without it.",
+   "situation": "the description states that a branch of a decision or condition is followed by a named action that a participant performs on that branch (for example an action taken when a condition holds, or one of several options the participant may choose), and the generated model leaves that branch with only the gateway flow, replaces the action with an event or a bare outcome label, or drops it",
+   "source": "learned guideline (refines FID-01)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-030",
+   "instruction": "When the description states that a check by one party yields a positive outcome on one branch, that this positive outcome is followed by a described action with several consequences occurring together, and that the process ends after a later described step is completed: Model the check as an exclusive gateway with the positive and negative outcomes as separate outgoing flows. On the positive branch, place an explicit task for the described action, using the description's wording, before any split. Route that task into a parallel gateway that splits the concurrent consequences, and model each consequence as its own task in a separate branch. Join the branches with a parallel gateway, then place the described later step as its own task before a single end event named for the process end. Do not skip the action task or connect the positive branch directly to the parallel split.",
+   "situation": "the description states that a final step is performed to close the whole process, after other described steps such as distributing and archiving the result, and that the process then ends",
+   "source": "learned guideline (refines GW-04)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

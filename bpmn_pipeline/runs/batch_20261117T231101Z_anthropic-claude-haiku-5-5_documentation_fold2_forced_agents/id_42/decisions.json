@@ -1,0 +1,312 @@
+{
+ "id": "42",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 38,
+  "T6": 6
+ },
+ "first_pass_error_counts": {
+  "T5": 41,
+  "T6": 6
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-055 (The records show that the reference splits the symptom description and the fridge-type collection into parallel branches (M1, M2, M3) before sending them together (S2). The generated model has no parallel gateways and no manual task for the type collection. The learned guideline LRN-055 already covers the gateway pattern, so this proposal only adds the manual-task case for the hand-performed item.)",
+   "guideline_id": "LRN-055",
+   "ref": "LRN-055",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-070 (cosine 0.89)",
+   "guideline_id": "LRN-070",
+   "ref": "LRN-070",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-031 (The generated model modeled the early departure as a task named 'Leave without repair' (X16) and routed the normal path to a separate 'Repair completed' end event (X15). The reference instead uses an exclusive gateway whose non-completion branch goes directly to its own end event (F8, M1), while the completed branch continues through the remaining steps to rating and the end (F7, F2). The descript)",
+   "guideline_id": "LRN-031",
+   "ref": "LRN-031",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-022 (The generated model has an extra completion end event (X15) and lacks the separate end event for the unfinished outcome that the reference places after the rating step (M1). The gateway labels in P1 and P2 are matched to the wrong reference gateways, which indicates the branching after the visit and the optional rating were not modeled the same way. The description says the visit can end without r)",
+   "guideline_id": "LRN-022",
+   "ref": "LRN-022",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-031 (The generated model models the unfinished outcome as the task \"Leave without repair (additional parts needed)\" that then leads to an end event (X16), and places the decision in the wrong position. The reference places an exclusive gateway after the outcome-establishing steps, sends the not-repairable outcome directly to an end event (M1, F8), and sends the repairable outcome through the rating ste)",
+   "guideline_id": "LRN-031",
+   "ref": "LRN-031",
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: because",
+   "guideline_id": "EXS-103",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-055",
+   "instruction": "When the description lists several activities that are carried out concurrently or in no stated order, and a later step starts only after all of them have completed: Model these activities as parallel branches: place a parallel gateway (split) before them, with one outgoing branch per activity and no conditions on the branches. Merge the branches with a matching parallel gateway (join) placed before the later step, so that step starts only after every branch has completed. Do not order the activities arbitrarily, do not use an exclusive gateway for the split or join, and do not let the later step follow any single branch.",
+   "situation": "the description says that a party must provide two or more items of information together in one message, and at least one item is a separate action the party performs by hand (without a software system) before the message is sent",
+   "source": "learned guideline (refines GW-05)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-070",
+   "instruction": "When The description says the process sends a request or places an order with an outside party, and the next step can only happen after that party's reply or confirmation arrives, without describing a decision based on that reply.: Model the wait for the reply or confirmation as an intermediate message catch event placed after the request activity and before the step that depends on it, connected by sequence flows in that order. Do not model the wait as a task, and do not leave it out so that the next step follows the request directly.",
+   "situation": "the description says that a party will arrive or act at a random or unspecified time after something has been arranged, and the next activity can only start once that arrival or action has occurred",
+   "source": "learned guideline (refines ACT-05)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-031",
+   "instruction": "When the description states a decision whose negative outcome ends the process separately, while its positive outcome leads to a final step that concludes the process: Model an exclusive gateway at the point where the decision is taken, after the checks it depends on. Route the negative outcome to its own end event. Route the positive outcome through the final step and let that step connect to the single end event for the positive path. Do not add a second concluding end event after the final step, and do not place the decision after the final step unless the description says the decision follows it.",
+   "situation": "the description states that an activity may sometimes be left unfinished, with its main work not done, when a required item is not available, so the process has a non-completion outcome alongside the normal completion outcome",
+   "source": "learned guideline (refines PROC-04)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-022",
+   "instruction": "When the description states that a later step continues only if an assessment result is positive (for example, \"if approved, ...\") and gives no alternative handling for the negative result, so the process must end on that branch: Place an exclusive gateway directly after the assessment activity. Label one outgoing flow with the positive condition, leading to the continuing activities. Label the other outgoing flow with the negative condition, leading to its own end event. Keep a dedicated decision gateway with the stated condition on the flow, and do not leave the negative outcome as an unlabeled or unconnected path.",
+   "situation": "the description states that a service activity may end without the item being finished, so the case leaves the process, while the finished outcome continues to a confirmation step and then to an optional feedback step (such as rating) that is not required for completion",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "EXS-103",
+   "instruction": "When the description says a visit by an outside party may end with the work still unfinished because something is still needed, so a later visit is required, and it describes an optional follow-up, such as a rating, that comes after the work is completed: After each such visit, model an exclusive gateway placed directly after the visit and before any optional follow-up. Its question asks whether the work is finished on this visit. The not-finished branch returns to the event or task that waits for the next visit. The finished branch continues to the optional follow-up, and the process then ends with an end event. Do not place this completion decision after the optional follow-up, and do not leave the not-finished branch without a path back to the waiting step.",
+   "situation": "the description says a visit by an outside party may end with the work still unfinished because something is still needed, so a later visit is required, and it describes an optional follow-up, such as a rating, that comes after the work is completed",
+   "source": "example-specific guideline",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

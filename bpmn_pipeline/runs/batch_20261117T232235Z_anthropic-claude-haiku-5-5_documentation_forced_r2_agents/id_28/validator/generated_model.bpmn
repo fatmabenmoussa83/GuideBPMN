@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Internship" targetNamespace="http://example.org/bpmn/internship">
+  <bpmn:message id="Msg_Offer" name="Offer"/>
+  <bpmn:message id="Msg_AcceptOffer" name="Offer accepted"/>
+  <bpmn:message id="Msg_DenyOffer" name="Offer denied"/>
+  <bpmn:message id="Msg_CompanyStatusUpdate" name="Company status update"/>
+  <bpmn:message id="Msg_Tweet" name="Recommendation tweet"/>
+
+  <bpmn:collaboration id="Collaboration_Internship">
+    <bpmn:participant id="Participant_Student" name="Student" processRef="Process_Student"/>
+    <bpmn:participant id="Participant_Company" name="Company"/>
+    <bpmn:participant id="Participant_Twitter" name="Twitter"/>
+
+    <bpmn:messageFlow id="MessageFlow_Offer" name="Offer" sourceRef="Participant_Company" targetRef="IntermediateCatchEvent_OfferReceived" messageRef="Msg_Offer"/>
+    <bpmn:messageFlow id="MessageFlow_AcceptOffer" name="Offer accepted" sourceRef="SendTask_AcceptOffer" targetRef="Participant_Company" messageRef="Msg_AcceptOffer"/>
+    <bpmn:messageFlow id="MessageFlow_DenyOffer" name="Offer denied" sourceRef="SendTask_DenyOffer" targetRef="Participant_Company" messageRef="Msg_DenyOffer"/>
+    <bpmn:messageFlow id="MessageFlow_CompanyStatusUpdate" name="Company status update" sourceRef="Participant_Company" targetRef="ReceiveTask_CompanyStatusUpdates" messageRef="Msg_CompanyStatusUpdate"/>
+    <bpmn:messageFlow id="MessageFlow_Tweet" name="Recommendation tweet" sourceRef="SendTask_TweetRecommendation" targetRef="Participant_Twitter" messageRef="Msg_Tweet"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Student" name="Internship (Student)" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Start" name="Start internship search">
+      <bpmn:outgoing>Flow_Start</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="UserTask_EnterTopic" name="Enter topic of interest">
+      <bpmn:incoming>Flow_Start</bpmn:incoming>
+      <bpmn:outgoing>Flow_TopicToSalary</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="UserTask_EnterSalary" name="Enter desired salary">
+      <bpmn:incoming>Flow_TopicToSalary</bpmn:incoming>
+      <bpmn:outgoing>Flow_SalaryToExperience</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="UserTask_EnterExperience" name="Enter experience">
+      <bpmn:incoming>Flow_SalaryToExperience</bpmn:incoming>
+      <bpmn:outgoing>Flow_ExperienceToHobbies</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="UserTask_EnterHobbies" name="Enter hobbies">
+      <bpmn:incoming>Flow_ExperienceToHobbies</bpmn:incoming>
+      <bpmn:outgoing>Flow_HobbiesToMerge</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_OffersMerge" name="Offers pending">
+      <bpmn:incoming>Flow_HobbiesToMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_DenyToMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToOffer</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:intermediateCatchEvent id="IntermediateCatchEvent_OfferReceived" name="Offer received">
+      <bpmn:incoming>Flow_ToOffer</bpmn:incoming>
+      <bpmn:outgoing>Flow_OfferToReview</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_OfferReceived" messageRef="Msg_Offer"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:userTask id="UserTask_ReviewOffer" name="Review offer">
+      <bpmn:incoming>Flow_OfferToReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToDecision</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_OfferDecision" name="Accept offer?" default="Flow_OfferDenied">
+      <bpmn:incoming>Flow_ToDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_OfferAccepted</bpmn:outgoing>
+      <bpmn:outgoing>Flow_OfferDenied</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sendTask id="SendTask_AcceptOffer" name="Send offer acceptance" messageRef="Msg_AcceptOffer">
+      <bpmn:incoming>Flow_OfferAccepted</bpmn:incoming>
+      <bpmn:outgoing>Flow_AcceptToInvalidate</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:serviceTask id="ServiceTask_InvalidateOtherOffers" name="Invalidate all other offers">
+      <bpmn:incoming>Flow_AcceptToInvalidate</bpmn:incoming>
+      <bpmn:outgoing>Flow_InvalidateToSplit</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sendTask id="SendTask_DenyOffer" name="Send offer denial" messageRef="Msg_DenyOffer">
+      <bpmn:incoming>Flow_OfferDenied</bpmn:incoming>
+      <bpmn:outgoing>Flow_DenyToMerge</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:parallelGateway id="Gateway_InternshipSplit" name="Internship running">
+      <bpmn:incoming>Flow_InvalidateToSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_SplitToWrite</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SplitToReceive</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:userTask id="UserTask_WriteStatusUpdates" name="Write at least 3 status updates about internship every week">
+      <bpmn:incoming>Flow_SplitToWrite</bpmn:incoming>
+      <bpmn:outgoing>Flow_WriteToJoin</bpmn:outgoing>
+      <bpmn:standardLoopCharacteristics testBefore="false" loopMaximum="3"/>
+    </bpmn:userTask>
+
+    <bpmn:receiveTask id="ReceiveTask_CompanyStatusUpdates" name="Receive 3 status updates about student from company" messageRef="Msg_CompanyStatusUpdate">
+      <bpmn:incoming>Flow_SplitToReceive</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReceiveToJoin</bpmn:outgoing>
+      <bpmn:standardLoopCharacteristics testBefore="false" loopMaximum="3"/>
+    </bpmn:receiveTask>
+
+    <bpmn:parallelGateway id="Gateway_InternshipJoin" name="Internship finished">
+      <bpmn:incoming>Flow_WriteToJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_ReceiveToJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_JoinToTweet</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:sendTask id="SendTask_TweetRecommendation" name="Tweet recommendation of company to friend" messageRef="Msg_Tweet">
+      <bpmn:incoming>Flow_JoinToTweet</bpmn:incoming>
+      <bpmn:outgoing>Flow_TweetToEnd</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false"/>
+    </bpmn:sendTask>
+
+    <bpmn:endEvent id="EndEvent_End" name="Recommendations sent">
+      <bpmn:incoming>Flow_TweetToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start" sourceRef="StartEvent_Start" targetRef="UserTask_EnterTopic"/>
+    <bpmn:sequenceFlow id="Flow_TopicToSalary" sourceRef="UserTask_EnterTopic" targetRef="UserTask_EnterSalary"/>
+    <bpmn:sequenceFlow id="Flow_SalaryToExperience" sourceRef="UserTask_EnterSalary" targetRef="UserTask_EnterExperience"/>
+    <bpmn:sequenceFlow id="Flow_ExperienceToHobbies" sourceRef="UserTask_EnterExperience" targetRef="UserTask_EnterHobbies"/>
+    <bpmn:sequenceFlow id="Flow_HobbiesToMerge" sourceRef="UserTask_EnterHobbies" targetRef="Gateway_OffersMerge"/>
+    <bpmn:sequenceFlow id="Flow_ToOffer" sourceRef="Gateway_OffersMerge" targetRef="IntermediateCatchEvent_OfferReceived"/>
+    <bpmn:sequenceFlow id="Flow_OfferToReview" sourceRef="IntermediateCatchEvent_OfferReceived" targetRef="UserTask_ReviewOffer"/>
+    <bpmn:sequenceFlow id="Flow_ToDecision" sourceRef="UserTask_ReviewOffer" targetRef="Gateway_OfferDecision"/>
+    <bpmn:sequenceFlow id="Flow_OfferAccepted" sourceRef="Gateway_OfferDecision" targetRef="SendTask_AcceptOffer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${offerAccepted == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_OfferDenied" sourceRef="Gateway_OfferDecision" targetRef="SendTask_DenyOffer"/>
+    <bpmn:sequenceFlow id="Flow_AcceptToInvalidate" sourceRef="SendTask_AcceptOffer" targetRef="ServiceTask_InvalidateOtherOffers"/>
+    <bpmn:sequenceFlow id="Flow_InvalidateToSplit" sourceRef="ServiceTask_InvalidateOtherOffers" targetRef="Gateway_InternshipSplit"/>
+    <bpmn:sequenceFlow id="Flow_DenyToMerge" sourceRef="SendTask_DenyOffer" targetRef="Gateway_OffersMerge"/>
+    <bpmn:sequenceFlow id="Flow_SplitToWrite" sourceRef="Gateway_InternshipSplit" targetRef="UserTask_WriteStatusUpdates"/>
+    <bpmn:sequenceFlow id="Flow_SplitToReceive" sourceRef="Gateway_InternshipSplit" targetRef="ReceiveTask_CompanyStatusUpdates"/>
+    <bpmn:sequenceFlow id="Flow_WriteToJoin" sourceRef="UserTask_WriteStatusUpdates" targetRef="Gateway_InternshipJoin"/>
+    <bpmn:sequenceFlow id="Flow_ReceiveToJoin" sourceRef="ReceiveTask_CompanyStatusUpdates" targetRef="Gateway_InternshipJoin"/>
+    <bpmn:sequenceFlow id="Flow_JoinToTweet" sourceRef="Gateway_InternshipJoin" targetRef="SendTask_TweetRecommendation"/>
+    <bpmn:sequenceFlow id="Flow_TweetToEnd" sourceRef="SendTask_TweetRecommendation" targetRef="EndEvent_End"/>
+  </bpmn:process>
+</bpmn:definitions>

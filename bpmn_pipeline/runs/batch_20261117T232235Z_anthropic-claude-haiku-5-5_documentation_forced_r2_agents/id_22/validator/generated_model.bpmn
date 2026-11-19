@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Subrogation" targetNamespace="http://example.org/bpmn/subrogation">
+  <bpmn:message id="Msg_PaymentRequest" name="Payment request"/>
+  <bpmn:message id="Msg_PaymentReceived" name="Payment received"/>
+  <bpmn:message id="Msg_Disagreement" name="Insurant disagrees with recourse"/>
+
+  <bpmn:collaboration id="Collab_Subrogation" name="Subrogation and recourse">
+    <bpmn:participant id="Participant_Handler" name="Claims handler" processRef="Process_Subrogation"/>
+    <bpmn:participant id="Participant_Insurant" name="Insurant"/>
+    <bpmn:messageFlow id="MsgFlow_PaymentRequest" name="Payment request" messageRef="Msg_PaymentRequest" sourceRef="Task_SendPaymentRequest" targetRef="Participant_Insurant"/>
+    <bpmn:messageFlow id="MsgFlow_PaymentReceived" name="Payment received" messageRef="Msg_PaymentReceived" sourceRef="Participant_Insurant" targetRef="Event_PaymentReceived"/>
+    <bpmn:messageFlow id="MsgFlow_Disagreement" name="Insurant disagrees with recourse" messageRef="Msg_Disagreement" sourceRef="Participant_Insurant" targetRef="Event_Disagreement"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Subrogation" name="Subrogation and recourse handling" isExecutable="false">
+    <bpmn:startEvent id="Start_Case" name="Case opened"/>
+
+    <bpmn:task id="Task_ObtainSubrogationInfo" name="Obtain information on possible subrogation"/>
+    <bpmn:exclusiveGateway id="Gateway_SubrogationSplit" name="Subrogation possible?"/>
+    <bpmn:endEvent id="End_NoSubrogation" name="Process ended (no subrogation possible)"/>
+
+    <bpmn:task id="Task_CheckCase" name="Check case"/>
+    <bpmn:exclusiveGateway id="Gateway_RecourseSplit" name="Recourse really possible?"/>
+    <bpmn:task id="Task_CloseCaseNoRecourse" name="Close case"/>
+    <bpmn:endEvent id="End_NoRecourse" name="Case closed (no recourse possible)"/>
+
+    <bpmn:sendTask id="Task_SendPaymentRequest" name="Send request for payment to insurant" messageRef="Msg_PaymentRequest"/>
+    <bpmn:task id="Task_CreateReminder" name="Create reminder"/>
+    <bpmn:eventBasedGateway id="Gateway_AwaitResponse" name="Await insurant reply or disagreement deadline"/>
+
+    <bpmn:intermediateCatchEvent id="Event_PaymentReceived" name="Payment received">
+      <bpmn:messageEventDefinition id="MED_PaymentReceived" messageRef="Msg_PaymentReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_Disagreement" name="Insurant disagrees with recourse">
+      <bpmn:messageEventDefinition id="MED_Disagreement" messageRef="Msg_Disagreement"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_DisagreementDeadline" name="Disagreement deadline reached">
+      <bpmn:timerEventDefinition id="TED_DisagreementDeadline"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:task id="Task_BookPayment" name="Make booking"/>
+    <bpmn:task id="Task_ClosePaidCase" name="Close case"/>
+    <bpmn:endEvent id="End_Paid" name="Case closed (paid)"/>
+
+    <bpmn:task id="Task_CheckReasoning" name="Check insurant's reasoning"/>
+    <bpmn:exclusiveGateway id="Gateway_ReasoningSplit" name="Insurant right?"/>
+    <bpmn:task id="Task_CloseCaseInsurantRight" name="Close case"/>
+    <bpmn:endEvent id="End_InsurantRight" name="Case closed (insurant right)"/>
+
+    <bpmn:task id="Task_ForwardToAgency" name="Forward case to collection agency"/>
+    <bpmn:endEvent id="End_Forwarded" name="Case forwarded to collection agency"/>
+
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="Start_Case" targetRef="Task_ObtainSubrogationInfo"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_ObtainSubrogationInfo" targetRef="Gateway_SubrogationSplit"/>
+    <bpmn:sequenceFlow id="Flow_03" name="No" sourceRef="Gateway_SubrogationSplit" targetRef="End_NoSubrogation"/>
+    <bpmn:sequenceFlow id="Flow_04" name="Yes" sourceRef="Gateway_SubrogationSplit" targetRef="Task_CheckCase"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_CheckCase" targetRef="Gateway_RecourseSplit"/>
+    <bpmn:sequenceFlow id="Flow_06" name="No" sourceRef="Gateway_RecourseSplit" targetRef="Task_CloseCaseNoRecourse"/>
+    <bpmn:sequenceFlow id="Flow_07" name="Yes" sourceRef="Gateway_RecourseSplit" targetRef="Task_SendPaymentRequest"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_CloseCaseNoRecourse" targetRef="End_NoRecourse"/>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_SendPaymentRequest" targetRef="Task_CreateReminder"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_CreateReminder" targetRef="Gateway_AwaitResponse"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Gateway_AwaitResponse" targetRef="Event_PaymentReceived"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Gateway_AwaitResponse" targetRef="Event_Disagreement"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Gateway_AwaitResponse" targetRef="Event_DisagreementDeadline"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Event_PaymentReceived" targetRef="Task_BookPayment"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_BookPayment" targetRef="Task_ClosePaidCase"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Task_ClosePaidCase" targetRef="End_Paid"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Event_Disagreement" targetRef="Task_CheckReasoning"/>
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Task_CheckReasoning" targetRef="Gateway_ReasoningSplit"/>
+    <bpmn:sequenceFlow id="Flow_19" name="Yes" sourceRef="Gateway_ReasoningSplit" targetRef="Task_CloseCaseInsurantRight"/>
+    <bpmn:sequenceFlow id="Flow_20" sourceRef="Task_CloseCaseInsurantRight" targetRef="End_InsurantRight"/>
+    <bpmn:sequenceFlow id="Flow_21" name="No" sourceRef="Gateway_ReasoningSplit" targetRef="Task_ForwardToAgency"/>
+    <bpmn:sequenceFlow id="Flow_22" sourceRef="Event_DisagreementDeadline" targetRef="Task_ForwardToAgency"/>
+    <bpmn:sequenceFlow id="Flow_23" sourceRef="Task_ForwardToAgency" targetRef="End_Forwarded"/>
+  </bpmn:process>
+</bpmn:definitions>

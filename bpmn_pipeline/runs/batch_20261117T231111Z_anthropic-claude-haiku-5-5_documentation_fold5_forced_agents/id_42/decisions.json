@@ -1,0 +1,312 @@
+{
+ "id": "42",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 42,
+  "T6": 9
+ },
+ "first_pass_error_counts": {
+  "T5": 45,
+  "T6": 10
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-012 (The reference has an intermediate catch event \"Wait until service facility arrives\" between the appointment step and the repair step, but the generated model has no counterpart. The description states that the facility makes an appointment and then arrives at a random time before repairing, so the arrival is an external occurrence the next step depends on. LRN-012 already covers waiting for an ext)",
+   "guideline_id": "LRN-012",
+   "ref": "LRN-012",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-012 (The reference has an intermediate catch event between the scheduling step and the repair, and the description says the service facility arrives at a random time and that the repair depends on that visit. The generated model lacks this wait. LRN-012 already covers the same case (an external milestone the process waits for, modeled as a catch event rather than a task), so this guideline restates it )",
+   "guideline_id": "LRN-012",
+   "ref": "LRN-012",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "generalized",
+   "detail": "general guideline covering EXS-060 (example 30) and this example",
+   "guideline_id": "LRN-094",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: symptoms, type",
+   "guideline_id": "EXS-092",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline (The description states that the outside party sometimes leaves without completing the repair because a part is missing, so the job must wait again for that party. The generated model has an attempt task and a gateway, but no loop back to the wait (F17 and M5 are missing), and it adds a separate ending instead (X13, X12). None of the documented or learned guidelines covers a retry loop that returns)",
+   "guideline_id": "LRN-096",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-010 (cosine 0.88)",
+   "guideline_id": "LRN-010",
+   "ref": "LRN-010",
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-012",
+   "instruction": "When the description says the process waits until an external milestone is reached (for example, an item arriving at a recipient's location) and later steps depend on that milestone having occurred: Model the wait as an intermediate catch event, not a task, and name that catch event with the milestone as the description states it, so the stage stays identifiable in the model. Do not replace the wait with a task, and do not leave the milestone unnamed or rename it to a generic label.",
+   "situation": "the description says an external party will come to the process at a time not fixed in advance, and a later activity can only start after that arrival has happened",
+   "source": "learned guideline (refines EVT-03)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-094",
+   "instruction": "When the description says that after a prior step, the process must wait for an external party to respond or arrive at a time not fixed in advance, and a later step or decision depends on that response or arrival: Model an intermediate catch event that represents the wait between the prior step and the dependent step or gateway. Do not fold the waiting into the prior task, do not model the wait as a separate task, and do not connect the two steps with a plain sequence flow that hides the wait.",
+   "situation": "the description says that after a prior step, the process must wait for an external party to respond or arrive at a time not fixed in advance, and a later step or decision depends on that response or arrival",
+   "source": "learned guideline (refines EVT-03), generalized from EXS-060",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "EXS-092",
+   "instruction": "When the description says that a party itself gathers or describes information (for example symptoms or an item's type) and then sends it on to another party, with no statement that the sender waits for a reply: Model the gathering or describing of the information as a task performed by that party (a manual or user task, according to who does the work), placed directly before a separate send task that transmits the information. Do not model the gathering step as a receive task, and do not omit it. Use a receive task only when the description states that the process waits for an incoming message.",
+   "situation": "the description says that a party itself gathers or describes information (for example symptoms or an item's type) and then sends it on to another party, with no statement that the sender waits for a reply",
+   "source": "example-specific guideline",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-096",
+   "instruction": "When the description says that a visit or attempt by an outside party may end without completing the job, so that the job must wait for a further visit by that party before it can proceed: Model the attempt as a task that follows the intermediate catch event for the party's visit. Place an exclusive gateway after the attempt. Give one outgoing flow that continues to the step that depends on the completed job. Give a second outgoing flow that returns to the same intermediate catch event, so the process waits again for the party. Do not end the process at the failed attempt, and do not model the return as a plain flow back to the earlier task that skips the wait.",
+   "situation": "the description says that a visit or attempt by an outside party may end without completing the job, so that the job must wait for a further visit by that party before it can proceed",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-010",
+   "instruction": "When the description states that two or more activities are carried out at the same time (one of them ongoing, such as monitoring, while others such as follow-up or analysis run in parallel) and a later step, such as the closing of the process, is described only after these activities are complete: Open the concurrent activities with a parallel gateway (split), so that all branches start. Close the branches with a parallel gateway (join) before the step that follows them, and connect the join to the concluding step with a sequence flow. Do not use exclusive gateways for these branches, and do not add conditions to the parallel flows.",
+   "situation": "the description says that a single send or hand-over step must carry several distinct pieces of information, and each piece must first be obtained through its own activity",
+   "source": "learned guideline (refines GW-05)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

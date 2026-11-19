@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   id="Definitions_ComplianceAudit"
+                   targetNamespace="http://example.org/bpmn/compliance-audit"
+                   expressionLanguage="http://www.w3.org/1999/XPath"
+                   typeLanguage="http://www.w3.org/2001/XMLSchema">
+  <bpmn:message id="Msg_SubmitDocs" name="Audit documentation submitted"/>
+  <bpmn:message id="Msg_RequestFinal" name="Final audit requested"/>
+  <bpmn:message id="Msg_FinalResult" name="Final audit result"/>
+
+  <bpmn:collaboration id="Collaboration_ComplianceAudit">
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_Company"/>
+    <bpmn:participant id="Participant_Auditor" name="External Auditor"/>
+    <bpmn:messageFlow id="MF_SubmitDocs" name="Submit documentation" sourceRef="SendTask_SubmitDocs" targetRef="Participant_Auditor" messageRef="Msg_SubmitDocs"/>
+    <bpmn:messageFlow id="MF_RequestFinal" name="Request final audit" sourceRef="SendTask_RequestFinal" targetRef="Participant_Auditor" messageRef="Msg_RequestFinal"/>
+    <bpmn:messageFlow id="MF_FinalResult" name="Send final audit result" sourceRef="Participant_Auditor" targetRef="ReceiveTask_FinalResult" messageRef="Msg_FinalResult"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Company" name="Company Compliance Audit" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Audit" name="Compliance audit scheduled">
+      <bpmn:outgoing>Flow_Start_Schedule</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_ScheduleAudit" name="Schedule compliance audit">
+      <bpmn:incoming>Flow_Start_Schedule</bpmn:incoming>
+      <bpmn:outgoing>Flow_Schedule_Split</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="Gateway_PrepSplit" name="Start preparation">
+      <bpmn:incoming>Flow_Schedule_Split</bpmn:incoming>
+      <bpmn:outgoing>Flow_Split_Docs</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Split_Evidence</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Split_SelfAssess</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_PrepareDocs" name="Prepare internal documentation">
+      <bpmn:incoming>Flow_Split_Docs</bpmn:incoming>
+      <bpmn:outgoing>Flow_Docs_Join</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_GatherEvidence" name="Gather evidence">
+      <bpmn:incoming>Flow_Split_Evidence</bpmn:incoming>
+      <bpmn:outgoing>Flow_Evidence_Join</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_SelfAssessment" name="Conduct self-assessment">
+      <bpmn:incoming>Flow_Split_SelfAssess</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelfAssess_Join</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Gateway_PrepJoin" name="Preparation complete">
+      <bpmn:incoming>Flow_Docs_Join</bpmn:incoming>
+      <bpmn:incoming>Flow_Evidence_Join</bpmn:incoming>
+      <bpmn:incoming>Flow_SelfAssess_Join</bpmn:incoming>
+      <bpmn:outgoing>Flow_Join_Submit</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sendTask id="SendTask_SubmitDocs" name="Submit documentation to external auditor" messageRef="Msg_SubmitDocs">
+      <bpmn:incoming>Flow_Join_Submit</bpmn:incoming>
+      <bpmn:outgoing>Flow_Submit_Review</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:task id="Task_AuditorReview" name="Auditors review processes and identify gaps or issues">
+      <bpmn:incoming>Flow_Submit_Review</bpmn:incoming>
+      <bpmn:outgoing>Flow_Review_Corrections</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Corrections" name="Implement corrections and improvements">
+      <bpmn:incoming>Flow_Review_Corrections</bpmn:incoming>
+      <bpmn:outgoing>Flow_Corrections_RequestFinal</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="SendTask_RequestFinal" name="Request final audit" messageRef="Msg_RequestFinal">
+      <bpmn:incoming>Flow_Corrections_RequestFinal</bpmn:incoming>
+      <bpmn:outgoing>Flow_RequestFinal_Result</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="ReceiveTask_FinalResult" name="Receive final audit result" messageRef="Msg_FinalResult">
+      <bpmn:incoming>Flow_RequestFinal_Result</bpmn:incoming>
+      <bpmn:outgoing>Flow_Result_Check</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="Gateway_CriteriaCheck" name="All criteria met?" default="Flow_NotMet">
+      <bpmn:incoming>Flow_Result_Check</bpmn:incoming>
+      <bpmn:outgoing>Flow_Met</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotMet</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_AwardCertification" name="Award certification">
+      <bpmn:incoming>Flow_Met</bpmn:incoming>
+      <bpmn:outgoing>Flow_Award_Issue</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_IssueDocuments" name="Issue official documents">
+      <bpmn:incoming>Flow_Award_Issue</bpmn:incoming>
+      <bpmn:outgoing>Flow_Issue_End</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_Certified" name="Certification process concluded">
+      <bpmn:incoming>Flow_Issue_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_NotCertified" name="Certification not awarded">
+      <bpmn:incoming>Flow_NotMet</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_Schedule" sourceRef="StartEvent_Audit" targetRef="Task_ScheduleAudit"/>
+    <bpmn:sequenceFlow id="Flow_Schedule_Split" sourceRef="Task_ScheduleAudit" targetRef="Gateway_PrepSplit"/>
+    <bpmn:sequenceFlow id="Flow_Split_Docs" sourceRef="Gateway_PrepSplit" targetRef="Task_PrepareDocs"/>
+    <bpmn:sequenceFlow id="Flow_Split_Evidence" sourceRef="Gateway_PrepSplit" targetRef="Task_GatherEvidence"/>
+    <bpmn:sequenceFlow id="Flow_Split_SelfAssess" sourceRef="Gateway_PrepSplit" targetRef="Task_SelfAssessment"/>
+    <bpmn:sequenceFlow id="Flow_Docs_Join" sourceRef="Task_PrepareDocs" targetRef="Gateway_PrepJoin"/>
+    <bpmn:sequenceFlow id="Flow_Evidence_Join" sourceRef="Task_GatherEvidence" targetRef="Gateway_PrepJoin"/>
+    <bpmn:sequenceFlow id="Flow_SelfAssess_Join" sourceRef="Task_SelfAssessment" targetRef="Gateway_PrepJoin"/>
+    <bpmn:sequenceFlow id="Flow_Join_Submit" sourceRef="Gateway_PrepJoin" targetRef="SendTask_SubmitDocs"/>
+    <bpmn:sequenceFlow id="Flow_Submit_Review" sourceRef="SendTask_SubmitDocs" targetRef="Task_AuditorReview"/>
+    <bpmn:sequenceFlow id="Flow_Review_Corrections" sourceRef="Task_AuditorReview" targetRef="Task_Corrections"/>
+    <bpmn:sequenceFlow id="Flow_Corrections_RequestFinal" sourceRef="Task_Corrections" targetRef="SendTask_RequestFinal"/>
+    <bpmn:sequenceFlow id="Flow_RequestFinal_Result" sourceRef="SendTask_RequestFinal" targetRef="ReceiveTask_FinalResult"/>
+    <bpmn:sequenceFlow id="Flow_Result_Check" sourceRef="ReceiveTask_FinalResult" targetRef="Gateway_CriteriaCheck"/>
+    <bpmn:sequenceFlow id="Flow_Met" name="All criteria met" sourceRef="Gateway_CriteriaCheck" targetRef="Task_AwardCertification">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${criteriaMet == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotMet" name="Not all criteria met" sourceRef="Gateway_CriteriaCheck" targetRef="EndEvent_NotCertified"/>
+    <bpmn:sequenceFlow id="Flow_Award_Issue" sourceRef="Task_AwardCertification" targetRef="Task_IssueDocuments"/>
+    <bpmn:sequenceFlow id="Flow_Issue_End" sourceRef="Task_IssueDocuments" targetRef="EndEvent_Certified"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,105 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_OnlineShopPurchase" targetNamespace="http://example.org/bpmn/online-shop-purchase">
+  <bpmn:process id="Process_OnlineShopPurchase" name="Online Shop Purchase" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_OrderStarted" name="Order started">
+      <bpmn:outgoing>Flow_Start_Login</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_LogIn" name="Log in to account">
+      <bpmn:incoming>Flow_Start_Login</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login_ItemsPaySplit</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="Gateway_ItemsPay_Split" name="Select items and set payment method">
+      <bpmn:incoming>Flow_Login_ItemsPaySplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_ItemsPaySplit_SelectItems</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ItemsPaySplit_SetPayment</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Task_SelectItems" name="Select items to purchase">
+      <bpmn:incoming>Flow_ItemsPaySplit_SelectItems</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelectItems_ItemsPayJoin</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_SetPaymentMethod" name="Set payment method">
+      <bpmn:incoming>Flow_ItemsPaySplit_SetPayment</bpmn:incoming>
+      <bpmn:outgoing>Flow_SetPayment_ItemsPayJoin</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="Gateway_ItemsPay_Join">
+      <bpmn:incoming>Flow_SelectItems_ItemsPayJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_SetPayment_ItemsPayJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_ItemsPayJoin_RewardSplit</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:parallelGateway id="Gateway_Reward_Split" name="Reward and payment">
+      <bpmn:incoming>Flow_ItemsPayJoin_RewardSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_RewardSplit_ChooseReward</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RewardSplit_PaymentSplit</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Task_ChooseReward" name="Choose free reward option">
+      <bpmn:incoming>Flow_RewardSplit_ChooseReward</bpmn:incoming>
+      <bpmn:outgoing>Flow_ChooseReward_RewardJoin</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Payment_Split" name="Payment option">
+      <bpmn:incoming>Flow_RewardSplit_PaymentSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_PaymentSplit_Pay</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PaymentSplit_Installment</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Pay" name="Pay">
+      <bpmn:incoming>Flow_PaymentSplit_Pay</bpmn:incoming>
+      <bpmn:outgoing>Flow_Pay_PaymentMerge</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_CompleteInstallment" name="Complete installment agreement">
+      <bpmn:incoming>Flow_PaymentSplit_Installment</bpmn:incoming>
+      <bpmn:outgoing>Flow_Installment_PaymentMerge</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Payment_Merge">
+      <bpmn:incoming>Flow_Pay_PaymentMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_Installment_PaymentMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_PaymentMerge_RewardJoin</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:parallelGateway id="Gateway_Reward_Join">
+      <bpmn:incoming>Flow_PaymentMerge_RewardJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_ChooseReward_RewardJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_RewardJoin_DeliveryMerge</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:exclusiveGateway id="Gateway_Delivery_Merge">
+      <bpmn:incoming>Flow_RewardJoin_DeliveryMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_ReturnItems_DeliveryMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_DeliveryMerge_Deliver</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_DeliverItems" name="Deliver items">
+      <bpmn:incoming>Flow_DeliveryMerge_Deliver</bpmn:incoming>
+      <bpmn:outgoing>Flow_Deliver_ReturnSplit</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Return_Split" name="Items returned?" default="Flow_NoReturn_End">
+      <bpmn:incoming>Flow_Deliver_ReturnSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReturnSplit_ReturnItems</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoReturn_End</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_ReturnItems" name="Return items for exchange">
+      <bpmn:incoming>Flow_ReturnSplit_ReturnItems</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReturnItems_DeliveryMerge</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_OrderCompleted" name="Order completed">
+      <bpmn:incoming>Flow_NoReturn_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Login" sourceRef="StartEvent_OrderStarted" targetRef="Task_LogIn"/>
+    <bpmn:sequenceFlow id="Flow_Login_ItemsPaySplit" sourceRef="Task_LogIn" targetRef="Gateway_ItemsPay_Split"/>
+    <bpmn:sequenceFlow id="Flow_ItemsPaySplit_SelectItems" sourceRef="Gateway_ItemsPay_Split" targetRef="Task_SelectItems"/>
+    <bpmn:sequenceFlow id="Flow_ItemsPaySplit_SetPayment" sourceRef="Gateway_ItemsPay_Split" targetRef="Task_SetPaymentMethod"/>
+    <bpmn:sequenceFlow id="Flow_SelectItems_ItemsPayJoin" sourceRef="Task_SelectItems" targetRef="Gateway_ItemsPay_Join"/>
+    <bpmn:sequenceFlow id="Flow_SetPayment_ItemsPayJoin" sourceRef="Task_SetPaymentMethod" targetRef="Gateway_ItemsPay_Join"/>
+    <bpmn:sequenceFlow id="Flow_ItemsPayJoin_RewardSplit" sourceRef="Gateway_ItemsPay_Join" targetRef="Gateway_Reward_Split"/>
+    <bpmn:sequenceFlow id="Flow_RewardSplit_ChooseReward" sourceRef="Gateway_Reward_Split" targetRef="Task_ChooseReward"/>
+    <bpmn:sequenceFlow id="Flow_RewardSplit_PaymentSplit" sourceRef="Gateway_Reward_Split" targetRef="Gateway_Payment_Split"/>
+    <bpmn:sequenceFlow id="Flow_PaymentSplit_Pay" name="Pay" sourceRef="Gateway_Payment_Split" targetRef="Task_Pay"/>
+    <bpmn:sequenceFlow id="Flow_PaymentSplit_Installment" name="Installment agreement" sourceRef="Gateway_Payment_Split" targetRef="Task_CompleteInstallment"/>
+    <bpmn:sequenceFlow id="Flow_Pay_PaymentMerge" sourceRef="Task_Pay" targetRef="Gateway_Payment_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Installment_PaymentMerge" sourceRef="Task_CompleteInstallment" targetRef="Gateway_Payment_Merge"/>
+    <bpmn:sequenceFlow id="Flow_PaymentMerge_RewardJoin" sourceRef="Gateway_Payment_Merge" targetRef="Gateway_Reward_Join"/>
+    <bpmn:sequenceFlow id="Flow_ChooseReward_RewardJoin" sourceRef="Task_ChooseReward" targetRef="Gateway_Reward_Join"/>
+    <bpmn:sequenceFlow id="Flow_RewardJoin_DeliveryMerge" sourceRef="Gateway_Reward_Join" targetRef="Gateway_Delivery_Merge"/>
+    <bpmn:sequenceFlow id="Flow_DeliveryMerge_Deliver" sourceRef="Gateway_Delivery_Merge" targetRef="Task_DeliverItems"/>
+    <bpmn:sequenceFlow id="Flow_Deliver_ReturnSplit" sourceRef="Task_DeliverItems" targetRef="Gateway_Return_Split"/>
+    <bpmn:sequenceFlow id="Flow_ReturnSplit_ReturnItems" name="Items returned" sourceRef="Gateway_Return_Split" targetRef="Task_ReturnItems">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${itemsReturned}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ReturnItems_DeliveryMerge" sourceRef="Task_ReturnItems" targetRef="Gateway_Delivery_Merge"/>
+    <bpmn:sequenceFlow id="Flow_NoReturn_End" name="No return" sourceRef="Gateway_Return_Split" targetRef="EndEvent_OrderCompleted"/>
+  </bpmn:process>
+</bpmn:definitions>

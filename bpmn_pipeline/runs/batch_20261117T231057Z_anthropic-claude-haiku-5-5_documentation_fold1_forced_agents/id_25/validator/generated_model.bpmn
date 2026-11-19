@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_FindAJob" targetNamespace="http://example.com/bpmn/find-a-job">
+  <bpmn:message id="Msg_Application" name="Job application"/>
+  <bpmn:message id="Msg_ReceiptConfirmed" name="Receipt confirmed and application rated"/>
+  <bpmn:message id="Msg_InterviewRequest" name="Interview negotiation requested"/>
+  <bpmn:message id="Msg_NewJobOffer" name="New potential job offer"/>
+  <bpmn:message id="Msg_EmploymentOffer" name="Company wants you to work for them"/>
+  <bpmn:message id="Msg_CompanyRating" name="Rating of company"/>
+  <bpmn:message id="Msg_CompanyRatedApplicant" name="Company rating of applicant"/>
+  <bpmn:message id="Msg_JobPermanent" name="Job becomes permanent"/>
+
+  <bpmn:collaboration id="Collaboration_FindAJob">
+    <bpmn:participant id="Participant_Applicant" name="Job applicant" processRef="Process_Applicant"/>
+    <bpmn:participant id="Participant_Company" name="Company"/>
+    <bpmn:messageFlow id="MF_Application" name="Job application" sourceRef="Task_SendApplication" targetRef="Participant_Company" messageRef="Msg_Application"/>
+    <bpmn:messageFlow id="MF_ReceiptConfirmed" name="Receipt confirmed" sourceRef="Participant_Company" targetRef="Event_ReceiptConfirmed" messageRef="Msg_ReceiptConfirmed"/>
+    <bpmn:messageFlow id="MF_InterviewRequest" name="Interview requested" sourceRef="Participant_Company" targetRef="Event_InterviewRequested" messageRef="Msg_InterviewRequest"/>
+    <bpmn:messageFlow id="MF_EmploymentOffer" name="Employment offer" sourceRef="Participant_Company" targetRef="Event_EmploymentOffer" messageRef="Msg_EmploymentOffer"/>
+    <bpmn:messageFlow id="MF_CompanyRating" name="Company rating" sourceRef="Task_RateCompany" targetRef="Participant_Company" messageRef="Msg_CompanyRating"/>
+    <bpmn:messageFlow id="MF_CompanyRatedApplicant" name="Applicant rating" sourceRef="Participant_Company" targetRef="Event_CompanyRatedYou" messageRef="Msg_CompanyRatedApplicant"/>
+    <bpmn:messageFlow id="MF_JobPermanent" name="Job permanent" sourceRef="Participant_Company" targetRef="Event_JobPermanent" messageRef="Msg_JobPermanent"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Applicant" name="Find a Job" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_JobSearch" name="Job search started"/>
+    <bpmn:sendTask id="Task_SendApplication" name="Send job application"/>
+    <bpmn:userTask id="Task_ReportApplication" name="Report company applied to"/>
+    <bpmn:exclusiveGateway id="Gateway_ResponsesMerge" name="Merge responses"/>
+    <bpmn:eventBasedGateway id="Gateway_AwaitResponse" name="Await next event"/>
+    <bpmn:intermediateCatchEvent id="Event_ReceiptConfirmed" name="Receipt confirmed and application rated">
+      <bpmn:messageEventDefinition id="MED_ReceiptConfirmed" messageRef="Msg_ReceiptConfirmed"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_InterviewRequested" name="Interview negotiation requested">
+      <bpmn:messageEventDefinition id="MED_InterviewRequested" messageRef="Msg_InterviewRequest"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_NewJobOffer" name="New potential job offer received">
+      <bpmn:messageEventDefinition id="MED_NewJobOffer" messageRef="Msg_NewJobOffer"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_EmploymentOffer" name="Company wants you to work for them">
+      <bpmn:messageEventDefinition id="MED_EmploymentOffer" messageRef="Msg_EmploymentOffer"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_NegotiateInterview" name="Negotiate job interview"/>
+    <bpmn:userTask id="Task_CompleteProbation" name="Complete probation phase"/>
+    <bpmn:parallelGateway id="Gateway_AfterProbation" name="After probation"/>
+    <bpmn:userTask id="Task_RateCompany" name="Rate company"/>
+    <bpmn:intermediateCatchEvent id="Event_CompanyRatedYou" name="Company rating of you received">
+      <bpmn:messageEventDefinition id="MED_CompanyRatedYou" messageRef="Msg_CompanyRatedApplicant"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_OneYearPassed" name="One year after company rating">
+      <bpmn:timerEventDefinition id="TED_OneYear">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P1Y</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_ViewReviews" name="View company reviews"/>
+    <bpmn:endEvent id="End_ReviewsViewed" name="Company reviews viewed"/>
+    <bpmn:intermediateCatchEvent id="Event_JobPermanent" name="Job becomes permanent">
+      <bpmn:messageEventDefinition id="MED_JobPermanent" messageRef="Msg_JobPermanent"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_Permanent" name="Rated company C or less?"/>
+    <bpmn:exclusiveGateway id="Gateway_ContinueMerge" name="Continue receiving offers"/>
+    <bpmn:intermediateCatchEvent id="Event_ContinueNewJobOffer" name="New potential job offer received">
+      <bpmn:messageEventDefinition id="MED_ContinueNewJobOffer" messageRef="Msg_NewJobOffer"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End_JobSearchEnded" name="Job search ended"/>
+
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_JobSearch" targetRef="Task_SendApplication"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_SendApplication" targetRef="Task_ReportApplication"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_ReportApplication" targetRef="Gateway_ResponsesMerge"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Gateway_ResponsesMerge" targetRef="Gateway_AwaitResponse"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Gateway_AwaitResponse" targetRef="Event_ReceiptConfirmed"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Gateway_AwaitResponse" targetRef="Event_InterviewRequested"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Gateway_AwaitResponse" targetRef="Event_NewJobOffer"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Gateway_AwaitResponse" targetRef="Event_EmploymentOffer"/>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Event_ReceiptConfirmed" targetRef="Gateway_ResponsesMerge"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Event_InterviewRequested" targetRef="Task_NegotiateInterview"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_NegotiateInterview" targetRef="Gateway_ResponsesMerge"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Event_NewJobOffer" targetRef="Task_SendApplication"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Event_EmploymentOffer" targetRef="Task_CompleteProbation"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_CompleteProbation" targetRef="Gateway_AfterProbation"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Gateway_AfterProbation" targetRef="Task_RateCompany"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Gateway_AfterProbation" targetRef="Event_JobPermanent"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Task_RateCompany" targetRef="Event_CompanyRatedYou"/>
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Event_CompanyRatedYou" targetRef="Event_OneYearPassed"/>
+    <bpmn:sequenceFlow id="Flow_19" sourceRef="Event_OneYearPassed" targetRef="Task_ViewReviews"/>
+    <bpmn:sequenceFlow id="Flow_20" sourceRef="Task_ViewReviews" targetRef="End_ReviewsViewed"/>
+    <bpmn:sequenceFlow id="Flow_21" sourceRef="Event_JobPermanent" targetRef="Gateway_Permanent"/>
+    <bpmn:sequenceFlow id="Flow_22" name="C or less" sourceRef="Gateway_Permanent" targetRef="Gateway_ContinueMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${companyRatingByApplicant &lt;= 'C'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_23" name="Better than C" sourceRef="Gateway_Permanent" targetRef="End_JobSearchEnded">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${companyRatingByApplicant &gt; 'C'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_24" sourceRef="Gateway_ContinueMerge" targetRef="Event_ContinueNewJobOffer"/>
+    <bpmn:sequenceFlow id="Flow_25" sourceRef="Event_ContinueNewJobOffer" targetRef="Gateway_ContinueMerge"/>
+  </bpmn:process>
+</bpmn:definitions>

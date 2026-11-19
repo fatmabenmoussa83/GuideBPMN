@@ -1,0 +1,104 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_FarmingBot" targetNamespace="http://example.com/bpmn/farming-bot">
+  <bpmn:message id="Msg_UpdateList" name="Update material list requested"/>
+  <bpmn:message id="Msg_Milestone" name="Milestone reached"/>
+  <bpmn:signal id="Signal_Disaster" name="Natural disaster"/>
+  <bpmn:signal id="Signal_Milestone" name="Milestone reached"/>
+  <bpmn:collaboration id="Collaboration_FarmingBot">
+    <bpmn:participant id="Participant_FarmingBot" name="Farming Bot" processRef="Process_FarmingBot"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_FarmingBot" name="Farming Bot" isExecutable="false">
+    <bpmn:documentation>Player creates a custom farming bot. Up to 10 resources are gathered in parallel. Urgency is set per selected resource. Some resources are required to create tools needed to gather other resources. After preferences are collected the bot starts farming. Natural disasters set the bot back. Milestones notify the player. The material list can be updated during farming. After the bot is finished the player can brag to selected friends and/or send them materials.</bpmn:documentation>
+
+    <bpmn:laneSet id="LaneSet_FarmingBot">
+      <bpmn:lane id="Lane_Player" name="Player">
+        <bpmn:flowNodeRef>StartEvent_Request</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UserTask_SelectResources</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UserTask_SetUrgency</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Share_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UserTask_Brag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UserTask_SendMaterials</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Share_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_BotFinished</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SubProcess_UpdateList</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Bot" name="Farming Bot">
+        <bpmn:flowNodeRef>BusinessRuleTask_CheckToolDependencies</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateTools</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ServiceTask_StartFarming</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ServiceTask_Gather</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>BoundaryEvent_Disaster</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ServiceTask_Recover</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>BoundaryEvent_Milestone</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SendTask_NotifyMilestone</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_MilestoneNotified</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_Request" name="Bot creation started"/>
+    <bpmn:userTask id="UserTask_SelectResources" name="Select resources to farm"/>
+    <bpmn:userTask id="UserTask_SetUrgency" name="Set resource urgency">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false">
+        <bpmn:loopCardinality xsi:type="bpmn:tFormalExpression">${selectedResourceCount}</bpmn:loopCardinality>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:userTask>
+    <bpmn:businessRuleTask id="BusinessRuleTask_CheckToolDependencies" name="Check tool dependencies">
+      <bpmn:documentation>Custom dependency logic: some resources are required to create tools needed to gather other resources.</bpmn:documentation>
+    </bpmn:businessRuleTask>
+    <bpmn:task id="Task_CreateTools" name="Create tools"/>
+    <bpmn:serviceTask id="ServiceTask_StartFarming" name="Start farming"/>
+    <bpmn:serviceTask id="ServiceTask_Gather" name="Gather resources">
+      <bpmn:documentation>Up to 10 resources are gathered in parallel.</bpmn:documentation>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false">
+        <bpmn:loopCardinality xsi:type="bpmn:tFormalExpression">${selectedResourceCount}</bpmn:loopCardinality>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:serviceTask>
+
+    <bpmn:boundaryEvent id="BoundaryEvent_Disaster" name="Natural disaster strikes" attachedToRef="ServiceTask_Gather" cancelActivity="true">
+      <bpmn:signalEventDefinition id="SignalDef_Disaster" signalRef="Signal_Disaster"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="ServiceTask_Recover" name="Recover bot after disaster"/>
+
+    <bpmn:boundaryEvent id="BoundaryEvent_Milestone" name="Milestone reached" attachedToRef="ServiceTask_Gather" cancelActivity="false">
+      <bpmn:signalEventDefinition id="SignalDef_Milestone" signalRef="Signal_Milestone"/>
+    </bpmn:boundaryEvent>
+    <bpmn:sendTask id="SendTask_NotifyMilestone" name="Notify player of milestone" messageRef="Msg_Milestone"/>
+    <bpmn:endEvent id="EndEvent_MilestoneNotified" name="Milestone notified"/>
+
+    <bpmn:inclusiveGateway id="Gateway_Share_Split" name="Brag and/or send materials"/>
+    <bpmn:userTask id="UserTask_Brag" name="Brag"/>
+    <bpmn:userTask id="UserTask_SendMaterials" name="Send materials"/>
+    <bpmn:inclusiveGateway id="Gateway_Share_Join" name="Sharing completed"/>
+    <bpmn:endEvent id="EndEvent_BotFinished" name="Bot finished and shared"/>
+
+    <bpmn:subProcess id="SubProcess_UpdateList" name="Update material list" triggeredByEvent="true">
+      <bpmn:startEvent id="StartEvent_UpdateList" name="Update requested" isInterrupting="false">
+        <bpmn:messageEventDefinition id="MessageDef_UpdateList" messageRef="Msg_UpdateList"/>
+      </bpmn:startEvent>
+      <bpmn:userTask id="UserTask_UpdateList" name="Update list of materials to farm"/>
+      <bpmn:endEvent id="EndEvent_ListUpdated" name="List updated"/>
+      <bpmn:sequenceFlow id="Flow_UpdateList_1" sourceRef="StartEvent_UpdateList" targetRef="UserTask_UpdateList"/>
+      <bpmn:sequenceFlow id="Flow_UpdateList_2" sourceRef="UserTask_UpdateList" targetRef="EndEvent_ListUpdated"/>
+    </bpmn:subProcess>
+
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_Request" targetRef="UserTask_SelectResources"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="UserTask_SelectResources" targetRef="UserTask_SetUrgency"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="UserTask_SetUrgency" targetRef="BusinessRuleTask_CheckToolDependencies"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="BusinessRuleTask_CheckToolDependencies" targetRef="Task_CreateTools"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_CreateTools" targetRef="ServiceTask_StartFarming"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="ServiceTask_StartFarming" targetRef="ServiceTask_Gather"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="ServiceTask_Gather" targetRef="Gateway_Share_Split"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Gateway_Share_Split" targetRef="UserTask_Brag">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${bragToFriends}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Gateway_Share_Split" targetRef="UserTask_SendMaterials">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${sendMaterialsToFriends}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="UserTask_Brag" targetRef="Gateway_Share_Join"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="UserTask_SendMaterials" targetRef="Gateway_Share_Join"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Gateway_Share_Join" targetRef="EndEvent_BotFinished"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="BoundaryEvent_Disaster" targetRef="ServiceTask_Recover"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="ServiceTask_Recover" targetRef="ServiceTask_Gather"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="BoundaryEvent_Milestone" targetRef="SendTask_NotifyMilestone"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="SendTask_NotifyMilestone" targetRef="EndEvent_MilestoneNotified"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_SupplierProcurement"
+                  targetNamespace="http://example.com/bpmn/supplier-procurement">
+  <bpmn:message id="Message_RFP" name="Request for proposals"/>
+  <bpmn:message id="Message_Proposal" name="Supplier proposal"/>
+
+  <bpmn:collaboration id="Collaboration_SupplierProcurement">
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_SupplierProcurement"/>
+    <bpmn:participant id="Participant_Suppliers" name="Suppliers"/>
+    <bpmn:messageFlow id="MessageFlow_RFP" name="Request for proposals" sourceRef="Task_IssueRFP" targetRef="Participant_Suppliers" messageRef="Message_RFP"/>
+    <bpmn:messageFlow id="MessageFlow_Proposals" name="Supplier proposals" sourceRef="Participant_Suppliers" targetRef="Task_ReceiveProposals" messageRef="Message_Proposal"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_SupplierProcurement" name="Select and onboard a supplier" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_NeedIdentified" name="Need for a new supplier identified">
+      <bpmn:outgoing>Flow_Start_IssueRFP</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:sendTask id="Task_IssueRFP" name="Issue request for proposals" messageRef="Message_RFP">
+      <bpmn:incoming>Flow_Start_IssueRFP</bpmn:incoming>
+      <bpmn:outgoing>Flow_IssueRFP_ReceiveProposals</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:receiveTask id="Task_ReceiveProposals" name="Receive supplier proposals" messageRef="Message_Proposal">
+      <bpmn:incoming>Flow_IssueRFP_ReceiveProposals</bpmn:incoming>
+      <bpmn:outgoing>Flow_Receive_Evaluate</bpmn:outgoing>
+    </bpmn:receiveTask>
+
+    <bpmn:task id="Task_EvaluateProposals" name="Evaluate proposals">
+      <bpmn:incoming>Flow_Receive_Evaluate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Evaluate_AssessmentDecision</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_AssessmentDecision" name="Conduct site visits or interviews?">
+      <bpmn:incoming>Flow_Evaluate_AssessmentDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_Assessment_Conduct</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Assessment_Skip</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_ConductAssessment" name="Conduct site visits or interviews">
+      <bpmn:incoming>Flow_Assessment_Conduct</bpmn:incoming>
+      <bpmn:outgoing>Flow_Conduct_AssessmentMerge</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_AssessmentMerge" name="Continue supplier analysis">
+      <bpmn:incoming>Flow_Assessment_Skip</bpmn:incoming>
+      <bpmn:incoming>Flow_Conduct_AssessmentMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_AssessmentMerge_Select</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_SelectSupplier" name="Select supplier">
+      <bpmn:incoming>Flow_AssessmentMerge_Select</bpmn:incoming>
+      <bpmn:outgoing>Flow_Select_Negotiate</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_NegotiateTerms" name="Negotiate contract terms">
+      <bpmn:incoming>Flow_Select_Negotiate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Negotiate_Agree</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_AgreeTerms" name="Agree contract terms">
+      <bpmn:incoming>Flow_Negotiate_Agree</bpmn:incoming>
+      <bpmn:outgoing>Flow_Agree_Sign</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_SignContract" name="Sign contract">
+      <bpmn:incoming>Flow_Agree_Sign</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sign_PostSignSplit</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="Gateway_PostSignSplit" name="Proceed with onboarding and contract execution">
+      <bpmn:incoming>Flow_Sign_PostSignSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_Split_Onboard</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Split_Execute</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:task id="Task_OnboardSupplier" name="Officially onboard supplier">
+      <bpmn:incoming>Flow_Split_Onboard</bpmn:incoming>
+      <bpmn:outgoing>Flow_Onboard_PostSignJoin</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ExecuteContract" name="Execute contract">
+      <bpmn:incoming>Flow_Split_Execute</bpmn:incoming>
+      <bpmn:outgoing>Flow_Execute_PostSignJoin</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="Gateway_PostSignJoin" name="Onboarding and contract execution complete">
+      <bpmn:incoming>Flow_Onboard_PostSignJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_Execute_PostSignJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_PostSignJoin_End</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:endEvent id="EndEvent_SupplierEstablished" name="Supplier onboarded and contract executed">
+      <bpmn:incoming>Flow_PostSignJoin_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_IssueRFP" sourceRef="StartEvent_NeedIdentified" targetRef="Task_IssueRFP"/>
+    <bpmn:sequenceFlow id="Flow_IssueRFP_ReceiveProposals" sourceRef="Task_IssueRFP" targetRef="Task_ReceiveProposals"/>
+    <bpmn:sequenceFlow id="Flow_Receive_Evaluate" sourceRef="Task_ReceiveProposals" targetRef="Task_EvaluateProposals"/>
+    <bpmn:sequenceFlow id="Flow_Evaluate_AssessmentDecision" sourceRef="Task_EvaluateProposals" targetRef="Gateway_AssessmentDecision"/>
+    <bpmn:sequenceFlow id="Flow_Assessment_Conduct" name="Conduct assessment" sourceRef="Gateway_AssessmentDecision" targetRef="Task_ConductAssessment"/>
+    <bpmn:sequenceFlow id="Flow_Assessment_Skip" name="Skip assessment" sourceRef="Gateway_AssessmentDecision" targetRef="Gateway_AssessmentMerge"/>
+    <bpmn:sequenceFlow id="Flow_Conduct_AssessmentMerge" sourceRef="Task_ConductAssessment" targetRef="Gateway_AssessmentMerge"/>
+    <bpmn:sequenceFlow id="Flow_AssessmentMerge_Select" sourceRef="Gateway_AssessmentMerge" targetRef="Task_SelectSupplier"/>
+    <bpmn:sequenceFlow id="Flow_Select_Negotiate" sourceRef="Task_SelectSupplier" targetRef="Task_NegotiateTerms"/>
+    <bpmn:sequenceFlow id="Flow_Negotiate_Agree" sourceRef="Task_NegotiateTerms" targetRef="Task_AgreeTerms"/>
+    <bpmn:sequenceFlow id="Flow_Agree_Sign" sourceRef="Task_AgreeTerms" targetRef="Task_SignContract"/>
+    <bpmn:sequenceFlow id="Flow_Sign_PostSignSplit" sourceRef="Task_SignContract" targetRef="Gateway_PostSignSplit"/>
+    <bpmn:sequenceFlow id="Flow_Split_Onboard" sourceRef="Gateway_PostSignSplit" targetRef="Task_OnboardSupplier"/>
+    <bpmn:sequenceFlow id="Flow_Split_Execute" sourceRef="Gateway_PostSignSplit" targetRef="Task_ExecuteContract"/>
+    <bpmn:sequenceFlow id="Flow_Onboard_PostSignJoin" sourceRef="Task_OnboardSupplier" targetRef="Gateway_PostSignJoin"/>
+    <bpmn:sequenceFlow id="Flow_Execute_PostSignJoin" sourceRef="Task_ExecuteContract" targetRef="Gateway_PostSignJoin"/>
+    <bpmn:sequenceFlow id="Flow_PostSignJoin_End" sourceRef="Gateway_PostSignJoin" targetRef="EndEvent_SupplierEstablished"/>
+  </bpmn:process>
+</bpmn:definitions>

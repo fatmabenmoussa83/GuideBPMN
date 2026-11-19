@@ -1,0 +1,305 @@
+{
+ "id": "50",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 15,
+  "T6": 5
+ },
+ "first_pass_error_counts": {
+  "T5": 15,
+  "T6": 6
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline (The generated model has one user task 'Check settlement recommendation' (X1) that merges the senior officer's check and verdict. The reference models the check ('Recommendation is checked by a senior claims officer', M2) and the verdict ('Senior claims officer marks the claim', M3) as two separate tasks before the verdict gateway. The description (S3) names both acts: a senior officer checks the r)",
+   "guideline_id": "LRN-104",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "rejected_bad_citation",
+   "detail": "cited ['M3', 'X1', 'S3', 'S4', 'M2', 'FID-02'] but was given ['M1', 'M2', 'M3', 'M4', 'M5', 'P1', 'P2', 'S1', 'S2', 'S3', 'S4', 'X1', 'X2']",
+   "guideline_id": null,
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines FID-02 (The reference separates the senior officer's check of the recommendation and the marking of the claim as two actions before the OK/Not OK gateway. The generated model has a single task \"Check settlement recommendation\" (X1) and no marking task before the gateway (M2, M3), so the described review and its outcome are collapsed. FID-02 already says not to merge separately described actions and to pre)",
+   "guideline_id": "LRN-105",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines FID-02 (The generated model merged the checking of the recommendation and the OK/Not OK verdict into one task (X1), and it omitted the described examination step (M1). The reference keeps the checking task (M2) and the verdict task (M3) separate, as the description states them in separate sentences. FID-02 already forbids merging separately described actions. This guideline adds the specific case of a che)",
+   "guideline_id": "LRN-106",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-106 (The generated model has a check task but no verdict task before the gateway (M3), so the gateway tests an outcome nobody produced. The return branch to the earlier action is missing (M4), and the continuation branch ends in an end event that drops the stated next activity (X2). The reference keeps the check, the verdict, the return and the continuation as separate elements, and the generated model)",
+   "guideline_id": "LRN-106",
+   "ref": "LRN-106",
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines FLOW-06 (The reference has an exclusive gateway before the drafting task (M6) and the description says a Not OK verdict sends the claim back to the officer (S4). FLOW-06 only says to add a join when paths reunite, and it does not cover a return loop that enters an earlier task from two flows. This guideline adds that case: the two entering flows meet at an exclusive merge. The missing tasks (M1, M3, M4, M5)",
+   "guideline_id": "LRN-107",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-104",
+   "instruction": "When the description says that one participant checks a work product and that a different participant then marks that product with a verdict (such as OK or Not OK) which decides the next step: Model the check of the work product as its own user task performed by the participant who checks it. Model the verdict as a separate user task performed by the participant who gives it, placed after the check and before the exclusive gateway that routes on the verdict. Label both tasks with the description's own verbs and objects for the check and the verdict. Do not merge the check and the verdict into one task, and do not let the gateway stand in for the verdict task.",
+   "situation": "the description says that one participant checks a work product and that a different participant then marks that product with a verdict (such as OK or Not OK) which decides the next step",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-105",
+   "instruction": "When the description says a person reviews a prepared item and then marks it with one of two stated outcomes, and the flow continues differently for each outcome: Model the review as a task performed by that person, and model the marking of the outcome as its own task placed directly before the exclusive gateway that tests it. Give each outcome its own outgoing flow labeled with the stated condition. Do not let the review task stand in for the marking task, and do not omit the marking action so that the gateway tests an outcome nobody produced.",
+   "situation": "the description says a person reviews a prepared item and then marks it with one of two stated outcomes, and the flow continues differently for each outcome",
+   "source": "learned guideline (refines FID-02)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-106",
+   "instruction": "When the description states an action performed by a role on an item, and a later sentence has an actor give a verdict on that item that decides which branch follows: Model every action the description states as its own task, in the order stated. Keep the review or checking action and the verdict as separate tasks, and do not let one task stand for both. Place the verdict task after the checking task and before the exclusive gateway that routes on the verdict. Also keep any earlier action the description names, such as an examination that precedes the drafting of the output, as its own task rather than dropping it. Branch targets described as continuing or returning to an earlier activity should be modeled as tasks or flows that carry the described action, not as an end event that drops it.",
+   "situation": "the description states an action performed by a role on an item, and a later sentence has an actor give a verdict on that item that decides which branch follows",
+   "source": "learned guideline (refines FID-02)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-107",
+   "instruction": "When the description states that a verdict branch returns the item to an earlier activity, while the activity that precedes that earlier activity in the forward flow also leads into it, so the earlier activity is entered from two flows: Place an exclusive merge gateway immediately before the earlier activity. Route both the forward flow from the preceding step and the returning flow from the verdict branch into this merge gateway, and let the merge gateway's single outgoing flow lead to the earlier activity. Do not connect the returning flow or the forward flow directly to the activity, and do not join the two flows with a parallel gateway.",
+   "situation": "the description states that a verdict branch returns the item to an earlier activity, while the activity that precedes that earlier activity in the forward flow also leads into it, so the earlier activity is entered from two flows",
+   "source": "learned guideline (refines FLOW-06)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

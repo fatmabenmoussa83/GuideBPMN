@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ITRequest" targetNamespace="http://example.org/bpmn/it-solution-request">
+  <bpmn:message id="Message_Request" name="IT solution request"/>
+  <bpmn:message id="Message_Delivery" name="Solution rolled out"/>
+  <bpmn:collaboration id="Collaboration_ITRequest">
+    <bpmn:participant id="Participant_Requester" name="Employee or department"/>
+    <bpmn:participant id="Participant_IT" name="IT" processRef="Process_IT"/>
+    <bpmn:messageFlow id="MessageFlow_Submit" name="Submit request" sourceRef="Participant_Requester" targetRef="Start_Request" messageRef="Message_Request"/>
+    <bpmn:messageFlow id="MessageFlow_Delivery" name="Notify rollout" sourceRef="Task_Rollout" targetRef="Participant_Requester" messageRef="Message_Delivery"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_IT" name="IT solution request handling" isExecutable="false">
+    <bpmn:startEvent id="Start_Request" name="IT solution request received">
+      <bpmn:outgoing>Flow_ToAssess</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Request" messageRef="Message_Request"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Assess" name="Assess request (compatibility, cost and resources)">
+      <bpmn:incoming>Flow_ToAssess</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToApprovalSplit</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Approval_Split" name="Request approved?" default="Flow_NotApproved">
+      <bpmn:incoming>Flow_ToApprovalSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotApproved</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_Rejected" name="Request not approved">
+      <bpmn:incoming>Flow_NotApproved</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_Procure" name="Procure tools or licenses">
+      <bpmn:incoming>Flow_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToInstall</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Install" name="Install solution">
+      <bpmn:incoming>Flow_ToInstall</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToTest</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Test" name="Test solution in controlled environment">
+      <bpmn:incoming>Flow_ToTest</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToRollout</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Rollout" name="Roll out solution to requesting department">
+      <bpmn:incoming>Flow_ToRollout</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToTrainingSplit</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Training_Split" name="Training provided?" default="Flow_NoTraining">
+      <bpmn:incoming>Flow_ToTrainingSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_Training</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoTraining</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Training" name="Provide training">
+      <bpmn:incoming>Flow_Training</bpmn:incoming>
+      <bpmn:outgoing>Flow_TrainingToJoin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Training_Join" name="Training step complete">
+      <bpmn:incoming>Flow_TrainingToJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_NoTraining</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToSupport</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Support" name="Provide IT support for troubleshooting">
+      <bpmn:incoming>Flow_ToSupport</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Support" name="Solution available with IT support">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ToAssess" sourceRef="Start_Request" targetRef="Task_Assess"/>
+    <bpmn:sequenceFlow id="Flow_ToApprovalSplit" sourceRef="Task_Assess" targetRef="Gateway_Approval_Split"/>
+    <bpmn:sequenceFlow id="Flow_Approved" name="Approved" sourceRef="Gateway_Approval_Split" targetRef="Task_Procure">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotApproved" name="Not approved" sourceRef="Gateway_Approval_Split" targetRef="End_Rejected"/>
+    <bpmn:sequenceFlow id="Flow_ToInstall" sourceRef="Task_Procure" targetRef="Task_Install"/>
+    <bpmn:sequenceFlow id="Flow_ToTest" sourceRef="Task_Install" targetRef="Task_Test"/>
+    <bpmn:sequenceFlow id="Flow_ToRollout" sourceRef="Task_Test" targetRef="Task_Rollout"/>
+    <bpmn:sequenceFlow id="Flow_ToTrainingSplit" sourceRef="Task_Rollout" targetRef="Gateway_Training_Split"/>
+    <bpmn:sequenceFlow id="Flow_Training" name="Training" sourceRef="Gateway_Training_Split" targetRef="Task_Training"/>
+    <bpmn:sequenceFlow id="Flow_NoTraining" name="No training" sourceRef="Gateway_Training_Split" targetRef="Gateway_Training_Join"/>
+    <bpmn:sequenceFlow id="Flow_TrainingToJoin" sourceRef="Task_Training" targetRef="Gateway_Training_Join"/>
+    <bpmn:sequenceFlow id="Flow_ToSupport" sourceRef="Gateway_Training_Join" targetRef="Task_Support"/>
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="Task_Support" targetRef="End_Support"/>
+  </bpmn:process>
+</bpmn:definitions>

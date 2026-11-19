@@ -1,0 +1,322 @@
+{
+ "id": "45",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 29,
+  "T6": 4
+ },
+ "first_pass_error_counts": {
+  "T3": 1,
+  "T5": 39,
+  "T6": 7
+ },
+ "guidelines": [
+  {
+   "failure_type": "T3",
+   "status": "rejected_bad_citation",
+   "detail": "cited ['V-L3', 'V-L3-1', 'S5', 'S8', 'LRN-005'] but was given ['S5', 'S6', 'S7', 'S8', 'V-L3', 'V-L3-1']",
+   "guideline_id": null,
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines FID-02 (The generated model omits two customer-performed steps (logging in and checking whether a product was already selected) that the description states explicitly, and the reference models them as manualTasks at the positions where later system steps or decisions depend on them. The omission is a faithfulness error about a described actor step, not a semantic choice of BPMN construct. M1 is not turned)",
+   "guideline_id": "LRN-126",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines FID-02 (S3 states that after saving a product the customer checks whether every product was already selected, and that check decides the following gateway. The generated model has no task for that check (M3), so the described step is lost. FID-02 already asks to keep separately described actions and their dependencies, but it does not say how to handle a participant's own check that a decision relies on. )",
+   "guideline_id": "LRN-127",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-031 (The reference joins the branches with a parallel join and then continues to the finishing task (F11). The generated model instead inserts an extra intermediate catch event, 'Address and payment completed', before the finishing task, and has no flow from the join to it (X11, G19). The description (S8) states only that the finish follows completion of the address and payment steps, with no external )",
+   "guideline_id": "LRN-031",
+   "ref": "LRN-031",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "abstained",
+   "detail": "The main T6 difference (M1 vs X5) is a reference choice that conflicts with BPMN 2.0.2 semantics. The description says the customer has to wait until the bank confirms payment (S6), and a wait for a confirmation is an intermediate catch event, not a task. The generated intermediate catch event is the correct element, so a guideline here would require the reference's incorrect choice. The other differences do not support a new guideline: the missing merge before the repeated product-selection step (M3) is the loop-merge case already covered by the learned guideline, and the start and end events",
+   "guideline_id": null,
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines FLOW-06 (Several records show that flows out of or into decision points are missing: the check-to-decision flow (F2), the decision-to-split flow for the completed-selection outcome (F7), the join-to-next-step flow (F11), and the missing gateways (M2, M3). Because the generator dropped connections at decision points rather than choosing other element types, the fix is to require explicit connection of every)",
+   "guideline_id": "LRN-128",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-001 (cosine 0.89)",
+   "guideline_id": "LRN-001",
+   "ref": "LRN-001",
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-126",
+   "instruction": "When the description states a step that a person performs (for example a user checking a status, or logging in) between automated system steps, and names no software performing that step: Model each such person-performed step as a bpmn:manualTask at its described position in the sequence, including when a later system task or decision depends on its result. Do not omit it or fold it into the adjacent system task.",
+   "situation": "the description states a step that a person performs (for example a user checking a status, or logging in) between automated system steps, and names no software performing that step",
+   "source": "learned guideline (refines FID-02)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-127",
+   "instruction": "When the description states that a participant, after performing an action, also performs a separate check of their own (for example whether all items have been handled) and the next decision depends on the outcome of that check: Model the participant's check as its own task (a manual task if no software is used, a user task if software assists it), placed after the action it follows and before the decision gateway that depends on its outcome. Do not fold the check into the preceding task or leave it out, and do not connect the preceding action directly to the decision.",
+   "situation": "the description states that a participant, after performing an action, also performs a separate check of their own (for example whether all items have been handled) and the next decision depends on the outcome of that check",
+   "source": "learned guideline (refines FID-02)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-031",
+   "instruction": "When the description says a later step starts once a condition or state is reached, and that state is reached when the concurrent activities running before it have progressed, without describing a wait for an external message, signal, time, or condition: Connect the parallel join that closes those concurrent activities directly to the task that starts the later step. Do not insert a separate intermediate catch event to represent the state being reached, because the join already represents that synchronization.",
+   "situation": "the description says that a later finishing step starts only after several concurrently running branches have all been completed, and that the step is then performed by the system, with no wait for an external message, signal, time, or condition stated at that point",
+   "source": "learned guideline (refines GW-05)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-128",
+   "instruction": "When the description says that the outcome of an activity or a completed repetition decides whether the process continues to a later step, so the activity is followed by a decision gateway, and that gateway has one outgoing flow for the continuing outcome and one for the other outcome: Connect the preceding activity by a sequence flow to a decision (exclusive) gateway placed right after it. Give that gateway one labeled outgoing flow for each outcome the description states, and route the continuing outcome directly to the next step the description names. Do not leave a decision gateway's outcome unconnected, and do not omit the flow from the activity into the decision gateway. Where the decision closes a repetition or a branch, its continuing outcome must reach the next step, not be dropped.",
+   "situation": "the description says that the outcome of an activity or a completed repetition decides whether the process continues to a later step, so the activity is followed by a decision gateway, and that gateway has one outgoing flow for the continuing outcome and one for the other outcome",
+   "source": "learned guideline (refines FLOW-06)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-001",
+   "instruction": "When the description states a conditional choice whose alternative outcomes later reconverge on a shared next activity or on an end event, while one branch leaves the process early: Model an exclusive gateway at the split for the conditional choice, with one labeled outgoing flow per outcome. Where the alternative paths come together again before a shared next activity or end event, insert a separate exclusive gateway as the merge point, so that each path enters the common step through a gateway rather than through a direct flow from several branches. Keep an early-exit branch as its own path to an end event instead of merging it into the continuing flow.",
+   "situation": "the description says a set of steps is repeated until a condition is met, so the first step of the repeated set is reached both from the entry into that set and from a later decision that loops back to it",
+   "source": "learned guideline (refines ACT-07)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T3",
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

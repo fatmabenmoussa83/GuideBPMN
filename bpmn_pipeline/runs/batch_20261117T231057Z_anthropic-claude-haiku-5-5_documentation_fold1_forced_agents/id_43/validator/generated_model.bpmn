@@ -1,0 +1,92 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_CarService" targetNamespace="http://example.org/bpmn/car-service">
+
+  <bpmn:message id="Message_ServiceDone" name="Successful service with next service date"/>
+  <bpmn:message id="Message_ServiceReminder" name="Service reminder"/>
+  <bpmn:message id="Message_CarDelivered" name="Car delivered for service"/>
+  <bpmn:message id="Message_CarReceived" name="Car received at facility"/>
+  <bpmn:message id="Message_StatusUpdate" name="Repair status update"/>
+  <bpmn:message id="Message_Payment" name="Payment via app"/>
+
+  <bpmn:collaboration id="Collaboration_CarService">
+    <bpmn:participant id="Participant_PoliceApp" name="Police Service Reminder App" processRef="Process_PoliceApp"/>
+    <bpmn:participant id="Participant_Owner" name="Car Owner"/>
+    <bpmn:participant id="Participant_Facility" name="Car Service Facility" processRef="Process_Facility"/>
+
+    <bpmn:messageFlow id="MessageFlow_Reminder" name="Service reminder" sourceRef="Task_NotifyOwner" targetRef="Participant_Owner" messageRef="Message_ServiceReminder"/>
+    <bpmn:messageFlow id="MessageFlow_CarDelivered" name="Car delivered" sourceRef="Participant_Owner" targetRef="Start_CarDelivered" messageRef="Message_CarDelivered"/>
+    <bpmn:messageFlow id="MessageFlow_CarReceived" name="Car received" sourceRef="Task_ConfirmReceipt" targetRef="Catch_CarBroughtToService" messageRef="Message_CarReceived"/>
+    <bpmn:messageFlow id="MessageFlow_StatusUpdate" name="Status update" sourceRef="Task_SendStatus" targetRef="Participant_Owner" messageRef="Message_StatusUpdate"/>
+    <bpmn:messageFlow id="MessageFlow_Payment" name="Payment" sourceRef="Participant_Owner" targetRef="Catch_Payment" messageRef="Message_Payment"/>
+    <bpmn:messageFlow id="MessageFlow_ServiceDone" name="Successful service" sourceRef="Task_SendNextService" targetRef="Start_ServiceDone" messageRef="Message_ServiceDone"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_PoliceApp" name="Police Service Reminder" isExecutable="false">
+    <bpmn:startEvent id="Start_ServiceDone" name="Successful service recorded">
+      <bpmn:messageEventDefinition id="MED_ServiceDone" messageRef="Message_ServiceDone"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_CheckRegistration" name="Check car registration"/>
+    <bpmn:exclusiveGateway id="Gateway_Registered" name="Car still registered?" default="Flow_NotRegistered"/>
+    <bpmn:sendTask id="Task_NotifyOwner" name="Notify owner of service due"/>
+    <bpmn:eventBasedGateway id="Gateway_ServiceEvent" name="Owner goes to service?"/>
+    <bpmn:intermediateCatchEvent id="Catch_CarBroughtToService" name="Car brought to service">
+      <bpmn:messageEventDefinition id="MED_CarBrought" messageRef="Message_CarReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Timer_30Days" name="30 days passed">
+      <bpmn:timerEventDefinition id="TED_30Days">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P30D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="Task_IssueFine" name="Issue fine"/>
+    <bpmn:endEvent id="End_Fined" name="Owner fined"/>
+    <bpmn:endEvent id="End_Serviced" name="Service visit recorded"/>
+    <bpmn:endEvent id="End_NotRegistered" name="No reminder sent"/>
+
+    <bpmn:sequenceFlow id="Flow_CheckRegistration" sourceRef="Start_ServiceDone" targetRef="Task_CheckRegistration"/>
+    <bpmn:sequenceFlow id="Flow_RegistrationCheck" sourceRef="Task_CheckRegistration" targetRef="Gateway_Registered"/>
+    <bpmn:sequenceFlow id="Flow_Registered" name="Yes" sourceRef="Gateway_Registered" targetRef="Task_NotifyOwner">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${registered == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotRegistered" name="No" sourceRef="Gateway_Registered" targetRef="End_NotRegistered"/>
+    <bpmn:sequenceFlow id="Flow_Notified" sourceRef="Task_NotifyOwner" targetRef="Gateway_ServiceEvent"/>
+    <bpmn:sequenceFlow id="Flow_WaitVisit" sourceRef="Gateway_ServiceEvent" targetRef="Catch_CarBroughtToService"/>
+    <bpmn:sequenceFlow id="Flow_WaitTimer" sourceRef="Gateway_ServiceEvent" targetRef="Timer_30Days"/>
+    <bpmn:sequenceFlow id="Flow_VisitRecorded" sourceRef="Catch_CarBroughtToService" targetRef="End_Serviced"/>
+    <bpmn:sequenceFlow id="Flow_Overdue" sourceRef="Timer_30Days" targetRef="Task_IssueFine"/>
+    <bpmn:sequenceFlow id="Flow_Fined" sourceRef="Task_IssueFine" targetRef="End_Fined"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Facility" name="Car Service Facility" isExecutable="false">
+    <bpmn:startEvent id="Start_CarDelivered" name="Car delivered for service">
+      <bpmn:messageEventDefinition id="MED_CarDelivered" messageRef="Message_CarDelivered"/>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_ConfirmReceipt" name="Confirm car receipt to app"/>
+    <bpmn:userTask id="Task_RecordProblems" name="Mechanic enters car problems for reference"/>
+    <bpmn:task id="Task_Repair" name="Repair car"/>
+    <bpmn:boundaryEvent id="Boundary_StatusInterval" name="Status update interval" attachedToRef="Task_Repair" cancelActivity="false">
+      <bpmn:timerEventDefinition id="TED_StatusInterval">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">R/P1D</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sendTask id="Task_SendStatus" name="Send status update email"/>
+    <bpmn:endEvent id="End_StatusSent" name="Status update sent"/>
+    <bpmn:userTask id="Task_RecordRepair" name="Mechanic enters successful repair and issues Pickerl"/>
+    <bpmn:intermediateCatchEvent id="Catch_Payment" name="Payment received">
+      <bpmn:messageEventDefinition id="MED_Payment" messageRef="Message_Payment"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_EnterNextService" name="Mechanic enters next service time"/>
+    <bpmn:sendTask id="Task_SendNextService" name="Send successful service and next service date to app"/>
+    <bpmn:endEvent id="End_ServiceCompleted" name="Service completed"/>
+
+    <bpmn:sequenceFlow id="Flow_Received" sourceRef="Start_CarDelivered" targetRef="Task_ConfirmReceipt"/>
+    <bpmn:sequenceFlow id="Flow_ConfirmedProblems" sourceRef="Task_ConfirmReceipt" targetRef="Task_RecordProblems"/>
+    <bpmn:sequenceFlow id="Flow_StartRepair" sourceRef="Task_RecordProblems" targetRef="Task_Repair"/>
+    <bpmn:sequenceFlow id="Flow_StatusTimer" sourceRef="Boundary_StatusInterval" targetRef="Task_SendStatus"/>
+    <bpmn:sequenceFlow id="Flow_StatusSent" sourceRef="Task_SendStatus" targetRef="End_StatusSent"/>
+    <bpmn:sequenceFlow id="Flow_RepairDone" sourceRef="Task_Repair" targetRef="Task_RecordRepair"/>
+    <bpmn:sequenceFlow id="Flow_AwaitPayment" sourceRef="Task_RecordRepair" targetRef="Catch_Payment"/>
+    <bpmn:sequenceFlow id="Flow_PaidNextService" sourceRef="Catch_Payment" targetRef="Task_EnterNextService"/>
+    <bpmn:sequenceFlow id="Flow_SendNext" sourceRef="Task_EnterNextService" targetRef="Task_SendNextService"/>
+    <bpmn:sequenceFlow id="Flow_Completed" sourceRef="Task_SendNextService" targetRef="End_ServiceCompleted"/>
+  </bpmn:process>
+
+</bpmn:definitions>

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_BurgerSeller"
+                  targetNamespace="http://example.com/bpmn/burger-seller">
+  <bpmn:message id="Message_Order" name="Order"/>
+  <bpmn:message id="Message_MenuQuestion" name="Menu choice question"/>
+  <bpmn:message id="Message_MenuAnswer" name="Menu choice answer"/>
+  <bpmn:message id="Message_SideQuestion" name="Fries or wedges question"/>
+  <bpmn:message id="Message_SideAnswer" name="Side choice answer"/>
+  <bpmn:message id="Message_StatusUpdate" name="Burger preparation status update"/>
+
+  <bpmn:collaboration id="Collaboration_BurgerSeller">
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_Robot" name="Robotic Burger Seller" processRef="Process_Robot"/>
+    <bpmn:messageFlow id="MessageFlow_Order" name="Order" sourceRef="Participant_Customer" targetRef="StartEvent_Order" messageRef="Message_Order"/>
+    <bpmn:messageFlow id="MessageFlow_MenuQuestion" name="Menu choice question" sourceRef="Task_AskMenu" targetRef="Participant_Customer" messageRef="Message_MenuQuestion"/>
+    <bpmn:messageFlow id="MessageFlow_MenuAnswer" name="Menu choice answer" sourceRef="Participant_Customer" targetRef="Task_ReceiveMenuChoice" messageRef="Message_MenuAnswer"/>
+    <bpmn:messageFlow id="MessageFlow_SideQuestion" name="Fries or wedges question" sourceRef="Task_AskSide" targetRef="Participant_Customer" messageRef="Message_SideQuestion"/>
+    <bpmn:messageFlow id="MessageFlow_SideAnswer" name="Side choice answer" sourceRef="Participant_Customer" targetRef="Task_ReceiveSideChoice" messageRef="Message_SideAnswer"/>
+    <bpmn:messageFlow id="MessageFlow_StatusUpdate" name="Status update" sourceRef="Task_SendStatus" targetRef="Participant_Customer" messageRef="Message_StatusUpdate"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Robot" name="Robotic Burger Seller near the University of Vienna" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Order" name="Order received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Order" messageRef="Message_Order"/>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_AskMenu" name="Ask whether the customer wants a menu or just the burger" messageRef="Message_MenuQuestion"/>
+    <bpmn:receiveTask id="Task_ReceiveMenuChoice" name="Receive menu choice" messageRef="Message_MenuAnswer"/>
+    <bpmn:exclusiveGateway id="Gateway_MenuChoice" name="Menu or just burger?"/>
+    <bpmn:parallelGateway id="Gateway_MenuWorkSplit" name="Prepare menu items in parallel" gatewayDirection="Diverging"/>
+    <bpmn:task id="Task_PrepareDrink" name="Prepare drink">
+      <bpmn:documentation>Preparation duration varies depending on the drink size.</bpmn:documentation>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_AskSide" name="Ask whether the customer wants fries or wedges" messageRef="Message_SideQuestion"/>
+    <bpmn:receiveTask id="Task_ReceiveSideChoice" name="Receive fries or wedges choice" messageRef="Message_SideAnswer"/>
+    <bpmn:exclusiveGateway id="Gateway_SideChoice" name="Fries or wedges?"/>
+    <bpmn:task id="Task_PrepareFries" name="Prepare fries">
+      <bpmn:documentation>Preparation duration varies depending on the size of the fries order.</bpmn:documentation>
+    </bpmn:task>
+    <bpmn:task id="Task_PrepareWedges" name="Prepare wedges">
+      <bpmn:documentation>Preparation duration varies depending on the size of the wedges order.</bpmn:documentation>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_SideMerge" name="Side prepared" gatewayDirection="Converging"/>
+    <bpmn:parallelGateway id="Gateway_MenuWorkJoin" name="Menu items ready" gatewayDirection="Converging"/>
+    <bpmn:exclusiveGateway id="Gateway_BurgerMerge" name="Continue to burger preparation" gatewayDirection="Converging"/>
+    <bpmn:subProcess id="SubProcess_PrepareBurger" name="Prepare burger">
+      <bpmn:startEvent id="StartEvent_BurgerPrep" name="Burger preparation starts"/>
+      <bpmn:task id="Task_PrepareBurger" name="Prepare burger">
+        <bpmn:documentation>Preparation duration varies depending on the number of ingredients.</bpmn:documentation>
+      </bpmn:task>
+      <bpmn:endEvent id="EndEvent_BurgerPrep" name="Burger prepared"/>
+      <bpmn:sequenceFlow id="Flow_BurgerPrep_Start" sourceRef="StartEvent_BurgerPrep" targetRef="Task_PrepareBurger"/>
+      <bpmn:sequenceFlow id="Flow_BurgerPrep_End" sourceRef="Task_PrepareBurger" targetRef="EndEvent_BurgerPrep"/>
+
+      <bpmn:subProcess id="EventSubProcess_StatusUpdates" name="Send enthusiastic status updates every 30 seconds" triggeredByEvent="true">
+        <bpmn:startEvent id="StartEvent_StatusTimer" name="Every 30 seconds" isInterrupting="false">
+          <bpmn:timerEventDefinition id="TimerDefinition_Status">
+            <bpmn:timeCycle>R/PT30S</bpmn:timeCycle>
+          </bpmn:timerEventDefinition>
+        </bpmn:startEvent>
+        <bpmn:sendTask id="Task_SendStatus" name="Send enthusiastic status update" messageRef="Message_StatusUpdate"/>
+        <bpmn:endEvent id="EndEvent_StatusSent" name="Status update sent"/>
+        <bpmn:sequenceFlow id="Flow_Status_Start" sourceRef="StartEvent_StatusTimer" targetRef="Task_SendStatus"/>
+        <bpmn:sequenceFlow id="Flow_Status_End" sourceRef="Task_SendStatus" targetRef="EndEvent_StatusSent"/>
+      </bpmn:subProcess>
+    </bpmn:subProcess>
+    <bpmn:task id="Task_DeliverOrder" name="Deliver order via conveyor belt"/>
+    <bpmn:endEvent id="EndEvent_OrderDelivered" name="Order delivered"/>
+
+    <bpmn:sequenceFlow id="Flow_OrderToQuestion" sourceRef="StartEvent_Order" targetRef="Task_AskMenu"/>
+    <bpmn:sequenceFlow id="Flow_QuestionToAnswer" sourceRef="Task_AskMenu" targetRef="Task_ReceiveMenuChoice"/>
+    <bpmn:sequenceFlow id="Flow_AnswerToMenuGateway" sourceRef="Task_ReceiveMenuChoice" targetRef="Gateway_MenuChoice"/>
+    <bpmn:sequenceFlow id="Flow_MenuChoice_Menu" sourceRef="Gateway_MenuChoice" targetRef="Gateway_MenuWorkSplit">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">menuSelected = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_MenuChoice_BurgerOnly" sourceRef="Gateway_MenuChoice" targetRef="Gateway_BurgerMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">menuSelected = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_MenuSplit_Drink" sourceRef="Gateway_MenuWorkSplit" targetRef="Task_PrepareDrink"/>
+    <bpmn:sequenceFlow id="Flow_Drink_MenuJoin" sourceRef="Task_PrepareDrink" targetRef="Gateway_MenuWorkJoin"/>
+    <bpmn:sequenceFlow id="Flow_MenuSplit_AskSide" sourceRef="Gateway_MenuWorkSplit" targetRef="Task_AskSide"/>
+    <bpmn:sequenceFlow id="Flow_AskSide_Receive" sourceRef="Task_AskSide" targetRef="Task_ReceiveSideChoice"/>
+    <bpmn:sequenceFlow id="Flow_Receive_SideGateway" sourceRef="Task_ReceiveSideChoice" targetRef="Gateway_SideChoice"/>
+    <bpmn:sequenceFlow id="Flow_SideChoice_Fries" sourceRef="Gateway_SideChoice" targetRef="Task_PrepareFries">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">friesSelected = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SideChoice_Wedges" sourceRef="Gateway_SideChoice" targetRef="Task_PrepareWedges">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">wedgesSelected = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Fries_SideMerge" sourceRef="Task_PrepareFries" targetRef="Gateway_SideMerge"/>
+    <bpmn:sequenceFlow id="Flow_Wedges_SideMerge" sourceRef="Task_PrepareWedges" targetRef="Gateway_SideMerge"/>
+    <bpmn:sequenceFlow id="Flow_SideMerge_MenuJoin" sourceRef="Gateway_SideMerge" targetRef="Gateway_MenuWorkJoin"/>
+    <bpmn:sequenceFlow id="Flow_MenuJoin_BurgerMerge" sourceRef="Gateway_MenuWorkJoin" targetRef="Gateway_BurgerMerge"/>
+    <bpmn:sequenceFlow id="Flow_BurgerMerge_Prepare" sourceRef="Gateway_BurgerMerge" targetRef="SubProcess_PrepareBurger"/>
+    <bpmn:sequenceFlow id="Flow_Prepare_Deliver" sourceRef="SubProcess_PrepareBurger" targetRef="Task_DeliverOrder"/>
+    <bpmn:sequenceFlow id="Flow_Deliver_End" sourceRef="Task_DeliverOrder" targetRef="EndEvent_OrderDelivered"/>
+  </bpmn:process>
+</bpmn:definitions>

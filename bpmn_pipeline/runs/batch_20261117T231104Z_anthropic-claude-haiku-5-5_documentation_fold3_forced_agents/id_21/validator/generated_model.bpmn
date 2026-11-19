@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Shipping"
+                  targetNamespace="http://example.org/bpmn/shipping">
+  <bpmn:collaboration id="Collaboration_Shipping" name="Goods Shipping Collaboration">
+    <bpmn:participant id="Participant_Shipping" name="Goods Shipping" processRef="Process_Shipping"/>
+    <bpmn:participant id="Participant_LogisticCompanies" name="Logistic Companies"/>
+    <bpmn:messageFlow id="MessageFlow_Invitation" name="Invitation to make offers" sourceRef="Task_Invite_Companies" targetRef="Participant_LogisticCompanies"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Shipping" name="Goods Shipping" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Shipping">
+      <bpmn:lane id="Lane_Secretary" name="Secretary">
+        <bpmn:flowNodeRef>Start_Shipment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Shipping_Required</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Clarify_Shipper</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Shipment_Size</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Invite_Companies</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Select_Offer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Normal_Post</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Shipping_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Prep_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Write_Label</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_No_Shipment</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_LogisticsHead" name="Logistics Department Head">
+        <bpmn:flowNodeRef>Gateway_Insurance_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Take_Insurance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Insurance_Join</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Warehouse" name="Warehouse Staff">
+        <bpmn:flowNodeRef>Task_Pack_Goods</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Prep_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Prepare_Pickup</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Ready</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Shipment" name="Goods to be shipped">
+      <bpmn:outgoing>Flow_Start</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:exclusiveGateway id="Gateway_Shipping_Required" name="Goods shall be shipped?" default="Flow_NoShipping">
+      <bpmn:incoming>Flow_Start</bpmn:incoming>
+      <bpmn:outgoing>Flow_Shipping</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoShipping</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="Task_Clarify_Shipper" name="Clarify who will do the shipping">
+      <bpmn:incoming>Flow_Shipping</bpmn:incoming>
+      <bpmn:outgoing>Flow_ClarifyToSize</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Shipment_Size" name="Amount of goods?">
+      <bpmn:incoming>Flow_ClarifyToSize</bpmn:incoming>
+      <bpmn:outgoing>Flow_Large</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Small</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sendTask id="Task_Invite_Companies" name="Invite three logistic companies to make offers">
+      <bpmn:incoming>Flow_Large</bpmn:incoming>
+      <bpmn:outgoing>Flow_InviteToSelect</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:userTask id="Task_Select_Offer" name="Select one offer">
+      <bpmn:incoming>Flow_InviteToSelect</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelectToJoin</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:task id="Task_Normal_Post" name="Use normal post shipment">
+      <bpmn:incoming>Flow_Small</bpmn:incoming>
+      <bpmn:outgoing>Flow_PostToJoin</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_Shipping_Join" name="Shipping arranged">
+      <bpmn:incoming>Flow_SelectToJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_PostToJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_JoinToPrepSplit</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:parallelGateway id="Gateway_Prep_Split" name="Start preparation">
+      <bpmn:incoming>Flow_JoinToPrepSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToLabel</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToInsuranceSplit</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToPack</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:userTask id="Task_Write_Label" name="Write package label">
+      <bpmn:incoming>Flow_ToLabel</bpmn:incoming>
+      <bpmn:outgoing>Flow_LabelToPrepJoin</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:inclusiveGateway id="Gateway_Insurance_Split" name="Parcel insurance necessary?" default="Flow_NoInsurance">
+      <bpmn:incoming>Flow_ToInsuranceSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_Insurance</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoInsurance</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+
+    <bpmn:userTask id="Task_Take_Insurance" name="Take parcel insurance">
+      <bpmn:incoming>Flow_Insurance</bpmn:incoming>
+      <bpmn:outgoing>Flow_InsuranceToJoin</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:inclusiveGateway id="Gateway_Insurance_Join" name="Insurance handled">
+      <bpmn:incoming>Flow_InsuranceToJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_NoInsurance</bpmn:incoming>
+      <bpmn:outgoing>Flow_InsuranceJoinToPrepJoin</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+
+    <bpmn:manualTask id="Task_Pack_Goods" name="Package goods">
+      <bpmn:incoming>Flow_ToPack</bpmn:incoming>
+      <bpmn:outgoing>Flow_PackToPrepJoin</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:parallelGateway id="Gateway_Prep_Join" name="Preparation complete">
+      <bpmn:incoming>Flow_LabelToPrepJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_InsuranceJoinToPrepJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_PackToPrepJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_PrepJoinToPickup</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:manualTask id="Task_Prepare_Pickup" name="Prepare packaged goods for pickup by logistic company">
+      <bpmn:incoming>Flow_PrepJoinToPickup</bpmn:incoming>
+      <bpmn:outgoing>Flow_PickupToEnd</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:endEvent id="End_Ready" name="Goods ready for pickup">
+      <bpmn:incoming>Flow_PickupToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="End_No_Shipment" name="No shipment required">
+      <bpmn:incoming>Flow_NoShipping</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start" sourceRef="Start_Shipment" targetRef="Gateway_Shipping_Required"/>
+    <bpmn:sequenceFlow id="Flow_Shipping" name="Yes" sourceRef="Gateway_Shipping_Required" targetRef="Task_Clarify_Shipper">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${shippingRequired == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoShipping" name="No" sourceRef="Gateway_Shipping_Required" targetRef="End_No_Shipment"/>
+    <bpmn:sequenceFlow id="Flow_ClarifyToSize" sourceRef="Task_Clarify_Shipper" targetRef="Gateway_Shipment_Size"/>
+    <bpmn:sequenceFlow id="Flow_Large" name="Large amount (special shipping)" sourceRef="Gateway_Shipment_Size" targetRef="Task_Invite_Companies">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${amount == 'large'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Small" name="Small amount" sourceRef="Gateway_Shipment_Size" targetRef="Task_Normal_Post">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${amount == 'small'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_InviteToSelect" sourceRef="Task_Invite_Companies" targetRef="Task_Select_Offer"/>
+    <bpmn:sequenceFlow id="Flow_SelectToJoin" sourceRef="Task_Select_Offer" targetRef="Gateway_Shipping_Join"/>
+    <bpmn:sequenceFlow id="Flow_PostToJoin" sourceRef="Task_Normal_Post" targetRef="Gateway_Shipping_Join"/>
+    <bpmn:sequenceFlow id="Flow_JoinToPrepSplit" sourceRef="Gateway_Shipping_Join" targetRef="Gateway_Prep_Split"/>
+    <bpmn:sequenceFlow id="Flow_ToLabel" sourceRef="Gateway_Prep_Split" targetRef="Task_Write_Label"/>
+    <bpmn:sequenceFlow id="Flow_ToInsuranceSplit" sourceRef="Gateway_Prep_Split" targetRef="Gateway_Insurance_Split"/>
+    <bpmn:sequenceFlow id="Flow_ToPack" sourceRef="Gateway_Prep_Split" targetRef="Task_Pack_Goods"/>
+    <bpmn:sequenceFlow id="Flow_Insurance" name="Yes" sourceRef="Gateway_Insurance_Split" targetRef="Task_Take_Insurance">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${insuranceNeeded == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoInsurance" name="No" sourceRef="Gateway_Insurance_Split" targetRef="Gateway_Insurance_Join"/>
+    <bpmn:sequenceFlow id="Flow_InsuranceToJoin" sourceRef="Task_Take_Insurance" targetRef="Gateway_Insurance_Join"/>
+    <bpmn:sequenceFlow id="Flow_InsuranceJoinToPrepJoin" sourceRef="Gateway_Insurance_Join" targetRef="Gateway_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_LabelToPrepJoin" sourceRef="Task_Write_Label" targetRef="Gateway_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_PackToPrepJoin" sourceRef="Task_Pack_Goods" targetRef="Gateway_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_PrepJoinToPickup" sourceRef="Gateway_Prep_Join" targetRef="Task_Prepare_Pickup"/>
+    <bpmn:sequenceFlow id="Flow_PickupToEnd" sourceRef="Task_Prepare_Pickup" targetRef="End_Ready"/>
+  </bpmn:process>
+</bpmn:definitions>

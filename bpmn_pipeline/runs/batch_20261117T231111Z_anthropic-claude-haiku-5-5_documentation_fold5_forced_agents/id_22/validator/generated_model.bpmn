@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Subrogation" targetNamespace="http://example.org/bpmn/subrogation">
+  <bpmn:message id="Msg_PaymentRequest" name="Payment request"/>
+  <bpmn:message id="Msg_PaymentReceived" name="Payment received"/>
+  <bpmn:message id="Msg_DisagreementReceived" name="Disagreement received"/>
+  <bpmn:process id="Process_Subrogation" name="Subrogation Recourse Handling" isExecutable="false">
+    <bpmn:startEvent id="Start_PotentialSubrogation" name="Potential subrogation case arises">
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_ObtainInfo" name="Obtain subrogation information">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CheckCase" name="Check case">
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_RecoursePossible" name="Recourse possible?" default="Flow_05">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_SendPaymentRequest" name="Send payment request to insurant" messageRef="Msg_PaymentRequest">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:task id="Task_CreateReminder" name="Create reminder">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_07</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:eventBasedGateway id="Gateway_AwaitResponse" name="Await insurant response or deadline">
+      <bpmn:incoming>Flow_07</bpmn:incoming>
+      <bpmn:outgoing>Flow_08</bpmn:outgoing>
+      <bpmn:outgoing>Flow_09</bpmn:outgoing>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="Event_PaymentReceived" name="Payment received">
+      <bpmn:incoming>Flow_08</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_PaymentReceived" messageRef="Msg_PaymentReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_DisagreementReceived" name="Insurant disagrees with recourse">
+      <bpmn:incoming>Flow_09</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_DisagreementReceived" messageRef="Msg_DisagreementReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_DeadlineReached" name="Disagreement deadline reached">
+      <bpmn:documentation>Duration of the disagreement deadline is not specified in the description.</bpmn:documentation>
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_21</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TED_DisagreementDeadline"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_CloseNoRecourse" name="Close case">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06b</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_NoRecourse" name="Case closed without recourse">
+      <bpmn:incoming>Flow_06b</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_BookPayment" name="Make booking">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ClosePaid" name="Close case">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_PaidClosed" name="Case closed after payment">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_CheckReasoning" name="Check insurant's reasoning">
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+      <bpmn:outgoing>Flow_16</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_ReasoningCorrect" name="Insurant reasoning correct?" default="Flow_18">
+      <bpmn:incoming>Flow_16</bpmn:incoming>
+      <bpmn:outgoing>Flow_17</bpmn:outgoing>
+      <bpmn:outgoing>Flow_18</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_CloseAgreed" name="Close case">
+      <bpmn:incoming>Flow_17</bpmn:incoming>
+      <bpmn:outgoing>Flow_19</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_AgreedClosed" name="Case closed after insurant was right">
+      <bpmn:incoming>Flow_19</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_ForwardToCollectionDispute" name="Forward case to collection agency">
+      <bpmn:incoming>Flow_18</bpmn:incoming>
+      <bpmn:outgoing>Flow_20</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ForwardToCollectionDeadline" name="Forward case to collection agency">
+      <bpmn:incoming>Flow_21</bpmn:incoming>
+      <bpmn:outgoing>Flow_22</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_CollectionForwarded" name="Case forwarded to collection agency">
+      <bpmn:incoming>Flow_20</bpmn:incoming>
+      <bpmn:incoming>Flow_22</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="Start_PotentialSubrogation" targetRef="Task_ObtainInfo"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_ObtainInfo" targetRef="Task_CheckCase"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_CheckCase" targetRef="Gateway_RecoursePossible"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Gateway_RecoursePossible" targetRef="Task_SendPaymentRequest">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${recoursePossible}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Gateway_RecoursePossible" targetRef="Task_CloseNoRecourse"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_SendPaymentRequest" targetRef="Task_CreateReminder"/>
+    <bpmn:sequenceFlow id="Flow_06b" sourceRef="Task_CloseNoRecourse" targetRef="End_NoRecourse"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_CreateReminder" targetRef="Gateway_AwaitResponse"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Gateway_AwaitResponse" targetRef="Event_PaymentReceived"/>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Gateway_AwaitResponse" targetRef="Event_DisagreementReceived"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Gateway_AwaitResponse" targetRef="Event_DeadlineReached"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Event_PaymentReceived" targetRef="Task_BookPayment"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_BookPayment" targetRef="Task_ClosePaid"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_ClosePaid" targetRef="End_PaidClosed"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Event_DisagreementReceived" targetRef="Task_CheckReasoning"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Task_CheckReasoning" targetRef="Gateway_ReasoningCorrect"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Gateway_ReasoningCorrect" targetRef="Task_CloseAgreed">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${reasoningCorrect}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Gateway_ReasoningCorrect" targetRef="Task_ForwardToCollectionDispute"/>
+    <bpmn:sequenceFlow id="Flow_19" sourceRef="Task_CloseAgreed" targetRef="End_AgreedClosed"/>
+    <bpmn:sequenceFlow id="Flow_20" sourceRef="Task_ForwardToCollectionDispute" targetRef="End_CollectionForwarded"/>
+    <bpmn:sequenceFlow id="Flow_21" sourceRef="Event_DeadlineReached" targetRef="Task_ForwardToCollectionDeadline"/>
+    <bpmn:sequenceFlow id="Flow_22" sourceRef="Task_ForwardToCollectionDeadline" targetRef="End_CollectionForwarded"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,305 @@
+{
+ "id": "37",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 44,
+  "T6": 6
+ },
+ "first_pass_error_counts": {
+  "T5": 44,
+  "T6": 7
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: below, enough",
+   "guideline_id": "EXS-092",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: batches",
+   "guideline_id": "EXS-093",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-078 (The generated model lacks the parallel gateway that forks the follow-up actions after the stock check (M2) and the parallel join that should synchronize them before the next step (M3). The description says reordering is needed when stock falls below a threshold (S8, S9), and the reference's fork and join reflect a fork-and-join pattern for unordered follow-up actions. LRN-078 already covers this p)",
+   "guideline_id": "LRN-078",
+   "ref": "LRN-078",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-078 (The reference has a parallel fork after the threshold check (M2) for the stock update and the reorder, which both must happen after the check (S9, S8). The generated model omits this fork, so these activities are not modeled as concurrent branches joined before the next step. LRN-078 already covers this pattern of a choice followed by unordered follow-up actions that must all finish, so the guidel)",
+   "guideline_id": "LRN-078",
+   "ref": "LRN-078",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-078 (The description says that when stock for a part falls below 5 the process reorders (cheapest) and the stock must also be updated, and the reference forks these from a parallel gateway after the 'Stock below 5?' decision. The generated model connects the exclusive gateway directly to the actions, which is the error. Documented GW-04 and GW-05 point the same way, and the learned LRN-078 covers the p)",
+   "guideline_id": "LRN-078",
+   "ref": "LRN-078",
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-096 (The reference models receipt of the first batch as a manualTask (M1), while the generated model has only catch events for the arrivals (X4, X5). The description says that building starts when the first parts arrive (S7) and that the parts come in several batches at uncertain times (S6), so each arrival is a wait that needs a receipt step. This is the main difference that is supported by the record)",
+   "guideline_id": "LRN-096",
+   "ref": "LRN-096",
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "EXS-092",
+   "instruction": "When the description states that an action is performed only when a condition on a quantity or stock level holds (for example, an action is taken only if the available amount is not enough, or only if a level falls below a threshold), and the process otherwise continues without that action: Model an exclusive gateway with a data-based condition placed before the conditional action. Give one outgoing flow that performs the action under the stated condition and one that skips it under the negated condition. Join the two flows with an exclusive merge gateway before the next step. Do not leave the check implicit, and do not make the conditional action unconditional.",
+   "situation": "the description states that an action is performed only when a condition on a quantity or stock level holds (for example, an action is taken only if the available amount is not enough, or only if a level falls below a threshold), and the process otherwise continues without that action",
+   "source": "example-specific guideline",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "EXS-093",
+   "instruction": "When the description states that items arrive in several separate batches at unpredictable times, and work continues until all items have been received, with a completion condition to check after each batch: Model each expected batch as a wait for an arrival using an intermediate catch event, not a task. After each arrival, place an exclusive gateway that asks whether the completion condition holds. Route one branch back to the wait for the next arrival and the other branch onward, so that the check is repeated after every batch.",
+   "situation": "the description states that items arrive in several separate batches at unpredictable times, and work continues until all items have been received, with a completion condition to check after each batch",
+   "source": "example-specific guideline",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-078",
+   "instruction": "When the description says that one outcome of a choice made by a participant leads to several follow-up actions that are not ordered relative to each other, and all of them must be carried out before the process moves on: Model the choice as an exclusive split with one labelled outgoing flow per outcome. On the branch of the outcome that triggers the follow-up actions, place a parallel gateway that forks them as concurrent branches, and join those branches with a parallel gateway before the next step. Do not chain the unordered follow-up actions in a fixed sequence, and do not join them with an exclusive gateway.",
+   "situation": "The description says that after a threshold check on a quantity or level, several follow-up actions are carried out for the same item, the description gives no order among them, and all of them must be finished before the process moves on.",
+   "source": "learned guideline (refines GW-04)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-096",
+   "instruction": "When the description lists several actions that a participant performs in sequence, and some of them come before a parallel split, after a decision, or on a branch that ends the process: Model each stated action as its own task (userTask, manualTask, or serviceTask according to who performs it), placed in the order the description gives and connected by sequence flows. Do not drop a stated action, and do not stand in for it with a start, catch, or end event. A wait for an external occurrence stays an intermediate catch event, but the stated work that checks or handles that occurrence is still a task.",
+   "situation": "the description says that items arrive from an external source in several separate deliveries at uncertain times, and that a participant starts work on them only after the first delivery arrives",
+   "source": "learned guideline (refines FID-02)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

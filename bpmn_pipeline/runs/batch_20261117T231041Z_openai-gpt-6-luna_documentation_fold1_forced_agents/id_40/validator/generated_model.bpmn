@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_OEE"
+                  targetNamespace="http://example.com/bpmn/oee">
+  <bpmn:message id="Message_MachineInformation" name="Machine information"/>
+  <bpmn:message id="Message_StopMachine" name="Stop machine command"/>
+  <bpmn:message id="Message_EngineerEmail" name="OEE alert email"/>
+  <bpmn:message id="Message_MachineRestarted" name="Machine restarted"/>
+  <bpmn:message id="Message_MachineDisconnected" name="Machine disconnected"/>
+
+  <bpmn:process id="Process_OEE" name="OEE" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_OEE" name="Start measuring"/>
+    <bpmn:receiveTask id="ReceiveTask_MachineInformation" name="Collect machine information" messageRef="Message_MachineInformation"/>
+    <bpmn:task id="Task_CalculateOEE" name="Calculate OEE"/>
+    <bpmn:exclusiveGateway id="Gateway_OEEThreshold" name="Check OEE threshold" default="Flow_OEE_NotBelowThreshold"/>
+    <bpmn:sendTask id="SendTask_StopMachine" name="Stop machine" messageRef="Message_StopMachine"/>
+    <bpmn:sendTask id="SendTask_EngineerEmail" name="Send email to engineer" messageRef="Message_EngineerEmail"/>
+    <bpmn:intermediateCatchEvent id="CatchEvent_MachineRestarted" name="Machine restarted">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_MachineRestarted" messageRef="Message_MachineRestarted"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:subProcess id="EventSubProcess_MachineDisconnected" name="Handle machine disconnection" triggeredByEvent="true">
+      <bpmn:startEvent id="StartEvent_MachineDisconnected" name="Machine disconnected" isInterrupting="true">
+        <bpmn:messageEventDefinition id="MessageEventDefinition_MachineDisconnected" messageRef="Message_MachineDisconnected"/>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="EndEvent_ProcessStopped" name="Process stopped"/>
+      <bpmn:sequenceFlow id="Flow_Disconnected_To_Stopped" sourceRef="StartEvent_MachineDisconnected" targetRef="EndEvent_ProcessStopped"/>
+    </bpmn:subProcess>
+
+    <bpmn:sequenceFlow id="Flow_Start_To_Collect" sourceRef="StartEvent_OEE" targetRef="ReceiveTask_MachineInformation"/>
+    <bpmn:sequenceFlow id="Flow_Collect_To_Calculate" sourceRef="ReceiveTask_MachineInformation" targetRef="Task_CalculateOEE"/>
+    <bpmn:sequenceFlow id="Flow_Calculate_To_Check" sourceRef="Task_CalculateOEE" targetRef="Gateway_OEEThreshold"/>
+    <bpmn:sequenceFlow id="Flow_OEE_BelowThreshold" name="OEE below threshold" sourceRef="Gateway_OEEThreshold" targetRef="SendTask_StopMachine">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">OEE &lt; threshold</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_OEE_NotBelowThreshold" name="OEE not below threshold" sourceRef="Gateway_OEEThreshold" targetRef="ReceiveTask_MachineInformation"/>
+    <bpmn:sequenceFlow id="Flow_Stop_To_Email" sourceRef="SendTask_StopMachine" targetRef="SendTask_EngineerEmail"/>
+    <bpmn:sequenceFlow id="Flow_Email_To_Restart" sourceRef="SendTask_EngineerEmail" targetRef="CatchEvent_MachineRestarted"/>
+    <bpmn:sequenceFlow id="Flow_Restart_To_Collect" sourceRef="CatchEvent_MachineRestarted" targetRef="ReceiveTask_MachineInformation"/>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_OEE">
+    <bpmn:participant id="Participant_OEE" name="OEE process" processRef="Process_OEE"/>
+    <bpmn:participant id="Participant_Machine" name="Machine"/>
+    <bpmn:participant id="Participant_Engineer" name="Engineer"/>
+    <bpmn:messageFlow id="MessageFlow_MachineInformation" name="Machine information" sourceRef="Participant_Machine" targetRef="ReceiveTask_MachineInformation" messageRef="Message_MachineInformation"/>
+    <bpmn:messageFlow id="MessageFlow_StopMachine" name="Stop machine command" sourceRef="SendTask_StopMachine" targetRef="Participant_Machine" messageRef="Message_StopMachine"/>
+    <bpmn:messageFlow id="MessageFlow_EngineerEmail" name="OEE alert email" sourceRef="SendTask_EngineerEmail" targetRef="Participant_Engineer" messageRef="Message_EngineerEmail"/>
+    <bpmn:messageFlow id="MessageFlow_MachineRestarted" name="Machine restarted" sourceRef="Participant_Machine" targetRef="CatchEvent_MachineRestarted" messageRef="Message_MachineRestarted"/>
+    <bpmn:messageFlow id="MessageFlow_MachineDisconnected" name="Machine disconnected" sourceRef="Participant_Machine" targetRef="StartEvent_MachineDisconnected" messageRef="Message_MachineDisconnected"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

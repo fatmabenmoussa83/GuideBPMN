@@ -1,0 +1,312 @@
+{
+ "id": "43",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 39,
+  "T6": 15
+ },
+ "first_pass_error_counts": {
+  "T5": 39,
+  "T6": 15
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-052 (cosine 0.89)",
+   "guideline_id": "LRN-052",
+   "ref": "LRN-052",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-052 (The generated model sends the owner notification directly after the trigger, while the reference first checks the registration status with a task and then branches on its result (M9, M3, M7, P3). The description states the check and says the notification happens only if the car is still registered (S3, S4). The guideline is phrased from the description's structure, so it applies to any check-then-)",
+   "guideline_id": "LRN-052",
+   "ref": "LRN-052",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines FID-01 (Reference model has a serviceTask 'Receive updates while waiting' after the mechanic's problem entry, and the description states status updates are received while the owner waits (S7). The generated model has no such task and instead uses an event-based gateway (X2) to wait, so the in-wait activity is dropped. FID-01 already requires modeling every stated activity; this guideline adds the case whe)",
+   "guideline_id": "LRN-093",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines EVT-02 (The description says a fine is applied after 30 days if the owner does not go to the service. The reference models this as a service task \"User fined\" (M4). The generated model ends with an end event \"Owner fined\" (X6), which treats the consequence as a terminal outcome. EVT-02 already says to use end events for terminal outcomes, and this guideline adds the case where the consequence is an action)",
+   "guideline_id": "LRN-094",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines GW-07 (The reference models yes/no checks as exclusive gateways, including the deadline check. The generated model instead used an event-based gateway with a timer catch event for the deadline (X2, X4), and an intermediate catch event for the owner's visit (X3). This produced a structural divergence and missing gateways (M10, M11, M12). The description says the fine follows only if the owner has not gone)",
+   "guideline_id": "LRN-095",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-062 (cosine 0.92)",
+   "guideline_id": "LRN-062",
+   "ref": "LRN-062",
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-052",
+   "instruction": "When the description makes the time limit or the target of a follow-up action depend on a sequence of yes/no checks applied to the same subject, where each check's result changes the next step: Model each check as its own exclusive gateway, placed in the order the description gives the checks. Give each gateway one labelled outgoing flow per outcome, using the condition wording from the description. Attach each outcome flow to the action or step it triggers, including any stated time limit. Connect the not-taken outcome to the next check or to its own continuation. Do not replace these checks with a single task that assesses the subject, and do not omit a check merely because its outcome only changes a time limit.",
+   "situation": "the description states a yes/no condition that is checked at a point in time, such as whether a party has already acted, with a consequence that follows if it has not happened after a stated period, and it does not describe several awaited events from which the first one that occurs selects the path",
+   "source": "learned guideline (refines ACT-07)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-093",
+   "instruction": "When the description states that while a waiting period lasts, the actor receives status information or the process performs a stated activity that does not end the wait: Model that ongoing activity as its own task, placed on a branch that runs alongside the wait and starts when the wait starts. Keep the wait itself as a separate event that ends the wait. Do not drop the activity, and do not replace it with the wait event or fold it into the wait's label.",
+   "situation": "the description states that while a waiting period lasts, the actor receives status information or the process performs a stated activity that does not end the wait",
+   "source": "learned guideline (refines FID-01)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-094",
+   "instruction": "When the description says that when a required action is not carried out within a stated deadline, an authority or system applies a consequence such as a fine or penalty to the actor: After the timer catch event that marks the deadline, on the branch where the required action was not carried out, model the consequence as a service task that carries out the consequence. Then connect that task to the end event. Do not replace the consequence with an end event named after its outcome, because the description states an action that is performed, not a terminal result.",
+   "situation": "the description says that when a required action is not carried out within a stated deadline, an authority or system applies a consequence such as a fine or penalty to the actor",
+   "source": "learned guideline (refines EVT-02)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-095",
+   "instruction": "When the description states that a consequence or follow-up step applies only if a required action has not been taken by a stated deadline, and it asks to check the state at that point rather than to react to whichever event occurs first: Model an exclusive gateway that checks the state of the required action at the deadline, with one labelled outgoing flow per answer (action taken or not taken), and attach the consequence to the not-taken flow. Do not model this as an event-based gateway with a timer catch event, and do not add a catch event for the deadline.",
+   "situation": "the description states that a consequence or follow-up step applies only if a required action has not been taken by a stated deadline, and it asks to check the state at that point rather than to react to whichever event occurs first",
+   "source": "learned guideline (refines GW-07)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-062",
+   "instruction": "When the description states, in one sentence, several items that the same participant enters or selects, joined by commas or 'and', and each item is a distinct input or choice the participant makes: Model each item in that list as its own user task, in the order the sentence states them, and label each task with the verb and the single item it covers, taken from the description. Do not combine two items into one task label, and do not drop any item from the list.",
+   "situation": "the description states, in separate sentences, that the same actor records one result and then records another distinct item, such as a follow-up time, and the generated model combines these recordings into one task whose label also covers a message to another party",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

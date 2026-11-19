@@ -1,0 +1,154 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_TravelBooking" targetNamespace="http://example.com/bpmn/travel-booking">
+  <bpmn:message id="Msg_SearchRequest" name="Ticket search request"/>
+  <bpmn:message id="Msg_SelectionProvided" name="Route, date and time selected"/>
+  <bpmn:message id="Msg_DetailsProvided" name="Personal and payment details provided"/>
+  <bpmn:message id="Msg_TicketSent" name="Ticket sent"/>
+  <bpmn:message id="Msg_ReminderSent" name="Reminder and instructions sent"/>
+
+  <bpmn:collaboration id="Collaboration_TravelBooking">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_TravelCompany" name="Travel Company" processRef="Process_TravelCompany"/>
+    <bpmn:messageFlow id="MessageFlow_SearchRequest" name="Search request" sourceRef="Task_SearchTicket" targetRef="StartEvent_SearchReceived"/>
+    <bpmn:messageFlow id="MessageFlow_Selection" name="Route, date and time" sourceRef="Task_SelectRouteDateTime" targetRef="IntermediateCatch_SelectionReceived"/>
+    <bpmn:messageFlow id="MessageFlow_Details" name="Personal and payment details" sourceRef="Task_ProvideDetails" targetRef="IntermediateCatch_DetailsReceived"/>
+    <bpmn:messageFlow id="MessageFlow_Ticket" name="Ticket" sourceRef="SendTask_SendTicket" targetRef="IntermediateCatch_TicketReceived"/>
+    <bpmn:messageFlow id="MessageFlow_Reminder" name="Reminder and instructions" sourceRef="SendTask_SendReminder" targetRef="IntermediateCatch_ReminderReceived"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Customer" name="Customer Ticket Journey" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_CustomerBegins" name="Customer begins ticket search">
+      <bpmn:outgoing>Flow_C1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_SearchTicket" name="Search for ticket">
+      <bpmn:incoming>Flow_C1</bpmn:incoming>
+      <bpmn:outgoing>Flow_C2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_SelectRouteDateTime" name="Select route, date and time">
+      <bpmn:incoming>Flow_C2</bpmn:incoming>
+      <bpmn:outgoing>Flow_C3</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ProvideDetails" name="Provide personal and payment details">
+      <bpmn:incoming>Flow_C3</bpmn:incoming>
+      <bpmn:outgoing>Flow_C4</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:intermediateCatchEvent id="IntermediateCatch_TicketReceived" name="Ticket received by email or SMS">
+      <bpmn:incoming>Flow_C4</bpmn:incoming>
+      <bpmn:outgoing>Flow_C5</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_TicketReceived" messageRef="Msg_TicketSent"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:intermediateCatchEvent id="IntermediateCatch_ReminderReceived" name="Reminder and instructions received">
+      <bpmn:incoming>Flow_C5</bpmn:incoming>
+      <bpmn:outgoing>Flow_C6</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_ReminderReceived" messageRef="Msg_ReminderSent"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:task id="Task_CompleteJourney" name="Complete journey">
+      <bpmn:incoming>Flow_C6</bpmn:incoming>
+      <bpmn:outgoing>Flow_C7</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_Feedback_Split" name="Post-travel feedback given?">
+      <bpmn:incoming>Flow_C7</bpmn:incoming>
+      <bpmn:outgoing>Flow_C8</bpmn:outgoing>
+      <bpmn:outgoing>Flow_C9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_ProvideFeedback" name="Provide post-travel feedback">
+      <bpmn:incoming>Flow_C8</bpmn:incoming>
+      <bpmn:outgoing>Flow_C10</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_Feedback_Merge" name="Feedback step done">
+      <bpmn:incoming>Flow_C9</bpmn:incoming>
+      <bpmn:incoming>Flow_C10</bpmn:incoming>
+      <bpmn:outgoing>Flow_C11</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="EndEvent_JourneyConcluded" name="Customer journey concluded">
+      <bpmn:incoming>Flow_C11</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_C1" sourceRef="StartEvent_CustomerBegins" targetRef="Task_SearchTicket"/>
+    <bpmn:sequenceFlow id="Flow_C2" sourceRef="Task_SearchTicket" targetRef="Task_SelectRouteDateTime"/>
+    <bpmn:sequenceFlow id="Flow_C3" sourceRef="Task_SelectRouteDateTime" targetRef="Task_ProvideDetails"/>
+    <bpmn:sequenceFlow id="Flow_C4" sourceRef="Task_ProvideDetails" targetRef="IntermediateCatch_TicketReceived"/>
+    <bpmn:sequenceFlow id="Flow_C5" sourceRef="IntermediateCatch_TicketReceived" targetRef="IntermediateCatch_ReminderReceived"/>
+    <bpmn:sequenceFlow id="Flow_C6" sourceRef="IntermediateCatch_ReminderReceived" targetRef="Task_CompleteJourney"/>
+    <bpmn:sequenceFlow id="Flow_C7" sourceRef="Task_CompleteJourney" targetRef="Gateway_Feedback_Split"/>
+    <bpmn:sequenceFlow id="Flow_C8" sourceRef="Gateway_Feedback_Split" targetRef="Task_ProvideFeedback"/>
+    <bpmn:sequenceFlow id="Flow_C9" sourceRef="Gateway_Feedback_Split" targetRef="Gateway_Feedback_Merge"/>
+    <bpmn:sequenceFlow id="Flow_C10" sourceRef="Task_ProvideFeedback" targetRef="Gateway_Feedback_Merge"/>
+    <bpmn:sequenceFlow id="Flow_C11" sourceRef="Gateway_Feedback_Merge" targetRef="EndEvent_JourneyConcluded"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_TravelCompany" name="Travel Company Ticket Booking" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_SearchReceived" name="Ticket search request received">
+      <bpmn:outgoing>Flow_T1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_SearchReceived" messageRef="Msg_SearchRequest"/>
+    </bpmn:startEvent>
+
+    <bpmn:intermediateCatchEvent id="IntermediateCatch_SelectionReceived" name="Route, date and time selected">
+      <bpmn:incoming>Flow_T1</bpmn:incoming>
+      <bpmn:outgoing>Flow_T2</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_SelectionReceived" messageRef="Msg_SelectionProvided"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:intermediateCatchEvent id="IntermediateCatch_DetailsReceived" name="Personal and payment details provided">
+      <bpmn:incoming>Flow_T2</bpmn:incoming>
+      <bpmn:outgoing>Flow_T3</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_DetailsReceived" messageRef="Msg_DetailsProvided"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="ServiceTask_GenerateTicket" name="Generate ticket">
+      <bpmn:incoming>Flow_T3</bpmn:incoming>
+      <bpmn:outgoing>Flow_T4</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:parallelGateway id="Gateway_Dispatch_Split" name="Split ticket dispatch and inventory update">
+      <bpmn:incoming>Flow_T4</bpmn:incoming>
+      <bpmn:outgoing>Flow_T5</bpmn:outgoing>
+      <bpmn:outgoing>Flow_T6</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:sendTask id="SendTask_SendTicket" name="Send ticket" messageRef="Msg_TicketSent">
+      <bpmn:incoming>Flow_T5</bpmn:incoming>
+      <bpmn:outgoing>Flow_T7</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:task id="Task_UpdateSeatInventory" name="Update seat inventory">
+      <bpmn:incoming>Flow_T6</bpmn:incoming>
+      <bpmn:outgoing>Flow_T8</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="Gateway_Dispatch_Join" name="Join ticket dispatch and inventory update">
+      <bpmn:incoming>Flow_T7</bpmn:incoming>
+      <bpmn:incoming>Flow_T8</bpmn:incoming>
+      <bpmn:outgoing>Flow_T9</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:sendTask id="SendTask_SendReminder" name="Send reminder" messageRef="Msg_ReminderSent">
+      <bpmn:incoming>Flow_T9</bpmn:incoming>
+      <bpmn:outgoing>Flow_T10</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:endEvent id="EndEvent_BookingConcluded" name="Booking process ended">
+      <bpmn:incoming>Flow_T10</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_T1" sourceRef="StartEvent_SearchReceived" targetRef="IntermediateCatch_SelectionReceived"/>
+    <bpmn:sequenceFlow id="Flow_T2" sourceRef="IntermediateCatch_SelectionReceived" targetRef="IntermediateCatch_DetailsReceived"/>
+    <bpmn:sequenceFlow id="Flow_T3" sourceRef="IntermediateCatch_DetailsReceived" targetRef="ServiceTask_GenerateTicket"/>
+    <bpmn:sequenceFlow id="Flow_T4" sourceRef="ServiceTask_GenerateTicket" targetRef="Gateway_Dispatch_Split"/>
+    <bpmn:sequenceFlow id="Flow_T5" sourceRef="Gateway_Dispatch_Split" targetRef="SendTask_SendTicket"/>
+    <bpmn:sequenceFlow id="Flow_T6" sourceRef="Gateway_Dispatch_Split" targetRef="Task_UpdateSeatInventory"/>
+    <bpmn:sequenceFlow id="Flow_T7" sourceRef="SendTask_SendTicket" targetRef="Gateway_Dispatch_Join"/>
+    <bpmn:sequenceFlow id="Flow_T8" sourceRef="Task_UpdateSeatInventory" targetRef="Gateway_Dispatch_Join"/>
+    <bpmn:sequenceFlow id="Flow_T9" sourceRef="Gateway_Dispatch_Join" targetRef="SendTask_SendReminder"/>
+    <bpmn:sequenceFlow id="Flow_T10" sourceRef="SendTask_SendReminder" targetRef="EndEvent_BookingConcluded"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_3DModel"
+                  targetNamespace="http://example.com/bpmn/3d-model">
+  <bpmn:message id="Message_Sketches" name="Sketches"/>
+  <bpmn:message id="Message_ChangeInstructions" name="Change instructions"/>
+  <bpmn:message id="Message_STL" name="STL model"/>
+  <bpmn:message id="Message_PrinterStatus" name="Printer status"/>
+
+  <bpmn:collaboration id="Collaboration_3DModel">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_Artist" name="Artist" processRef="Process_Artist"/>
+    <bpmn:participant id="Participant_Printer" name="3D printer"/>
+    <bpmn:messageFlow id="MessageFlow_Sketches" name="Send sketches" sourceRef="Task_SendSketches" targetRef="Start_ArtistSketches" messageRef="Message_Sketches"/>
+    <bpmn:messageFlow id="MessageFlow_ChangeInstructions" name="Send change instructions" sourceRef="Task_SendChanges" targetRef="Task_ReceiveChanges" messageRef="Message_ChangeInstructions"/>
+    <bpmn:messageFlow id="MessageFlow_InitialSTL" name="Send STL model" sourceRef="Task_SendInitialSTL" targetRef="Event_ReceiveSTL" messageRef="Message_STL"/>
+    <bpmn:messageFlow id="MessageFlow_RevisedSTL" name="Send revised STL model" sourceRef="Task_SendRevisedSTL" targetRef="Event_ReceiveSTL" messageRef="Message_STL"/>
+    <bpmn:messageFlow id="MessageFlow_PrinterStatus" name="Send printer status" sourceRef="Participant_Printer" targetRef="Boundary_PrinterStatus" messageRef="Message_PrinterStatus"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Customer" name="Instruct an artist and print a 3D model" isExecutable="false">
+    <bpmn:startEvent id="Start_Craving" name="Crave a custom 3D model"/>
+    <bpmn:sendTask id="Task_SendSketches" name="Send sketches"/>
+    <bpmn:intermediateCatchEvent id="Event_ReceiveSTL" name="Receive STL model">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_ReceiveSTL" messageRef="Message_STL"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_ReviewModel" name="Review the model"/>
+    <bpmn:exclusiveGateway id="Gateway_Satisfied" name="Satisfied with the result?" default="Flow_NotSatisfied"/>
+    <bpmn:sendTask id="Task_SendChanges" name="Tell the artist what to change"/>
+    <bpmn:userTask id="Task_ChooseColor" name="Choose plastic color"/>
+    <bpmn:exclusiveGateway id="Gateway_ColorAtHome" name="Is the color at home?" default="Flow_ColorNotAtHome"/>
+    <bpmn:userTask id="Task_CheckQuantity" name="Check how much color is left"/>
+    <bpmn:exclusiveGateway id="Gateway_Under100" name="Under 100 grams?" default="Flow_AtLeast100g"/>
+    <bpmn:userTask id="Task_AddShoppingList" name="Put color on the shopping list"/>
+    <bpmn:userTask id="Task_OrderPlastic" name="Order the plastic color"/>
+    <bpmn:exclusiveGateway id="Gateway_PlasticReadyMerge" name="Plastic obtained or available"/>
+    <bpmn:parallelGateway id="Gateway_PreparationSplit" name="Prepare printing"/>
+    <bpmn:userTask id="Task_TurnOnPrinter" name="Turn on the printer"/>
+    <bpmn:userTask id="Task_HeatPrinter" name="Heat the bed and extruder"/>
+    <bpmn:boundaryEvent id="Boundary_PrinterStatus" name="Printer status received" attachedToRef="Task_HeatPrinter" cancelActivity="false">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_PrinterStatus" messageRef="Message_PrinterStatus"/>
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="End_PrinterStatus" name="Printer status received"/>
+    <bpmn:task id="Task_GenerateGCode" name="Generate G-code from the STL"/>
+    <bpmn:parallelGateway id="Gateway_PreparationJoin" name="Printing preparation complete"/>
+    <bpmn:userTask id="Task_PrintModel" name="Print the model"/>
+    <bpmn:endEvent id="End_Printing" name="Model printed"/>
+
+    <bpmn:sequenceFlow id="Flow_Customer_01" sourceRef="Start_Craving" targetRef="Task_SendSketches"/>
+    <bpmn:sequenceFlow id="Flow_Customer_02" sourceRef="Task_SendSketches" targetRef="Event_ReceiveSTL"/>
+    <bpmn:sequenceFlow id="Flow_Customer_03" sourceRef="Event_ReceiveSTL" targetRef="Task_ReviewModel"/>
+    <bpmn:sequenceFlow id="Flow_Customer_04" sourceRef="Task_ReviewModel" targetRef="Gateway_Satisfied"/>
+    <bpmn:sequenceFlow id="Flow_Satisfied" name="Satisfied" sourceRef="Gateway_Satisfied" targetRef="Task_ChooseColor">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">satisfied</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotSatisfied" name="Not satisfied" sourceRef="Gateway_Satisfied" targetRef="Task_SendChanges"/>
+    <bpmn:sequenceFlow id="Flow_ChangesToReceive" sourceRef="Task_SendChanges" targetRef="Event_ReceiveSTL"/>
+    <bpmn:sequenceFlow id="Flow_Customer_05" sourceRef="Task_ChooseColor" targetRef="Gateway_ColorAtHome"/>
+    <bpmn:sequenceFlow id="Flow_ColorAtHome" name="Yes" sourceRef="Gateway_ColorAtHome" targetRef="Task_CheckQuantity">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">colorAtHome</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ColorNotAtHome" name="No" sourceRef="Gateway_ColorAtHome" targetRef="Task_OrderPlastic"/>
+    <bpmn:sequenceFlow id="Flow_CheckQuantity" sourceRef="Task_CheckQuantity" targetRef="Gateway_Under100"/>
+    <bpmn:sequenceFlow id="Flow_Under100" name="Under 100 grams" sourceRef="Gateway_Under100" targetRef="Task_AddShoppingList">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">remainingGrams &lt; 100</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_AtLeast100g" name="100 grams or more" sourceRef="Gateway_Under100" targetRef="Gateway_PlasticReadyMerge"/>
+    <bpmn:sequenceFlow id="Flow_ListToPlasticMerge" sourceRef="Task_AddShoppingList" targetRef="Gateway_PlasticReadyMerge"/>
+    <bpmn:sequenceFlow id="Flow_OrderToPlasticMerge" sourceRef="Task_OrderPlastic" targetRef="Gateway_PlasticReadyMerge"/>
+    <bpmn:sequenceFlow id="Flow_PlasticToPreparation" sourceRef="Gateway_PlasticReadyMerge" targetRef="Gateway_PreparationSplit"/>
+    <bpmn:sequenceFlow id="Flow_PreparationToPrinter" sourceRef="Gateway_PreparationSplit" targetRef="Task_TurnOnPrinter"/>
+    <bpmn:sequenceFlow id="Flow_TurnOnToHeat" sourceRef="Task_TurnOnPrinter" targetRef="Task_HeatPrinter"/>
+    <bpmn:sequenceFlow id="Flow_HeatToJoin" sourceRef="Task_HeatPrinter" targetRef="Gateway_PreparationJoin"/>
+    <bpmn:sequenceFlow id="Flow_PreparationToGCode" sourceRef="Gateway_PreparationSplit" targetRef="Task_GenerateGCode"/>
+    <bpmn:sequenceFlow id="Flow_GCodeToJoin" sourceRef="Task_GenerateGCode" targetRef="Gateway_PreparationJoin"/>
+    <bpmn:sequenceFlow id="Flow_JoinToPrint" sourceRef="Gateway_PreparationJoin" targetRef="Task_PrintModel"/>
+    <bpmn:sequenceFlow id="Flow_PrintToEnd" sourceRef="Task_PrintModel" targetRef="End_Printing"/>
+    <bpmn:sequenceFlow id="Flow_StatusToEnd" sourceRef="Boundary_PrinterStatus" targetRef="End_PrinterStatus"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Artist" name="Create the 3D model" isExecutable="false">
+    <bpmn:startEvent id="Start_ArtistSketches" name="Sketches received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_ArtistSketches" messageRef="Message_Sketches"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CreateModel" name="Create the 3D model"/>
+    <bpmn:sendTask id="Task_SendInitialSTL" name="Send STL model"/>
+    <bpmn:receiveTask id="Task_ReceiveChanges" name="Receive change instructions" messageRef="Message_ChangeInstructions"/>
+    <bpmn:task id="Task_ReviseModel" name="Revise the 3D model"/>
+    <bpmn:sendTask id="Task_SendRevisedSTL" name="Send revised STL model"/>
+    <bpmn:endEvent id="End_ArtistWork" name="Revised STL model sent"/>
+
+    <bpmn:sequenceFlow id="Flow_Artist_01" sourceRef="Start_ArtistSketches" targetRef="Task_CreateModel"/>
+    <bpmn:sequenceFlow id="Flow_Artist_02" sourceRef="Task_CreateModel" targetRef="Task_SendInitialSTL"/>
+    <bpmn:sequenceFlow id="Flow_Artist_03" sourceRef="Task_SendInitialSTL" targetRef="Task_ReceiveChanges"/>
+    <bpmn:sequenceFlow id="Flow_Artist_04" sourceRef="Task_ReceiveChanges" targetRef="Task_ReviseModel"/>
+    <bpmn:sequenceFlow id="Flow_Artist_05" sourceRef="Task_ReviseModel" targetRef="Task_SendRevisedSTL"/>
+    <bpmn:sequenceFlow id="Flow_Artist_06" sourceRef="Task_SendRevisedSTL" targetRef="End_ArtistWork"/>
+  </bpmn:process>
+</bpmn:definitions>

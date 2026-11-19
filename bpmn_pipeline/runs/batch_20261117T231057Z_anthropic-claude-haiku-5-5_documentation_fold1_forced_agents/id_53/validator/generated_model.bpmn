@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Dismissal" targetNamespace="http://example.org/bpmn/dismissal">
+  <bpmn:collaboration id="Collaboration_Dismissal">
+    <bpmn:participant id="Participant_MSPN" name="MSPN" processRef="Process_MSPN"/>
+    <bpmn:participant id="Participant_MSPO" name="MSPO" processRef="Process_MSPO"/>
+    <bpmn:messageFlow id="MessageFlow_Dismissal" name="Dismissal" sourceRef="Task_SendDismissal" targetRef="StartEvent_Dismissal"/>
+  </bpmn:collaboration>
+  <bpmn:message id="Message_Dismissal" name="Dismissal"/>
+  <bpmn:process id="Process_MSPN" name="MSPN Dismissal Submission" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_MSPN" name="Start">
+      <bpmn:outgoing>Flow_ToSend</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_SendDismissal" name="Send dismissal to MSPO" messageRef="Message_Dismissal">
+      <bpmn:incoming>Flow_ToSend</bpmn:incoming>
+      <bpmn:outgoing>Flow_SendToEnd</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_MSPN" name="Dismissal sent">
+      <bpmn:incoming>Flow_SendToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ToSend" sourceRef="StartEvent_MSPN" targetRef="Task_SendDismissal"/>
+    <bpmn:sequenceFlow id="Flow_SendToEnd" sourceRef="Task_SendDismissal" targetRef="EndEvent_MSPN"/>
+  </bpmn:process>
+  <bpmn:process id="Process_MSPO" name="MSPO Dismissal Review" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Dismissal" name="Dismissal received">
+      <bpmn:outgoing>Flow_ToReview</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Dismissal" messageRef="Message_Dismissal"/>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_ReviewDismissal" name="Review dismissal">
+      <bpmn:incoming>Flow_ToReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToDecision</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Decision_Split" name="Decision">
+      <bpmn:incoming>Flow_ToDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToReject</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToConfirm</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_RejectDismissal" name="Reject dismissal of MSPN">
+      <bpmn:incoming>Flow_ToReject</bpmn:incoming>
+      <bpmn:outgoing>Flow_RejectToMerge</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_ConfirmDismissal" name="Confirm dismissal of MSPN">
+      <bpmn:incoming>Flow_ToConfirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_ConfirmToMerge</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Decision_Merge" name="Decision made">
+      <bpmn:incoming>Flow_RejectToMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_ConfirmToMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergeToEnd</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_Decided" name="Dismissal decided">
+      <bpmn:incoming>Flow_MergeToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ToReview" sourceRef="StartEvent_Dismissal" targetRef="Task_ReviewDismissal"/>
+    <bpmn:sequenceFlow id="Flow_ToDecision" sourceRef="Task_ReviewDismissal" targetRef="Gateway_Decision_Split"/>
+    <bpmn:sequenceFlow id="Flow_ToReject" name="Rejects" sourceRef="Gateway_Decision_Split" targetRef="Task_RejectDismissal"/>
+    <bpmn:sequenceFlow id="Flow_ToConfirm" name="Confirms" sourceRef="Gateway_Decision_Split" targetRef="Task_ConfirmDismissal"/>
+    <bpmn:sequenceFlow id="Flow_RejectToMerge" sourceRef="Task_RejectDismissal" targetRef="Gateway_Decision_Merge"/>
+    <bpmn:sequenceFlow id="Flow_ConfirmToMerge" sourceRef="Task_ConfirmDismissal" targetRef="Gateway_Decision_Merge"/>
+    <bpmn:sequenceFlow id="Flow_MergeToEnd" sourceRef="Gateway_Decision_Merge" targetRef="EndEvent_Decided"/>
+  </bpmn:process>
+</bpmn:definitions>

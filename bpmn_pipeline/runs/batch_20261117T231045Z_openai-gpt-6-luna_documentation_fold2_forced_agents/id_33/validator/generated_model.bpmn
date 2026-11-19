@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_3DModel" targetNamespace="http://example.com/bpmn/3d-model">
+  <bpmn:message id="Message_ProjectRequest" name="Sketches and project request"/>
+  <bpmn:message id="Message_Draft" name="Draft model"/>
+  <bpmn:message id="Message_Feedback" name="Model feedback"/>
+  <bpmn:message id="Message_STL" name="STL file"/>
+  <bpmn:message id="Message_PrinterStatus" name="Printer status"/>
+  <bpmn:process id="Process_Customer" name="Instruct an artist and print a 3D model" isExecutable="false">
+    <bpmn:startEvent id="Start_Craving" name="Crave a custom 3D model">
+      <bpmn:outgoing>Flow_C_Start_SendSketches</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_SendSketches" name="Send sketches and request a project" messageRef="Message_ProjectRequest">
+      <bpmn:incoming>Flow_C_Start_SendSketches</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_SendSketches_ReceiveDraft</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="Task_ReceiveDraft" name="Receive draft model" messageRef="Message_Draft">
+      <bpmn:incoming>Flow_C_SendSketches_ReceiveDraft</bpmn:incoming>
+      <bpmn:incoming>Flow_C_SendChanges_ReceiveDraft</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_ReceiveDraft_Review</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:task id="Task_ReviewModel" name="Review model">
+      <bpmn:incoming>Flow_C_ReceiveDraft_Review</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_Review_Satisfied</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_ModelSatisfied" name="Satisfied with the result?">
+      <bpmn:incoming>Flow_C_Review_Satisfied</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_Satisfied_Approval</bpmn:outgoing>
+      <bpmn:outgoing>Flow_C_NotSatisfied_Changes</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_SendApproval" name="Approve model" messageRef="Message_Feedback">
+      <bpmn:incoming>Flow_C_Satisfied_Approval</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_Approval_ReceiveSTL</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Task_SendChanges" name="Tell artist what to change" messageRef="Message_Feedback">
+      <bpmn:incoming>Flow_C_NotSatisfied_Changes</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_SendChanges_ReceiveDraft</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="Task_ReceiveSTL" name="Receive STL file" messageRef="Message_STL">
+      <bpmn:incoming>Flow_C_Approval_ReceiveSTL</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_ReceiveSTL_ChooseColor</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:task id="Task_ChooseColor" name="Choose plastic color">
+      <bpmn:incoming>Flow_C_ReceiveSTL_ChooseColor</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_ChooseColor_InStock</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_ColorInStock" name="Is the color at home?">
+      <bpmn:incoming>Flow_C_ChooseColor_InStock</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_InStock_CheckAmount</bpmn:outgoing>
+      <bpmn:outgoing>Flow_C_NotInStock_Order</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_CheckAmount" name="Check amount of color left">
+      <bpmn:incoming>Flow_C_InStock_CheckAmount</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_CheckAmount_Under100</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Under100" name="Under 100 grams?">
+      <bpmn:incoming>Flow_C_CheckAmount_Under100</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_Under100_AddList</bpmn:outgoing>
+      <bpmn:outgoing>Flow_C_AtLeast100_MergeStock</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_AddShoppingList" name="Put color on shopping list">
+      <bpmn:incoming>Flow_C_Under100_AddList</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_AddList_MergeStock</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_MergeStockAmount">
+      <bpmn:incoming>Flow_C_AddList_MergeStock</bpmn:incoming>
+      <bpmn:incoming>Flow_C_AtLeast100_MergeStock</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_MergeStock_MergeColor</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_OrderColor" name="Order color">
+      <bpmn:incoming>Flow_C_NotInStock_Order</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_OrderColor_MergeColor</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_MergeColorHandling">
+      <bpmn:incoming>Flow_C_MergeStock_MergeColor</bpmn:incoming>
+      <bpmn:incoming>Flow_C_OrderColor_MergeColor</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_ColorHandling_PreparationSplit</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:parallelGateway id="Gateway_PreparationSplit" name="Prepare printer and G-code">
+      <bpmn:incoming>Flow_C_ColorHandling_PreparationSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_Split_Heat</bpmn:outgoing>
+      <bpmn:outgoing>Flow_C_Split_GCode</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_HeatPrinter" name="Turn on printer and heat bed and extruder">
+      <bpmn:documentation>The printer continuously sends its status during heating.</bpmn:documentation>
+      <bpmn:incoming>Flow_C_Split_Heat</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_Heat_PreparationJoin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_GenerateGCode" name="Generate G-code from the STL file">
+      <bpmn:incoming>Flow_C_Split_GCode</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_GCode_PreparationJoin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Gateway_PreparationJoin" name="Printer and G-code ready">
+      <bpmn:incoming>Flow_C_Heat_PreparationJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_C_GCode_PreparationJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_Join_Print</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_PrintModel" name="Print model">
+      <bpmn:incoming>Flow_C_Join_Print</bpmn:incoming>
+      <bpmn:outgoing>Flow_C_Print_End</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_ModelPrinted" name="Model printed">
+      <bpmn:incoming>Flow_C_Print_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_C_Start_SendSketches" sourceRef="Start_Craving" targetRef="Task_SendSketches"/>
+    <bpmn:sequenceFlow id="Flow_C_SendSketches_ReceiveDraft" sourceRef="Task_SendSketches" targetRef="Task_ReceiveDraft"/>
+    <bpmn:sequenceFlow id="Flow_C_ReceiveDraft_Review" sourceRef="Task_ReceiveDraft" targetRef="Task_ReviewModel"/>
+    <bpmn:sequenceFlow id="Flow_C_Review_Satisfied" sourceRef="Task_ReviewModel" targetRef="Gateway_ModelSatisfied"/>
+    <bpmn:sequenceFlow id="Flow_C_Satisfied_Approval" name="Satisfied" sourceRef="Gateway_ModelSatisfied" targetRef="Task_SendApproval">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">satisfiedWithResult</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_C_NotSatisfied_Changes" name="Not satisfied" sourceRef="Gateway_ModelSatisfied" targetRef="Task_SendChanges">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not satisfiedWithResult</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_C_SendChanges_ReceiveDraft" sourceRef="Task_SendChanges" targetRef="Task_ReceiveDraft"/>
+    <bpmn:sequenceFlow id="Flow_C_Approval_ReceiveSTL" sourceRef="Task_SendApproval" targetRef="Task_ReceiveSTL"/>
+    <bpmn:sequenceFlow id="Flow_C_ReceiveSTL_ChooseColor" sourceRef="Task_ReceiveSTL" targetRef="Task_ChooseColor"/>
+    <bpmn:sequenceFlow id="Flow_C_ChooseColor_InStock" sourceRef="Task_ChooseColor" targetRef="Gateway_ColorInStock"/>
+    <bpmn:sequenceFlow id="Flow_C_InStock_CheckAmount" name="In stock" sourceRef="Gateway_ColorInStock" targetRef="Task_CheckAmount">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">colorInStock</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_C_NotInStock_Order" name="Not in stock" sourceRef="Gateway_ColorInStock" targetRef="Task_OrderColor">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not colorInStock</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_C_CheckAmount_Under100" sourceRef="Task_CheckAmount" targetRef="Gateway_Under100"/>
+    <bpmn:sequenceFlow id="Flow_C_Under100_AddList" name="Under 100 grams" sourceRef="Gateway_Under100" targetRef="Task_AddShoppingList">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">amountInGrams &lt; 100</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_C_AtLeast100_MergeStock" name="100 grams or more" sourceRef="Gateway_Under100" targetRef="Gateway_MergeStockAmount">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">amountInGrams &gt;= 100</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_C_AddList_MergeStock" sourceRef="Task_AddShoppingList" targetRef="Gateway_MergeStockAmount"/>
+    <bpmn:sequenceFlow id="Flow_C_MergeStock_MergeColor" sourceRef="Gateway_MergeStockAmount" targetRef="Gateway_MergeColorHandling"/>
+    <bpmn:sequenceFlow id="Flow_C_OrderColor_MergeColor" sourceRef="Task_OrderColor" targetRef="Gateway_MergeColorHandling"/>
+    <bpmn:sequenceFlow id="Flow_C_ColorHandling_PreparationSplit" sourceRef="Gateway_MergeColorHandling" targetRef="Gateway_PreparationSplit"/>
+    <bpmn:sequenceFlow id="Flow_C_Split_Heat" sourceRef="Gateway_PreparationSplit" targetRef="Task_HeatPrinter"/>
+    <bpmn:sequenceFlow id="Flow_C_Split_GCode" sourceRef="Gateway_PreparationSplit" targetRef="Task_GenerateGCode"/>
+    <bpmn:sequenceFlow id="Flow_C_Heat_PreparationJoin" sourceRef="Task_HeatPrinter" targetRef="Gateway_PreparationJoin"/>
+    <bpmn:sequenceFlow id="Flow_C_GCode_PreparationJoin" sourceRef="Task_GenerateGCode" targetRef="Gateway_PreparationJoin"/>
+    <bpmn:sequenceFlow id="Flow_C_Join_Print" sourceRef="Gateway_PreparationJoin" targetRef="Task_PrintModel"/>
+    <bpmn:sequenceFlow id="Flow_C_Print_End" sourceRef="Task_PrintModel" targetRef="End_ModelPrinted"/>
+  </bpmn:process>
+  <bpmn:process id="Process_Artist" name="Create the 3D model" isExecutable="false">
+    <bpmn:startEvent id="Start_ReceiveProjectRequest" name="Receive sketches and project request">
+      <bpmn:outgoing>Flow_A_Start_CreateProject</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_ProjectRequest" messageRef="Message_ProjectRequest"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CreateProject" name="Create project">
+      <bpmn:incoming>Flow_A_Start_CreateProject</bpmn:incoming>
+      <bpmn:outgoing>Flow_A_Create_SendDraft</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_SendDraft" name="Send draft model" messageRef="Message_Draft">
+      <bpmn:incoming>Flow_A_Create_SendDraft</bpmn:incoming>
+      <bpmn:incoming>Flow_A_Revise_SendDraft</bpmn:incoming>
+      <bpmn:outgoing>Flow_A_SendDraft_ReceiveFeedback</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="Task_ReceiveFeedback" name="Receive model feedback" messageRef="Message_Feedback">
+      <bpmn:incoming>Flow_A_SendDraft_ReceiveFeedback</bpmn:incoming>
+      <bpmn:outgoing>Flow_A_ReceiveFeedback_Gateway</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="Gateway_FeedbackAccepted" name="Model accepted?">
+      <bpmn:incoming>Flow_A_ReceiveFeedback_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_A_Accepted_SendSTL</bpmn:outgoing>
+      <bpmn:outgoing>Flow_A_Changes_Revise</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ReviseModel" name="Make requested changes">
+      <bpmn:incoming>Flow_A_Changes_Revise</bpmn:incoming>
+      <bpmn:outgoing>Flow_A_Revise_SendDraft</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_SendSTL" name="Send STL file" messageRef="Message_STL">
+      <bpmn:incoming>Flow_A_Accepted_SendSTL</bpmn:incoming>
+      <bpmn:outgoing>Flow_A_SendSTL_End</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_STLSent" name="STL file sent">
+      <bpmn:incoming>Flow_A_SendSTL_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_A_Start_CreateProject" sourceRef="Start_ReceiveProjectRequest" targetRef="Task_CreateProject"/>
+    <bpmn:sequenceFlow id="Flow_A_Create_SendDraft" sourceRef="Task_CreateProject" targetRef="Task_SendDraft"/>
+    <bpmn:sequenceFlow id="Flow_A_SendDraft_ReceiveFeedback" sourceRef="Task_SendDraft" targetRef="Task_ReceiveFeedback"/>
+    <bpmn:sequenceFlow id="Flow_A_ReceiveFeedback_Gateway" sourceRef="Task_ReceiveFeedback" targetRef="Gateway_FeedbackAccepted"/>
+    <bpmn:sequenceFlow id="Flow_A_Accepted_SendSTL" name="Accepted" sourceRef="Gateway_FeedbackAccepted" targetRef="Task_SendSTL">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">modelAccepted</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_A_Changes_Revise" name="Changes requested" sourceRef="Gateway_FeedbackAccepted" targetRef="Task_ReviseModel">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not modelAccepted</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_A_Revise_SendDraft" sourceRef="Task_ReviseModel" targetRef="Task_SendDraft"/>
+    <bpmn:sequenceFlow id="Flow_A_SendSTL_End" sourceRef="Task_SendSTL" targetRef="End_STLSent"/>
+  </bpmn:process>
+  <bpmn:collaboration id="Collaboration_3DModel">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_Artist" name="Artist" processRef="Process_Artist"/>
+    <bpmn:participant id="Participant_Printer" name="3D printer"/>
+    <bpmn:messageFlow id="MessageFlow_ProjectRequest" name="Sketches and project request" sourceRef="Task_SendSketches" targetRef="Start_ReceiveProjectRequest" messageRef="Message_ProjectRequest"/>
+    <bpmn:messageFlow id="MessageFlow_Draft" name="Draft model" sourceRef="Task_SendDraft" targetRef="Task_ReceiveDraft" messageRef="Message_Draft"/>
+    <bpmn:messageFlow id="MessageFlow_Feedback_Changes" name="Requested changes" sourceRef="Task_SendChanges" targetRef="Task_ReceiveFeedback" messageRef="Message_Feedback"/>
+    <bpmn:messageFlow id="MessageFlow_Feedback_Approval" name="Model approval" sourceRef="Task_SendApproval" targetRef="Task_ReceiveFeedback" messageRef="Message_Feedback"/>
+    <bpmn:messageFlow id="MessageFlow_STL" name="STL file" sourceRef="Task_SendSTL" targetRef="Task_ReceiveSTL" messageRef="Message_STL"/>
+    <bpmn:messageFlow id="MessageFlow_PrinterStatus" name="Continuous status updates during heating" sourceRef="Participant_Printer" targetRef="Task_HeatPrinter" messageRef="Message_PrinterStatus"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

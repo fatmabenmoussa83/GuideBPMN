@@ -1,0 +1,124 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_StorageManagement" targetNamespace="http://example.org/bpmn/storage-management">
+  <bpmn:message id="Message_ProductArrived" name="Ordered product arrived"/>
+  <bpmn:process id="Process_StorageManagement" name="Storage management" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_1" name="Order received">
+      <bpmn:outgoing>Flow_StartToRead</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_ReadOrder" name="Read order from automatic order management system">
+      <bpmn:incoming>Flow_StartToRead</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReadToMerge</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_ProductMerge" name="Product to check">
+      <bpmn:incoming>Flow_ReadToMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_NextToMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergeToCheck</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_CheckInStock" name="Check if the product is in stock">
+      <bpmn:incoming>Flow_MergeToCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckToInStock</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_InStock" name="Product in stock?">
+      <bpmn:incoming>Flow_CheckToInStock</bpmn:incoming>
+      <bpmn:outgoing>Flow_InStockYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_InStockNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Withdraw" name="Withdraw product from warehouse">
+      <bpmn:incoming>Flow_InStockYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_WithdrawToAvailable</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Reorder" name="Reorder product from wholesaler">
+      <bpmn:incoming>Flow_InStockNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReorderToWait</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:receiveTask id="Task_WaitArrival" name="Wait for arrival of ordered product" messageRef="Message_ProductArrived">
+      <bpmn:incoming>Flow_ReorderToWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_WaitToDelayCheck</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="Gateway_DelayCheck" name="Waited more than 10 days?">
+      <bpmn:incoming>Flow_WaitToDelayCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_DelayYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_DelayNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_DemandPenalty" name="Demand delivery delay penalty from wholesaler">
+      <bpmn:incoming>Flow_DelayYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_PenaltyToArrivalMerge</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_ArrivalMerge" name="Arrival handled">
+      <bpmn:incoming>Flow_PenaltyToArrivalMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_DelayNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_ArrivalMergeToRegister</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Register" name="Register product in stock management system">
+      <bpmn:incoming>Flow_ArrivalMergeToRegister</bpmn:incoming>
+      <bpmn:outgoing>Flow_RegisterToAvailable</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Available" name="Product available">
+      <bpmn:incoming>Flow_WithdrawToAvailable</bpmn:incoming>
+      <bpmn:incoming>Flow_RegisterToAvailable</bpmn:incoming>
+      <bpmn:outgoing>Flow_AvailableToCheck</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_CheckOrderReady" name="Check if the whole order is ready for shipment">
+      <bpmn:incoming>Flow_AvailableToCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckToReady</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_OrderReady" name="Order ready for shipment?">
+      <bpmn:incoming>Flow_CheckToReady</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReadyYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ReadyNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:parallelGateway id="Gateway_ShipSplit" name="Start shipment preparation">
+      <bpmn:incoming>Flow_ReadyYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToRequestCourier</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToPack</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_RequestCourier" name="Request courier">
+      <bpmn:incoming>Flow_ToRequestCourier</bpmn:incoming>
+      <bpmn:outgoing>Flow_CourierToJoin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Pack" name="Pack products">
+      <bpmn:incoming>Flow_ToPack</bpmn:incoming>
+      <bpmn:outgoing>Flow_PackToJoin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Gateway_ShipJoin" name="Courier requested and products packed">
+      <bpmn:incoming>Flow_CourierToJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_PackToJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_JoinToShip</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_Ship" name="Ship products">
+      <bpmn:incoming>Flow_JoinToShip</bpmn:incoming>
+      <bpmn:outgoing>Flow_ShipToEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_Shipped" name="Order shipped">
+      <bpmn:incoming>Flow_ShipToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_SelectNext" name="Select next product from order">
+      <bpmn:incoming>Flow_ReadyNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_NextToMerge</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_StartToRead" sourceRef="StartEvent_1" targetRef="Task_ReadOrder"/>
+    <bpmn:sequenceFlow id="Flow_ReadToMerge" sourceRef="Task_ReadOrder" targetRef="Gateway_ProductMerge"/>
+    <bpmn:sequenceFlow id="Flow_NextToMerge" sourceRef="Task_SelectNext" targetRef="Gateway_ProductMerge"/>
+    <bpmn:sequenceFlow id="Flow_MergeToCheck" sourceRef="Gateway_ProductMerge" targetRef="Task_CheckInStock"/>
+    <bpmn:sequenceFlow id="Flow_CheckToInStock" sourceRef="Task_CheckInStock" targetRef="Gateway_InStock"/>
+    <bpmn:sequenceFlow id="Flow_InStockYes" name="Yes" sourceRef="Gateway_InStock" targetRef="Task_Withdraw"/>
+    <bpmn:sequenceFlow id="Flow_InStockNo" name="No" sourceRef="Gateway_InStock" targetRef="Task_Reorder"/>
+    <bpmn:sequenceFlow id="Flow_WithdrawToAvailable" sourceRef="Task_Withdraw" targetRef="Gateway_Available"/>
+    <bpmn:sequenceFlow id="Flow_ReorderToWait" sourceRef="Task_Reorder" targetRef="Task_WaitArrival"/>
+    <bpmn:sequenceFlow id="Flow_WaitToDelayCheck" sourceRef="Task_WaitArrival" targetRef="Gateway_DelayCheck"/>
+    <bpmn:sequenceFlow id="Flow_DelayYes" name="Yes" sourceRef="Gateway_DelayCheck" targetRef="Task_DemandPenalty"/>
+    <bpmn:sequenceFlow id="Flow_DelayNo" name="No" sourceRef="Gateway_DelayCheck" targetRef="Gateway_ArrivalMerge"/>
+    <bpmn:sequenceFlow id="Flow_PenaltyToArrivalMerge" sourceRef="Task_DemandPenalty" targetRef="Gateway_ArrivalMerge"/>
+    <bpmn:sequenceFlow id="Flow_ArrivalMergeToRegister" sourceRef="Gateway_ArrivalMerge" targetRef="Task_Register"/>
+    <bpmn:sequenceFlow id="Flow_RegisterToAvailable" sourceRef="Task_Register" targetRef="Gateway_Available"/>
+    <bpmn:sequenceFlow id="Flow_AvailableToCheck" sourceRef="Gateway_Available" targetRef="Task_CheckOrderReady"/>
+    <bpmn:sequenceFlow id="Flow_CheckToReady" sourceRef="Task_CheckOrderReady" targetRef="Gateway_OrderReady"/>
+    <bpmn:sequenceFlow id="Flow_ReadyYes" name="Yes" sourceRef="Gateway_OrderReady" targetRef="Gateway_ShipSplit"/>
+    <bpmn:sequenceFlow id="Flow_ReadyNo" name="No" sourceRef="Gateway_OrderReady" targetRef="Task_SelectNext"/>
+    <bpmn:sequenceFlow id="Flow_ToRequestCourier" sourceRef="Gateway_ShipSplit" targetRef="Task_RequestCourier"/>
+    <bpmn:sequenceFlow id="Flow_ToPack" sourceRef="Gateway_ShipSplit" targetRef="Task_Pack"/>
+    <bpmn:sequenceFlow id="Flow_CourierToJoin" sourceRef="Task_RequestCourier" targetRef="Gateway_ShipJoin"/>
+    <bpmn:sequenceFlow id="Flow_PackToJoin" sourceRef="Task_Pack" targetRef="Gateway_ShipJoin"/>
+    <bpmn:sequenceFlow id="Flow_JoinToShip" sourceRef="Gateway_ShipJoin" targetRef="Task_Ship"/>
+    <bpmn:sequenceFlow id="Flow_ShipToEnd" sourceRef="Task_Ship" targetRef="EndEvent_Shipped"/>
+  </bpmn:process>
+</bpmn:definitions>

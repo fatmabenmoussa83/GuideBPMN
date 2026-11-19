@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ComplianceAudit" targetNamespace="http://example.com/bpmn/compliance-audit">
+  <bpmn:message id="Msg_AuditSubmission" name="Documentation and self-assessment submitted"/>
+  <bpmn:message id="Msg_GapsIdentified" name="Gaps and issues identified"/>
+  <bpmn:message id="Msg_FinalAuditRequest" name="Final audit requested"/>
+  <bpmn:message id="Msg_FinalAuditResult" name="Final audit result"/>
+  <bpmn:collaboration id="Collaboration_ComplianceAudit">
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_Company"/>
+    <bpmn:participant id="Participant_Auditor" name="External Auditor" processRef="Process_Auditor"/>
+    <bpmn:messageFlow id="MessageFlow_SubmitForAudit" name="Submit documentation" sourceRef="SendTask_SubmitForAudit" targetRef="Start_AuditSubmissionReceived"/>
+    <bpmn:messageFlow id="MessageFlow_GapsIdentified" name="Gaps and issues identified" sourceRef="SendTask_ReportGaps" targetRef="Event_GapsIdentified"/>
+    <bpmn:messageFlow id="MessageFlow_RequestFinalAudit" name="Final audit requested" sourceRef="SendTask_RequestFinalAudit" targetRef="Event_FinalAuditRequest"/>
+    <bpmn:messageFlow id="MessageFlow_FinalAuditResult" name="Final audit result" sourceRef="SendTask_SendFinalResult" targetRef="Event_FinalAuditResult"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Company" name="Compliance Audit - Company" isExecutable="false">
+    <bpmn:startEvent id="Start_AuditScheduled" name="Compliance audit scheduled"/>
+    <bpmn:task id="Task_ScheduleAudit" name="Schedule compliance audit"/>
+    <bpmn:parallelGateway id="Gateway_Prep_Split" name="Start preparation activities"/>
+    <bpmn:task id="Task_PrepareDocumentation" name="Prepare documentation"/>
+    <bpmn:task id="Task_GatherEvidence" name="Gather evidence"/>
+    <bpmn:task id="Task_SelfAssessment" name="Conduct self-assessment"/>
+    <bpmn:parallelGateway id="Gateway_Prep_Join" name="Preparation completed"/>
+    <bpmn:sendTask id="SendTask_SubmitForAudit" name="Submit documentation for external audit" messageRef="Msg_AuditSubmission"/>
+    <bpmn:intermediateCatchEvent id="Event_GapsIdentified" name="Gaps and issues report received">
+      <bpmn:messageEventDefinition id="MED_GapsIdentified" messageRef="Msg_GapsIdentified"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_MakeCorrections" name="Make necessary corrections or improvements"/>
+    <bpmn:sendTask id="SendTask_RequestFinalAudit" name="Request final audit" messageRef="Msg_FinalAuditRequest"/>
+    <bpmn:intermediateCatchEvent id="Event_FinalAuditResult" name="Final audit result received">
+      <bpmn:messageEventDefinition id="MED_FinalAuditResult" messageRef="Msg_FinalAuditResult"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_CriteriaMet" name="All criteria met?" default="Flow_CriteriaNotMet"/>
+    <bpmn:task id="Task_AwardCertification" name="Award certification"/>
+    <bpmn:task id="Task_IssueOfficialDocuments" name="Issue official documents"/>
+    <bpmn:endEvent id="End_Certified" name="Certification issued"/>
+    <bpmn:endEvent id="End_NotCertified" name="Certification not awarded"/>
+    <bpmn:sequenceFlow id="Flow_Scheduled" sourceRef="Start_AuditScheduled" targetRef="Task_ScheduleAudit"/>
+    <bpmn:sequenceFlow id="Flow_ScheduleToSplit" sourceRef="Task_ScheduleAudit" targetRef="Gateway_Prep_Split"/>
+    <bpmn:sequenceFlow id="Flow_SplitToDocumentation" sourceRef="Gateway_Prep_Split" targetRef="Task_PrepareDocumentation"/>
+    <bpmn:sequenceFlow id="Flow_SplitToEvidence" sourceRef="Gateway_Prep_Split" targetRef="Task_GatherEvidence"/>
+    <bpmn:sequenceFlow id="Flow_SplitToSelfAssessment" sourceRef="Gateway_Prep_Split" targetRef="Task_SelfAssessment"/>
+    <bpmn:sequenceFlow id="Flow_DocumentationToJoin" sourceRef="Task_PrepareDocumentation" targetRef="Gateway_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_EvidenceToJoin" sourceRef="Task_GatherEvidence" targetRef="Gateway_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_SelfAssessmentToJoin" sourceRef="Task_SelfAssessment" targetRef="Gateway_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_JoinToSubmit" sourceRef="Gateway_Prep_Join" targetRef="SendTask_SubmitForAudit"/>
+    <bpmn:sequenceFlow id="Flow_SubmitToGaps" sourceRef="SendTask_SubmitForAudit" targetRef="Event_GapsIdentified"/>
+    <bpmn:sequenceFlow id="Flow_GapsToCorrections" sourceRef="Event_GapsIdentified" targetRef="Task_MakeCorrections"/>
+    <bpmn:sequenceFlow id="Flow_CorrectionsToRequest" sourceRef="Task_MakeCorrections" targetRef="SendTask_RequestFinalAudit"/>
+    <bpmn:sequenceFlow id="Flow_RequestToResult" sourceRef="SendTask_RequestFinalAudit" targetRef="Event_FinalAuditResult"/>
+    <bpmn:sequenceFlow id="Flow_ResultToGateway" sourceRef="Event_FinalAuditResult" targetRef="Gateway_CriteriaMet"/>
+    <bpmn:sequenceFlow id="Flow_CriteriaMet" name="Yes" sourceRef="Gateway_CriteriaMet" targetRef="Task_AwardCertification">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${allCriteriaMet == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_CriteriaNotMet" name="No" sourceRef="Gateway_CriteriaMet" targetRef="End_NotCertified"/>
+    <bpmn:sequenceFlow id="Flow_AwardToDocuments" sourceRef="Task_AwardCertification" targetRef="Task_IssueOfficialDocuments"/>
+    <bpmn:sequenceFlow id="Flow_DocumentsToEnd" sourceRef="Task_IssueOfficialDocuments" targetRef="End_Certified"/>
+  </bpmn:process>
+  <bpmn:process id="Process_Auditor" name="Compliance Audit - External Auditor" isExecutable="false">
+    <bpmn:startEvent id="Start_AuditSubmissionReceived" name="Audit submission received">
+      <bpmn:messageEventDefinition id="MED_AuditSubmission" messageRef="Msg_AuditSubmission"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_ReviewProcesses" name="Review company processes and identify gaps and issues"/>
+    <bpmn:sendTask id="SendTask_ReportGaps" name="Report gaps and issues" messageRef="Msg_GapsIdentified"/>
+    <bpmn:intermediateCatchEvent id="Event_FinalAuditRequest" name="Final audit requested">
+      <bpmn:messageEventDefinition id="MED_FinalAuditRequest" messageRef="Msg_FinalAuditRequest"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_PerformFinalAudit" name="Perform final audit"/>
+    <bpmn:sendTask id="SendTask_SendFinalResult" name="Send final audit result" messageRef="Msg_FinalAuditResult"/>
+    <bpmn:endEvent id="End_AuditorDone" name="Audit completed"/>
+    <bpmn:sequenceFlow id="Flow_AuditSubmissionToReview" sourceRef="Start_AuditSubmissionReceived" targetRef="Task_ReviewProcesses"/>
+    <bpmn:sequenceFlow id="Flow_ReviewToReportGaps" sourceRef="Task_ReviewProcesses" targetRef="SendTask_ReportGaps"/>
+    <bpmn:sequenceFlow id="Flow_ReportGapsToRequest" sourceRef="SendTask_ReportGaps" targetRef="Event_FinalAuditRequest"/>
+    <bpmn:sequenceFlow id="Flow_RequestToFinalAudit" sourceRef="Event_FinalAuditRequest" targetRef="Task_PerformFinalAudit"/>
+    <bpmn:sequenceFlow id="Flow_FinalAuditToResult" sourceRef="Task_PerformFinalAudit" targetRef="SendTask_SendFinalResult"/>
+    <bpmn:sequenceFlow id="Flow_ResultToEnd" sourceRef="SendTask_SendFinalResult" targetRef="End_AuditorDone"/>
+  </bpmn:process>
+</bpmn:definitions>

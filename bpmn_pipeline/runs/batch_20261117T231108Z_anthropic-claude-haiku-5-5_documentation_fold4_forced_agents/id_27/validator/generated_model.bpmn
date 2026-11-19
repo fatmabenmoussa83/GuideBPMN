@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_WorkAccident" targetNamespace="http://example.org/bpmn/work-accident">
+  <bpmn:message id="Msg_AccidentNotification" name="Accident, near-miss or risk notification"/>
+  <bpmn:collaboration id="Collab_WorkAccident" name="Work Accident">
+    <bpmn:participant id="Part_Insured" name="Insured person" processRef="Proc_Insured"/>
+    <bpmn:participant id="Part_Employer" name="Employer (incl. self-employed person)" processRef="Proc_Employer"/>
+    <bpmn:participant id="Part_LabourInspectorate" name="Labour Inspectorate"/>
+    <bpmn:participant id="Part_AccidentInsurer" name="Accident insurance provider"/>
+    <bpmn:participant id="Part_PrivateInsurer" name="Private insurance provider"/>
+    <bpmn:participant id="Part_School" name="School, educational facility or university" processRef="Proc_School"/>
+    <bpmn:participant id="Part_Student" name="Student or schoolchild" processRef="Proc_Student"/>
+    <bpmn:participant id="Part_Directorate" name="Competent directorate"/>
+
+    <bpmn:messageFlow id="MF_InformEmployer" name="Inform employer" sourceRef="Task_InformEmployer" targetRef="StartEvent_Notification"/>
+    <bpmn:messageFlow id="MF_PrivateReport" name="Written accident report" sourceRef="Task_PrivateReport" targetRef="Part_PrivateInsurer"/>
+    <bpmn:messageFlow id="MF_PrivateFatality" name="Fatality report within three days" sourceRef="Task_PrivateFatality" targetRef="Part_PrivateInsurer"/>
+    <bpmn:messageFlow id="MF_ReportLabour" name="Report fatality or serious injury" sourceRef="Task_ReportLabour" targetRef="Part_LabourInspectorate"/>
+    <bpmn:messageFlow id="MF_EmployerReportInsurer" name="Report within five days" sourceRef="Task_ReportInsurer" targetRef="Part_AccidentInsurer"/>
+    <bpmn:messageFlow id="MF_SchoolReportInsurer" name="Report within five days in triplicate" sourceRef="Task_ReportTriplicate" targetRef="Part_AccidentInsurer"/>
+    <bpmn:messageFlow id="MF_StudentReportDirectorate" name="Report accident" sourceRef="Task_ReportDirectorate" targetRef="Part_Directorate"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Proc_Insured" name="Insured person" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Accident" name="Accident or near miss occurs">
+      <bpmn:outgoing>Flow_I1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Identify" name="Identify reportable event">
+      <bpmn:incoming>Flow_I1</bpmn:incoming>
+      <bpmn:outgoing>Flow_I2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_InformEmployer" name="Inform employer immediately">
+      <bpmn:incoming>Flow_I2</bpmn:incoming>
+      <bpmn:outgoing>Flow_I3</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="Gateway_PrivateCheck" name="Private insurance applies?" default="Flow_PrivateNo">
+      <bpmn:incoming>Flow_I3</bpmn:incoming>
+      <bpmn:outgoing>Flow_PrivateYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PrivateNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_PrivateReport" name="Report accident in writing to private insurer immediately">
+      <bpmn:incoming>Flow_PrivateYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_P2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="Gateway_FatalCheck" name="Fatality?" default="Flow_NotFatal">
+      <bpmn:incoming>Flow_P2</bpmn:incoming>
+      <bpmn:outgoing>Flow_FatalYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotFatal</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_PrivateFatality" name="Report fatality to private insurer within three days">
+      <bpmn:incoming>Flow_FatalYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_PF</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_FatalReported" name="Fatality reported to private insurer">
+      <bpmn:incoming>Flow_PF</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_ReportedPrivate" name="Accident reported to private insurer">
+      <bpmn:incoming>Flow_NotFatal</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_NoPrivate" name="No private insurance report required">
+      <bpmn:incoming>Flow_PrivateNo</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_I1" sourceRef="StartEvent_Accident" targetRef="Task_Identify"/>
+    <bpmn:sequenceFlow id="Flow_I2" sourceRef="Task_Identify" targetRef="Task_InformEmployer"/>
+    <bpmn:sequenceFlow id="Flow_I3" sourceRef="Task_InformEmployer" targetRef="Gateway_PrivateCheck"/>
+    <bpmn:sequenceFlow id="Flow_PrivateYes" name="Yes" sourceRef="Gateway_PrivateCheck" targetRef="Task_PrivateReport">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${privateInsuranceApplies}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_PrivateNo" name="No" sourceRef="Gateway_PrivateCheck" targetRef="End_NoPrivate"/>
+    <bpmn:sequenceFlow id="Flow_P2" sourceRef="Task_PrivateReport" targetRef="Gateway_FatalCheck"/>
+    <bpmn:sequenceFlow id="Flow_FatalYes" name="Yes" sourceRef="Gateway_FatalCheck" targetRef="Task_PrivateFatality">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${fatality}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotFatal" name="No" sourceRef="Gateway_FatalCheck" targetRef="End_ReportedPrivate"/>
+    <bpmn:sequenceFlow id="Flow_PF" sourceRef="Task_PrivateFatality" targetRef="End_FatalReported"/>
+  </bpmn:process>
+
+  <bpmn:process id="Proc_Employer" name="Employer" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Notification" name="Accident, near-miss or risk notification received">
+      <bpmn:outgoing>Flow_E1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Notification" messageRef="Msg_AccidentNotification"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_RecordDetails" name="Record incident details">
+      <bpmn:incoming>Flow_E1</bpmn:incoming>
+      <bpmn:outgoing>Flow_E2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_SeverityCheck" name="Fatality or serious injury?" default="Flow_SevNo">
+      <bpmn:incoming>Flow_E2</bpmn:incoming>
+      <bpmn:outgoing>Flow_SevYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SevNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_EmergencyCheck" name="Already reported to emergency services?" default="Flow_EmNo">
+      <bpmn:incoming>Flow_SevYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_EmYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_EmNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_ReportLabour" name="Report to Labour Inspectorate immediately">
+      <bpmn:incoming>Flow_EmNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_L2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="Gateway_LIMerge" name="Merge">
+      <bpmn:incoming>Flow_SevNo</bpmn:incoming>
+      <bpmn:incoming>Flow_EmYes</bpmn:incoming>
+      <bpmn:incoming>Flow_L2</bpmn:incoming>
+      <bpmn:outgoing>Flow_E3</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_InsurerCheck" name="Fatality or unable to work for three days?" default="Flow_InsNo">
+      <bpmn:incoming>Flow_E3</bpmn:incoming>
+      <bpmn:outgoing>Flow_InsYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_InsNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_ReportInsurer" name="Report to accident insurance provider within five days">
+      <bpmn:incoming>Flow_InsYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_R2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="Gateway_InsMerge" name="Merge">
+      <bpmn:incoming>Flow_R2</bpmn:incoming>
+      <bpmn:incoming>Flow_InsNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_E4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_Documented" name="Accident information gathered">
+      <bpmn:incoming>Flow_E4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1" sourceRef="StartEvent_Notification" targetRef="Task_RecordDetails"/>
+    <bpmn:sequenceFlow id="Flow_E2" sourceRef="Task_RecordDetails" targetRef="Gateway_SeverityCheck"/>
+    <bpmn:sequenceFlow id="Flow_SevYes" name="Yes" sourceRef="Gateway_SeverityCheck" targetRef="Gateway_EmergencyCheck">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${isFatalOrSeriousInjury}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SevNo" name="No" sourceRef="Gateway_SeverityCheck" targetRef="Gateway_LIMerge"/>
+    <bpmn:sequenceFlow id="Flow_EmYes" name="Yes" sourceRef="Gateway_EmergencyCheck" targetRef="Gateway_LIMerge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${reportedToEmergencyServices}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_EmNo" name="No" sourceRef="Gateway_EmergencyCheck" targetRef="Task_ReportLabour"/>
+    <bpmn:sequenceFlow id="Flow_L2" sourceRef="Task_ReportLabour" targetRef="Gateway_LIMerge"/>
+    <bpmn:sequenceFlow id="Flow_E3" sourceRef="Gateway_LIMerge" targetRef="Gateway_InsurerCheck"/>
+    <bpmn:sequenceFlow id="Flow_InsYes" name="Yes" sourceRef="Gateway_InsurerCheck" targetRef="Task_ReportInsurer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${fatalityOrIncapacityThreeDays}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_InsNo" name="No" sourceRef="Gateway_InsurerCheck" targetRef="Gateway_InsMerge"/>
+    <bpmn:sequenceFlow id="Flow_R2" sourceRef="Task_ReportInsurer" targetRef="Gateway_InsMerge"/>
+    <bpmn:sequenceFlow id="Flow_E4" sourceRef="Gateway_InsMerge" targetRef="End_Documented"/>
+  </bpmn:process>
+
+  <bpmn:process id="Proc_School" name="School, educational facility or university" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_SchoolAccident" name="Work accident with insured person injured or killed occurs">
+      <bpmn:outgoing>Flow_S1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_ReportTriplicate" name="Report accident to accident insurance provider within five days (in triplicate)">
+      <bpmn:incoming>Flow_S1</bpmn:incoming>
+      <bpmn:outgoing>Flow_S2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_SchoolReported" name="Accident reported">
+      <bpmn:incoming>Flow_S2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_S1" sourceRef="StartEvent_SchoolAccident" targetRef="Task_ReportTriplicate"/>
+    <bpmn:sequenceFlow id="Flow_S2" sourceRef="Task_ReportTriplicate" targetRef="End_SchoolReported"/>
+  </bpmn:process>
+
+  <bpmn:process id="Proc_Student" name="Student or schoolchild" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_StudentAccident" name="Accident of student or schoolchild occurs">
+      <bpmn:outgoing>Flow_ST1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_ReportDirectorate" name="Report accident to competent directorate">
+      <bpmn:incoming>Flow_ST1</bpmn:incoming>
+      <bpmn:outgoing>Flow_ST2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_StudentReported" name="Accident reported">
+      <bpmn:incoming>Flow_ST2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ST1" sourceRef="StartEvent_StudentAccident" targetRef="Task_ReportDirectorate"/>
+    <bpmn:sequenceFlow id="Flow_ST2" sourceRef="Task_ReportDirectorate" targetRef="End_StudentReported"/>
+  </bpmn:process>
+</bpmn:definitions>

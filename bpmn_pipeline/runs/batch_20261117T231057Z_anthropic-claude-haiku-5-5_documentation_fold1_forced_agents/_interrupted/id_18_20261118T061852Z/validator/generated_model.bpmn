@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_UniversityEnrollment" targetNamespace="http://example.org/bpmn/university-enrollment">
+  <bpmn:message id="Msg_Application" name="Application submitted"/>
+  <bpmn:message id="Msg_MissingNotice" name="Missing documents notice"/>
+  <bpmn:message id="Msg_MissingItems" name="Missing items provided"/>
+  <bpmn:message id="Msg_AcceptanceLetter" name="Acceptance letter"/>
+  <bpmn:message id="Msg_RejectionLetter" name="Rejection letter"/>
+  <bpmn:message id="Msg_EnrollmentConfirmation" name="Enrollment confirmed"/>
+  <bpmn:message id="Msg_EnrollmentCancellation" name="Application canceled"/>
+  <bpmn:message id="Msg_Orientation" name="Orientation materials"/>
+  <bpmn:message id="Msg_Grades" name="Grades posted"/>
+  <bpmn:message id="Msg_AppealForm" name="Appeal form submitted"/>
+  <bpmn:message id="Msg_AppealDecision" name="Appeal decision"/>
+
+  <bpmn:collaboration id="Collab_Enrollment">
+    <bpmn:participant id="Participant_Student" name="Prospective Student" processRef="Process_Student"/>
+    <bpmn:participant id="Participant_University" name="University" processRef="Process_University"/>
+    <bpmn:messageFlow id="MF_Apply" name="Submit application" sourceRef="S_Submit" targetRef="U_Start"/>
+    <bpmn:messageFlow id="MF_MissingNotice" name="Notify missing documents" sourceRef="U_NotifyMissing" targetRef="S_IE_Missing"/>
+    <bpmn:messageFlow id="MF_MissingItems" name="Provide missing items" sourceRef="S_ProvideMissing" targetRef="U_IE_MissingItems"/>
+    <bpmn:messageFlow id="MF_AcceptLetter" name="Acceptance letter" sourceRef="U_SendAccept" targetRef="S_IE_Accept"/>
+    <bpmn:messageFlow id="MF_RejectLetter" name="Rejection letter" sourceRef="U_SendReject" targetRef="S_IE_Reject"/>
+    <bpmn:messageFlow id="MF_Confirm" name="Confirm enrollment" sourceRef="S_Confirm" targetRef="U_IE_Confirm"/>
+    <bpmn:messageFlow id="MF_CancelNotice" name="Cancel application" sourceRef="S_CancelApp" targetRef="U_IE_CancelNotice"/>
+    <bpmn:messageFlow id="MF_Orientation" name="Orientation materials" sourceRef="U_SendOrient" targetRef="S_ReceiveOrient"/>
+    <bpmn:messageFlow id="MF_Grades" name="Grades posted" sourceRef="T_PostGrades" targetRef="S_IE_Grades"/>
+    <bpmn:messageFlow id="MF_AppealForm" name="Appeal form" sourceRef="S_SubmitAppeal" targetRef="U_IE_AppealForm"/>
+    <bpmn:messageFlow id="MF_AppealDecision" name="Appeal decision" sourceRef="T_SendAppealDecision" targetRef="S_IE_Decision"/>
+  </bpmn:collaboration>
+
+  <!-- Student process -->
+  <bpmn:process id="Process_Student" name="Prospective Student" isExecutable="false">
+    <bpmn:startEvent id="S_Start" name="Decide to apply"/>
+    <bpmn:userTask id="S_Submit" name="Submit online application"/>
+    <bpmn:exclusiveGateway id="S_Merge1" name="Application pending"/>
+    <bpmn:eventBasedGateway id="S_Wait" name="Await admissions response"/>
+    <bpmn:intermediateCatchEvent id="S_IE_Missing" name="Missing documents notice received">
+      <bpmn:messageEventDefinition id="S_IE_Missing_Def" messageRef="Msg_MissingNotice"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="S_IE_Accept" name="Acceptance letter received">
+      <bpmn:messageEventDefinition id="S_IE_Accept_Def" messageRef="Msg_AcceptanceLetter"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="S_IE_Reject" name="Rejection letter received">
+      <bpmn:messageEventDefinition id="S_IE_Reject_Def" messageRef="Msg_RejectionLetter"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="S_ProvideMissing" name="Provide missing items"/>
+    <bpmn:endEvent id="S_EndRejected" name="Application rejected"/>
+    <bpmn:exclusiveGateway id="S_GW_Deadline" name="Enrollment confirmed by deadline?"/>
+    <bpmn:userTask id="S_Confirm" name="Confirm enrollment"/>
+    <bpmn:task id="S_CancelApp" name="Cancel application"/>
+    <bpmn:endEvent id="S_EndCanceled" name="Application canceled"/>
+    <bpmn:receiveTask id="S_ReceiveOrient" name="Receive orientation materials" messageRef="Msg_Orientation"/>
+    <bpmn:task id="S_GetID" name="Obtain student ID card"/>
+    <bpmn:subProcess id="S_Plan" name="Create study plan">
+      <bpmn:startEvent id="P_Start" name="Start study plan"/>
+      <bpmn:task id="P_Advisor" name="Meet with academic advisor"/>
+      <bpmn:task id="P_SelectCourses" name="Select courses"/>
+      <bpmn:task id="P_ResolveConflicts" name="Resolve schedule conflicts"/>
+      <bpmn:endEvent id="P_End" name="Study plan created"/>
+      <bpmn:sequenceFlow id="PF1" sourceRef="P_Start" targetRef="P_Advisor"/>
+      <bpmn:sequenceFlow id="PF2" sourceRef="P_Advisor" targetRef="P_SelectCourses"/>
+      <bpmn:sequenceFlow id="PF3" sourceRef="P_SelectCourses" targetRef="P_ResolveConflicts"/>
+      <bpmn:sequenceFlow id="PF4" sourceRef="P_ResolveConflicts" targetRef="P_End"/>
+    </bpmn:subProcess>
+    <bpmn:exclusiveGateway id="S_SemMerge" name="Semester start"/>
+    <bpmn:task id="S_Attend" name="Attend classes"/>
+    <bpmn:task id="S_AddDrop" name="Add or drop courses within add/drop period"/>
+    <bpmn:intermediateCatchEvent id="S_IE_Grades" name="Grades posted">
+      <bpmn:messageEventDefinition id="S_IE_Grades_Def" messageRef="Msg_Grades"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="S_Review" name="Review grades online"/>
+    <bpmn:exclusiveGateway id="S_Grievance" name="Grievance to file?"/>
+    <bpmn:subProcess id="S_Appeal" name="File appeal">
+      <bpmn:startEvent id="S_Appeal_Start" name="Appeal started"/>
+      <bpmn:task id="S_SubmitAppeal" name="Submit appeal form"/>
+      <bpmn:task id="S_MeetCommittee" name="Meet with appeals committee"/>
+      <bpmn:intermediateCatchEvent id="S_IE_Decision" name="Appeal decision received">
+        <bpmn:messageEventDefinition id="S_IE_Decision_Def" messageRef="Msg_AppealDecision"/>
+      </bpmn:intermediateCatchEvent>
+      <bpmn:endEvent id="S_Appeal_End" name="Appeal concluded"/>
+      <bpmn:sequenceFlow id="SA1" sourceRef="S_Appeal_Start" targetRef="S_SubmitAppeal"/>
+      <bpmn:sequenceFlow id="SA2" sourceRef="S_SubmitAppeal" targetRef="S_MeetCommittee"/>
+      <bpmn:sequenceFlow id="SA3" sourceRef="S_MeetCommittee" targetRef="S_IE_Decision"/>
+      <bpmn:sequenceFlow id="SA4" sourceRef="S_IE_Decision" targetRef="S_Appeal_End"/>
+    </bpmn:subProcess>
+    <bpmn:exclusiveGateway id="S_LoopMerge" name="Grades reviewed"/>
+    <bpmn:exclusiveGateway id="S_Decide" name="Next step after semester?"/>
+    <bpmn:task id="S_Graduate" name="Complete graduation"/>
+    <bpmn:endEvent id="S_EndGraduated" name="Student graduated"/>
+    <bpmn:task id="S_Withdraw" name="Process withdrawal"/>
+    <bpmn:endEvent id="S_EndWithdrawn" name="Student withdrew"/>
+
+    <bpmn:sequenceFlow id="SF1" sourceRef="S_Start" targetRef="S_Submit"/>
+    <bpmn:sequenceFlow id="SF2" sourceRef="S_Submit" targetRef="S_Merge1"/>
+    <bpmn:sequenceFlow id="SF3" sourceRef="S_Merge1" targetRef="S_Wait"/>
+    <bpmn:sequenceFlow id="SF4" sourceRef="S_Wait" targetRef="S_IE_Missing"/>
+    <bpmn:sequenceFlow id="SF5" sourceRef="S_Wait" targetRef="S_IE_Accept"/>
+    <bpmn:sequenceFlow id="SF6" sourceRef="S_Wait" targetRef="S_IE_Reject"/>
+    <bpmn:sequenceFlow id="SF7" sourceRef="S_IE_Missing" targetRef="S_ProvideMissing"/>
+    <bpmn:sequenceFlow id="SF8" sourceRef="S_ProvideMissing" targetRef="S_Merge1"/>
+    <bpmn:sequenceFlow id="SF9" sourceRef="S_IE_Reject" targetRef="S_EndRejected"/>
+    <bpmn:sequenceFlow id="SF10" sourceRef="S_IE_Accept" targetRef="S_GW_Deadline"/>
+    <bpmn:sequenceFlow id="SF11" name="Confirmed by deadline" sourceRef="S_GW_Deadline" targetRef="S_Confirm"/>
+    <bpmn:sequenceFlow id="SF12" name="Deadline passed" sourceRef="S_GW_Deadline" targetRef="S_CancelApp"/>
+    <bpmn:sequenceFlow id="SF13" sourceRef="S_Confirm" targetRef="S_ReceiveOrient"/>
+    <bpmn:sequenceFlow id="SF14" sourceRef="S_CancelApp" targetRef="S_EndCanceled"/>
+    <bpmn:sequenceFlow id="SF15" sourceRef="S_ReceiveOrient" targetRef="S_GetID"/>
+    <bpmn:sequenceFlow id="SF16" sourceRef="S_GetID" targetRef="S_Plan"/>
+    <bpmn:sequenceFlow id="SF17" sourceRef="S_Plan" targetRef="S_SemMerge"/>
+    <bpmn:sequenceFlow id="SF18" sourceRef="S_SemMerge" targetRef="S_Attend"/>
+    <bpmn:sequenceFlow id="SF19" sourceRef="S_Attend" targetRef="S_AddDrop"/>
+    <bpmn:sequenceFlow id="SF20" sourceRef="S_AddDrop" targetRef="S_IE_Grades"/>
+    <bpmn:sequenceFlow id="SF21" sourceRef="S_IE_Grades" targetRef="S_Review"/>
+    <bpmn:sequenceFlow id="SF22" sourceRef="S_Review" targetRef="S_Grievance"/>
+    <bpmn:sequenceFlow id="SF23" name="Yes" sourceRef="S_Grievance" targetRef="S_Appeal"/>
+    <bpmn:sequenceFlow id="SF24" name="No" sourceRef="S_Grievance" targetRef="S_LoopMerge"/>
+    <bpmn:sequenceFlow id="SF25" sourceRef="S_Appeal" targetRef="S_LoopMerge"/>
+    <bpmn:sequenceFlow id="SF26" sourceRef="S_LoopMerge" targetRef="S_Decide"/>
+    <bpmn:sequenceFlow id="SF27" name="Continue to next semester" sourceRef="S_Decide" targetRef="S_SemMerge"/>
+    <bpmn:sequenceFlow id="SF28" name="Graduate" sourceRef="S_Decide" targetRef="S_Graduate"/>
+    <bpmn:sequenceFlow id="SF29" name="Withdraw" sourceRef="S_Decide" targetRef="S_Withdraw"/>
+    <bpmn:sequenceFlow id="SF30" sourceRef="S_Graduate" targetRef="S_EndGraduated"/>
+    <bpmn:sequenceFlow id="SF31" sourceRef="S_Withdraw" targetRef="S_EndWithdrawn"/>
+  </bpmn:process>
+
+  <!-- University process -->
+  <bpmn:process id="Process_University" name="University" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_University">
+      <bpmn:lane id="Lane_Admissions" name="Admissions Office">
+        <bpmn:flowNodeRef>U_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_MergeReview</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Review</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_DocsComplete</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_NotifyMissing</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_IE_MissingItems</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_ParSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_ParJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_SendAccept</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_SendReject</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_EndRejected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_GW_Deadline</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_IE_Confirm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_IE_CancelNotice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_EndCanceled</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_GW_ConfirmSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_SendOrient</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_GW_Intl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_GW_IntlMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_GW_Join2</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Committee" name="Admissions Committee">
+        <bpmn:flowNodeRef>T_Evaluate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_GW_Accept</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Finance" name="Finance Department">
+        <bpmn:flowNodeRef>T_Fees</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_IT" name="IT Department">
+        <bpmn:flowNodeRef>T_Accounts</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_International" name="International Student Office">
+        <bpmn:flowNodeRef>T_Visa</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Academic" name="Academic Administration">
+        <bpmn:flowNodeRef>U_SemMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_Semester</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_PostGrades</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_GW_AppealSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_AppealMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_GW_NextSem</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_CloseRecord</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>U_EndDone</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Appeals" name="Appeals Committee">
+        <bpmn:flowNodeRef>U_IE_AppealForm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_AppealHearing</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_SendAppealDecision</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="U_Start" name="Application received">
+      <bpmn:messageEventDefinition id="U_Start_Def" messageRef="Msg_Application"/>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="U_MergeReview" name="Review pending"/>
+    <bpmn:userTask id="T_Review" name="Review application and supporting documents"/>
+    <bpmn:exclusiveGateway id="GW_DocsComplete" name="Documents complete?"/>
+    <bpmn:sendTask id="U_NotifyMissing" name="Notify applicant of missing documents"/>
+    <bpmn:intermediateCatchEvent id="U_IE_MissingItems" name="Missing items received">
+      <bpmn:messageEventDefinition id="U_IE_MissingItems_Def" messageRef="Msg_MissingItems"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:parallelGateway id="GW_ParSplit" name="Start evaluation and fee processing"/>
+    <bpmn:userTask id="T_Evaluate" name="Evaluate application"/>
+    <bpmn:task id="T_Fees" name="Process application fees or waivers"/>
+    <bpmn:parallelGateway id="GW_ParJoin" name="Evaluation and fees complete"/>
+    <bpmn:exclusiveGateway id="U_GW_Accept" name="Application accepted?"/>
+    <bpmn:sendTask id="U_SendAccept" name="Send acceptance letter"/>
+    <bpmn:sendTask id="U_SendReject" name="Send rejection letter"/>
+    <bpmn:endEvent id="U_EndRejected" name="Application rejected"/>
+    <bpmn:eventBasedGateway id="U_GW_Deadline" name="Enrollment confirmed or canceled?"/>
+    <bpmn:intermediateCatchEvent id="U_IE_Confirm" name="Enrollment confirmed">
+      <bpmn:messageEventDefinition id="U_IE_Confirm_Def" messageRef="Msg_EnrollmentConfirmation"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="U_IE_CancelNotice" name="Application canceled notice received">
+      <bpmn:messageEventDefinition id="U_IE_CancelNotice_Def" messageRef="Msg_EnrollmentCancellation"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="U_EndCanceled" name="Application canceled"/>
+    <bpmn:parallelGateway id="U_GW_ConfirmSplit" name="Start enrollment setup"/>
+    <bpmn:sendTask id="U_SendOrient" name="Send orientation materials"/>
+    <bpmn:task id="T_Accounts" name="Set up student email, portal and library accounts"/>
+    <bpmn:exclusiveGateway id="U_GW_Intl" name="International student?"/>
+    <bpmn:task id="T_Visa" name="Assist with visa processing"/>
+    <bpmn:exclusiveGateway id="U_GW_IntlMerge" name="International step complete"/>
+    <bpmn:parallelGateway id="U_GW_Join2" name="Enrollment setup complete"/>
+    <bpmn:exclusiveGateway id="U_SemMerge" name="Semester start"/>
+    <bpmn:task id="U_Semester" name="Conduct semester: classes and add/drop period"/>
+    <bpmn:task id="T_PostGrades" name="Post semester grades"/>
+    <bpmn:exclusiveGateway id="U_GW_AppealSplit" name="Grievance filed?"/>
+    <bpmn:intermediateCatchEvent id="U_IE_AppealForm" name="Appeal form received">
+      <bpmn:messageEventDefinition id="U_IE_AppealForm_Def" messageRef="Msg_AppealForm"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="T_AppealHearing" name="Hear appeal with student"/>
+    <bpmn:sendTask id="T_SendAppealDecision" name="Send appeal decision"/>
+    <bpmn:exclusiveGateway id="U_AppealMerge" name="Grievance handling complete"/>
+    <bpmn:exclusiveGateway id="U_GW_NextSem" name="Student continues to next semester?"/>
+    <bpmn:task id="T_CloseRecord" name="Close student record"/>
+    <bpmn:endEvent id="U_EndDone" name="Student record closed"/>
+
+    <bpmn:sequenceFlow id="UF1" sourceRef="U_Start" targetRef="U_MergeReview"/>
+    <bpmn:sequenceFlow id="UF2" sourceRef="U_MergeReview" targetRef="T_Review"/>
+    <bpmn:sequenceFlow id="UF3" sourceRef="T_Review" targetRef="GW_DocsComplete"/>
+    <bpmn:sequenceFlow id="UF4" name="No" sourceRef="GW_DocsComplete" targetRef="U_NotifyMissing"/>
+    <bpmn:sequenceFlow id="UF5" name="Yes" sourceRef="GW_DocsComplete" targetRef="GW_ParSplit"/>
+    <bpmn:sequenceFlow id="UF6" sourceRef="U_NotifyMissing" targetRef="U_IE_MissingItems"/>
+    <bpmn:sequenceFlow id="UF7" sourceRef="U_IE_MissingItems" targetRef="U_MergeReview"/>
+    <bpmn:sequenceFlow id="UF8" sourceRef="GW_ParSplit" targetRef="T_Evaluate"/>
+    <bpmn:sequenceFlow id="UF9" sourceRef="GW_ParSplit" targetRef="T_Fees"/>
+    <bpmn:sequenceFlow id="UF10" sourceRef="T_Evaluate" targetRef="GW_ParJoin"/>
+    <bpmn:sequenceFlow id="UF11" sourceRef="T_Fees" targetRef="GW_ParJoin"/>
+    <bpmn:sequenceFlow id="UF12" sourceRef="GW_ParJoin" targetRef="U_GW_Accept"/>
+    <bpmn:sequenceFlow id="UF13" name="Yes" sourceRef="U_GW_Accept" targetRef="U_SendAccept"/>
+    <bpmn:sequenceFlow id="UF14" name="No" sourceRef="U_GW_Accept" targetRef="U_SendReject"/>
+    <bpmn:sequenceFlow id="UF15" sourceRef="U_SendReject" targetRef="U_EndRejected"/>
+    <bpmn:sequenceFlow id="UF16" sourceRef="U_SendAccept" targetRef="U_GW_Deadline"/>
+    <bpmn:sequenceFlow id="UF17" sourceRef="U_GW_Deadline" targetRef="U_IE_Confirm"/>
+    <bpmn:sequenceFlow id="UF18" sourceRef="U_GW_Deadline" targetRef="U_IE_CancelNotice"/>
+    <bpmn:sequenceFlow id="UF19" sourceRef="U_IE_CancelNotice" targetRef="U_EndCanceled"/>
+    <bpmn:sequenceFlow id="UF20" sourceRef="U_IE_Confirm" targetRef="U_GW_ConfirmSplit"/>
+    <bpmn:sequenceFlow id="UF21" sourceRef="U_GW_ConfirmSplit" targetRef="U_SendOrient"/>
+    <bpmn:sequenceFlow id="UF22" sourceRef="U_GW_ConfirmSplit" targetRef="T_Accounts"/>
+    <bpmn:sequenceFlow id="UF23" sourceRef="U_GW_ConfirmSplit" targetRef="U_GW_Intl"/>
+    <bpmn:sequenceFlow id="UF24" name="Yes" sourceRef="U_GW_Intl" targetRef="T_Visa"/>
+    <bpmn:sequenceFlow id="UF25" name="No" sourceRef="U_GW_Intl" targetRef="U_GW_IntlMerge"/>
+    <bpmn:sequenceFlow id="UF26" sourceRef="T_Visa" targetRef="U_GW_IntlMerge"/>
+    <bpmn:sequenceFlow id="UF27" sourceRef="U_GW_IntlMerge" targetRef="U_GW_Join2"/>
+    <bpmn:sequenceFlow id="UF28" sourceRef="U_SendOrient" targetRef="U_GW_Join2"/>
+    <bpmn:sequenceFlow id="UF29" sourceRef="T_Accounts" targetRef="U_GW_Join2"/>
+    <bpmn:sequenceFlow id="UF30" sourceRef="U_GW_Join2" targetRef="U_SemMerge"/>
+    <bpmn:sequenceFlow id="UF31" sourceRef="U_SemMerge" targetRef="U_Semester"/>
+    <bpmn:sequenceFlow id="UF32" sourceRef="U_Semester" targetRef="T_PostGrades"/>
+    <bpmn:sequenceFlow id="UF33" sourceRef="T_PostGrades" targetRef="U_GW_AppealSplit"/>
+    <bpmn:sequenceFlow id="UF34" name="Yes" sourceRef="U_GW_AppealSplit" targetRef="U_IE_AppealForm"/>
+    <bpmn:sequenceFlow id="UF35" name="No" sourceRef="U_GW_AppealSplit" targetRef="U_AppealMerge"/>
+    <bpmn:sequenceFlow id="UF36" sourceRef="U_IE_AppealForm" targetRef="T_AppealHearing"/>
+    <bpmn:sequenceFlow id="UF37" sourceRef="T_AppealHearing" targetRef="T_SendAppealDecision"/>
+    <bpmn:sequenceFlow id="UF38" sourceRef="T_SendAppealDecision" targetRef="U_AppealMerge"/>
+    <bpmn:sequenceFlow id="UF39" sourceRef="U_AppealMerge" targetRef="U_GW_NextSem"/>
+    <bpmn:sequenceFlow id="UF40" name="Yes" sourceRef="U_GW_NextSem" targetRef="U_SemMerge"/>
+    <bpmn:sequenceFlow id="UF41" name="No" sourceRef="U_GW_NextSem" targetRef="T_CloseRecord"/>
+    <bpmn:sequenceFlow id="UF42" sourceRef="T_CloseRecord" targetRef="U_EndDone"/>
+  </bpmn:process>
+</bpmn:definitions>

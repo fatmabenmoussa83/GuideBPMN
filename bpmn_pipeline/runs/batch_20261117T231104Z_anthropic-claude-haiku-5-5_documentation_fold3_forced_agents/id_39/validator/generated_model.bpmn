@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_DIYSmartphoneRepair"
+                  targetNamespace="http://example.org/bpmn/diy-smartphone-repair">
+  <bpmn:collaboration id="Collaboration_DIYRepair">
+    <bpmn:participant id="Participant_Customer" name="DIY Repairer" processRef="Process_DIYRepairer"/>
+    <bpmn:participant id="Participant_OnlineTool" name="Online Repair Tool"/>
+    <bpmn:participant id="Participant_Friend" name="Friend"/>
+    <bpmn:participant id="Participant_Expert" name="Repair Expert"/>
+    <bpmn:messageFlow id="MessageFlow_SubmitModelDefect" name="Model and defect" sourceRef="Task_SubmitModelDefect" targetRef="Participant_OnlineTool"/>
+    <bpmn:messageFlow id="MessageFlow_MaterialsList" name="List of materials" sourceRef="Participant_OnlineTool" targetRef="Task_ReceiveMaterialsList"/>
+    <bpmn:messageFlow id="MessageFlow_ToolsList" name="List of tools" sourceRef="Participant_OnlineTool" targetRef="Task_ReceiveToolsList"/>
+    <bpmn:messageFlow id="MessageFlow_OrderingChoices" name="Ordering choices per part" sourceRef="Participant_OnlineTool" targetRef="Task_ReceiveOrderingChoices"/>
+    <bpmn:messageFlow id="MessageFlow_ContactFriend" name="Borrow or buy request" sourceRef="Task_ContactFriends" targetRef="Participant_Friend"/>
+    <bpmn:messageFlow id="MessageFlow_FriendReply" name="Friend reply" sourceRef="Participant_Friend" targetRef="Task_ReceiveFriendReply"/>
+    <bpmn:messageFlow id="MessageFlow_Instructions" name="Repair instructions" sourceRef="Participant_OnlineTool" targetRef="Task_ReceiveInstructions"/>
+    <bpmn:messageFlow id="MessageFlow_ReviewVideo" name="Review and/or video" sourceRef="Task_SendReview" targetRef="Participant_OnlineTool"/>
+    <bpmn:messageFlow id="MessageFlow_PhoneToExpert" name="Phone for expert repair" sourceRef="Task_SendToExpert" targetRef="Participant_Expert"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_DIYRepairer" name="DIY Repair of a Broken Smartphone Screen" isExecutable="false">
+    <bpmn:startEvent id="Start_Repair" name="Repair started">
+      <bpmn:outgoing>Flow_StartToEnterModel</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="Task_EnterModelDefect" name="Enter phone model and broken part">
+      <bpmn:incoming>Flow_StartToEnterModel</bpmn:incoming>
+      <bpmn:outgoing>Flow_EnterModelToSubmit</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:sendTask id="Task_SubmitModelDefect" name="Submit model and defect to tool">
+      <bpmn:incoming>Flow_EnterModelToSubmit</bpmn:incoming>
+      <bpmn:outgoing>Flow_SubmitToListsFork</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:parallelGateway id="Gateway_Lists_Fork" name="Tool outputs">
+      <bpmn:incoming>Flow_SubmitToListsFork</bpmn:incoming>
+      <bpmn:outgoing>Flow_ListsForkToMaterials</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ListsForkToTools</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ListsForkToOrdering</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:receiveTask id="Task_ReceiveMaterialsList" name="Receive list of materials">
+      <bpmn:incoming>Flow_ListsForkToMaterials</bpmn:incoming>
+      <bpmn:outgoing>Flow_MaterialsToListsJoin</bpmn:outgoing>
+    </bpmn:receiveTask>
+
+    <bpmn:receiveTask id="Task_ReceiveToolsList" name="Receive list of tools">
+      <bpmn:incoming>Flow_ListsForkToTools</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToolsToListsJoin</bpmn:outgoing>
+    </bpmn:receiveTask>
+
+    <bpmn:receiveTask id="Task_ReceiveOrderingChoices" name="Receive ordering choices for each part">
+      <bpmn:incoming>Flow_ListsForkToOrdering</bpmn:incoming>
+      <bpmn:outgoing>Flow_OrderingToListsJoin</bpmn:outgoing>
+    </bpmn:receiveTask>
+
+    <bpmn:parallelGateway id="Gateway_Lists_Join" name="Lists received">
+      <bpmn:incoming>Flow_MaterialsToListsJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_ToolsToListsJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_OrderingToListsJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_ListsJoinToSelect</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:userTask id="Task_SelectOrdering" name="Select ordering option for each part">
+      <bpmn:incoming>Flow_ListsJoinToSelect</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelectToCheckOwned</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="Task_CheckOwned" name="Check which materials and tools you already have">
+      <bpmn:incoming>Flow_SelectToCheckOwned</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckOwnedToAvailableSplit</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_AllAvailable_Split" name="All required items available?">
+      <bpmn:incoming>Flow_CheckOwnedToAvailableSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_AllAvailableToSourcingMerge</bpmn:outgoing>
+      <bpmn:outgoing>Flow_MissingToFriendsSplit</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:exclusiveGateway id="Gateway_FriendsOffer_Split" name="Friends offer items cheaply?">
+      <bpmn:incoming>Flow_MissingToFriendsSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_FriendsYesToContact</bpmn:outgoing>
+      <bpmn:outgoing>Flow_FriendsNoToMerge</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sendTask id="Task_ContactFriends" name="Contact friends about cheap items">
+      <bpmn:incoming>Flow_FriendsYesToContact</bpmn:incoming>
+      <bpmn:outgoing>Flow_ContactToFriendReply</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:receiveTask id="Task_ReceiveFriendReply" name="Receive friend reply">
+      <bpmn:incoming>Flow_ContactToFriendReply</bpmn:incoming>
+      <bpmn:outgoing>Flow_FriendReplyToMerge</bpmn:outgoing>
+    </bpmn:receiveTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Friends_Merge" name="Friend sourcing done">
+      <bpmn:incoming>Flow_FriendsNoToMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_FriendReplyToMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_FriendsMergeToBuy</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_BuyRemaining" name="Buy remaining materials and tools">
+      <bpmn:incoming>Flow_FriendsMergeToBuy</bpmn:incoming>
+      <bpmn:outgoing>Flow_BuyToSourcingMerge</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_Sourcing_Merge" name="All items ready">
+      <bpmn:incoming>Flow_AllAvailableToSourcingMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_BuyToSourcingMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_SourcingMergeToReceiveInstructions</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:receiveTask id="Task_ReceiveInstructions" name="Receive repair instructions">
+      <bpmn:incoming>Flow_SourcingMergeToReceiveInstructions</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReceiveInstructionsToRepair</bpmn:outgoing>
+    </bpmn:receiveTask>
+
+    <bpmn:manualTask id="Task_RepairPhone" name="Repair screen following instructions">
+      <bpmn:incoming>Flow_ReceiveInstructionsToRepair</bpmn:incoming>
+      <bpmn:outgoing>Flow_RepairToOutcome</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Repair_Outcome" name="Repair worked?">
+      <bpmn:incoming>Flow_RepairToOutcome</bpmn:incoming>
+      <bpmn:outgoing>Flow_RepairSuccessful</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RepairFailed</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sendTask id="Task_SendReview" name="Send review and/or video of repair">
+      <bpmn:incoming>Flow_RepairSuccessful</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReviewToEndRepaired</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:endEvent id="End_Repaired" name="Phone repaired">
+      <bpmn:incoming>Flow_ReviewToEndRepaired</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sendTask id="Task_SendToExpert" name="Send phone to expert">
+      <bpmn:incoming>Flow_RepairFailed</bpmn:incoming>
+      <bpmn:outgoing>Flow_ExpertToEnd</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:endEvent id="End_SentToExpert" name="Phone handed to expert">
+      <bpmn:incoming>Flow_ExpertToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_StartToEnterModel" sourceRef="Start_Repair" targetRef="Task_EnterModelDefect"/>
+    <bpmn:sequenceFlow id="Flow_EnterModelToSubmit" sourceRef="Task_EnterModelDefect" targetRef="Task_SubmitModelDefect"/>
+    <bpmn:sequenceFlow id="Flow_SubmitToListsFork" sourceRef="Task_SubmitModelDefect" targetRef="Gateway_Lists_Fork"/>
+    <bpmn:sequenceFlow id="Flow_ListsForkToMaterials" sourceRef="Gateway_Lists_Fork" targetRef="Task_ReceiveMaterialsList"/>
+    <bpmn:sequenceFlow id="Flow_ListsForkToTools" sourceRef="Gateway_Lists_Fork" targetRef="Task_ReceiveToolsList"/>
+    <bpmn:sequenceFlow id="Flow_ListsForkToOrdering" sourceRef="Gateway_Lists_Fork" targetRef="Task_ReceiveOrderingChoices"/>
+    <bpmn:sequenceFlow id="Flow_MaterialsToListsJoin" sourceRef="Task_ReceiveMaterialsList" targetRef="Gateway_Lists_Join"/>
+    <bpmn:sequenceFlow id="Flow_ToolsToListsJoin" sourceRef="Task_ReceiveToolsList" targetRef="Gateway_Lists_Join"/>
+    <bpmn:sequenceFlow id="Flow_OrderingToListsJoin" sourceRef="Task_ReceiveOrderingChoices" targetRef="Gateway_Lists_Join"/>
+    <bpmn:sequenceFlow id="Flow_ListsJoinToSelect" sourceRef="Gateway_Lists_Join" targetRef="Task_SelectOrdering"/>
+    <bpmn:sequenceFlow id="Flow_SelectToCheckOwned" sourceRef="Task_SelectOrdering" targetRef="Task_CheckOwned"/>
+    <bpmn:sequenceFlow id="Flow_CheckOwnedToAvailableSplit" sourceRef="Task_CheckOwned" targetRef="Gateway_AllAvailable_Split"/>
+    <bpmn:sequenceFlow id="Flow_AllAvailableToSourcingMerge" name="Yes" sourceRef="Gateway_AllAvailable_Split" targetRef="Gateway_Sourcing_Merge">
+      <bpmn:conditionExpression>All items available</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_MissingToFriendsSplit" name="No" sourceRef="Gateway_AllAvailable_Split" targetRef="Gateway_FriendsOffer_Split">
+      <bpmn:conditionExpression>Items still missing</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_FriendsYesToContact" name="Yes" sourceRef="Gateway_FriendsOffer_Split" targetRef="Task_ContactFriends">
+      <bpmn:conditionExpression>Items available cheaply from friends</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_FriendsNoToMerge" name="No" sourceRef="Gateway_FriendsOffer_Split" targetRef="Gateway_Friends_Merge">
+      <bpmn:conditionExpression>No cheap items from friends</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ContactToFriendReply" sourceRef="Task_ContactFriends" targetRef="Task_ReceiveFriendReply"/>
+    <bpmn:sequenceFlow id="Flow_FriendReplyToMerge" sourceRef="Task_ReceiveFriendReply" targetRef="Gateway_Friends_Merge"/>
+    <bpmn:sequenceFlow id="Flow_FriendsMergeToBuy" sourceRef="Gateway_Friends_Merge" targetRef="Task_BuyRemaining"/>
+    <bpmn:sequenceFlow id="Flow_BuyToSourcingMerge" sourceRef="Task_BuyRemaining" targetRef="Gateway_Sourcing_Merge"/>
+    <bpmn:sequenceFlow id="Flow_SourcingMergeToReceiveInstructions" sourceRef="Gateway_Sourcing_Merge" targetRef="Task_ReceiveInstructions"/>
+    <bpmn:sequenceFlow id="Flow_ReceiveInstructionsToRepair" sourceRef="Task_ReceiveInstructions" targetRef="Task_RepairPhone"/>
+    <bpmn:sequenceFlow id="Flow_RepairToOutcome" sourceRef="Task_RepairPhone" targetRef="Gateway_Repair_Outcome"/>
+    <bpmn:sequenceFlow id="Flow_RepairSuccessful" name="Yes" sourceRef="Gateway_Repair_Outcome" targetRef="Task_SendReview">
+      <bpmn:conditionExpression>Repair worked</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_RepairFailed" name="No" sourceRef="Gateway_Repair_Outcome" targetRef="Task_SendToExpert">
+      <bpmn:conditionExpression>Repair did not work</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ReviewToEndRepaired" sourceRef="Task_SendReview" targetRef="End_Repaired"/>
+    <bpmn:sequenceFlow id="Flow_ExpertToEnd" sourceRef="Task_SendToExpert" targetRef="End_SentToExpert"/>
+  </bpmn:process>
+</bpmn:definitions>

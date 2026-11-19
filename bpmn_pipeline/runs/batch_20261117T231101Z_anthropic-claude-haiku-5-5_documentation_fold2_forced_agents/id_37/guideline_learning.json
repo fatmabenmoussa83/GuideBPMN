@@ -1,0 +1,1000 @@
+{
+ "example_id": "37",
+ "outcomes": [
+  {
+   "failure_type": "T5",
+   "example_id": "37",
+   "learning_mode": "tools",
+   "retrieved": [
+    "S6",
+    "S7",
+    "S8",
+    "S9",
+    "M2",
+    "M3",
+    "M10",
+    "M4",
+    "X4",
+    "X7",
+    "F5",
+    "G10",
+    "X6"
+   ],
+   "retriever_reason": "The failure is a structural divergence around the parts-arrival logic. The reference models receiving the first and third batches of parts as manualTasks feeding a complexGateway \"First parts arrived\" that leads to building, and the generated model instead uses intermediate catch events (\"First parts arrive\", \"Next parts batch arrives\") with different flows. The description sentences S6 (parts arrive in batches in random order), S7 (start building when first parts arrive), S8 (sometimes reorder)",
+   "added_counterparts": [
+    "X6"
+   ],
+   "first_answer": {
+    "decision": "abstain",
+    "reason": "The differences are in how the arrival of batches is represented. The generated model uses intermediate catch events for waiting on arrivals, which matches BPMN 2.0.2 for waiting on an external event with a random timing. The reference uses manualTasks for receiving the batches. A guideline toward the reference's manualTask would conflict with BPMN semantics, so it cannot be proposed. The remaining differences (the missing 'Start/Continue building' task, the extra end event, and the flows around the gateways) are not clearly supported as a single structural rule by these records, so I abstain."
+   },
+   "candidate": {
+    "decision": "propose",
+    "trigger": "the description says an activity is repeated once for each external occurrence (something arriving, or a response to something that was sent out) and the process keeps repeating until a completion or satisfaction condition holds, looping back when that condition is not yet met",
+    "instruction": "Model the repeated activity as a task. Wait for each occurrence with an intermediate catch event placed before the decision. After the wait, use a decision gateway that tests the completion condition. Place an exclusive merge gateway before the repeated task so that the first entry and the loop-back both enter through it. Connect the 'not yet met' outgoing flow of the decision back to that merge gateway, and leave the 'met' flow to continue the process. Do not omit the wait before the decision, and do not connect the decision directly back to the task without the merge.",
+    "category": "Activities and task types",
+    "cited": [
+     "S7",
+     "M4",
+     "X4",
+     "X7",
+     "X6"
+    ],
+    "reason": "The generated model waits for arrivals with intermediate catch events, which is correct BPMN, but it omits the building work between the first arrival and the 'Building finished?' decision, and it ends the flow at 'Building completed' (X6) without that work task. The description says building starts when the first parts arrive (S7), so that work is an atomic unit that must be a task before the completion check. ACT-01 already says to use a task for atomic work; this guideline adds when that applies: after an arrival event that begins repeated work checked by a decision. The reference's manualT",
+    "relation_answered": {
+     "relation": "refines ACT-01",
+     "rule_id": "ACT-01"
+    },
+    "_judged": {
+     "relation": "refines",
+     "rule_id": "ACT-01",
+     "reason": "The generated model waits for arrivals with intermediate catch events, which is correct BPMN, but it omits the building work between the first arrival and the 'Building finished?' decision, and it ends the flow at 'Building completed' (X6) without that work task. The description says building starts when the first parts arrive (S7), so that work is an atomic unit that must be a task before the com"
+    },
+    "_shown": [
+     {
+      "id": "ACT-07",
+      "instruction": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization.",
+      "category": "Activities and task types",
+      "cosine": 0.6550963268391701,
+      "lexical": 0.07142857142857142
+     },
+     {
+      "id": "ACT-01",
+      "instruction": "Use bpmn:task for atomic work when the execution mode is unspecified. A task contains no internal flow.",
+      "category": "Activities and task types",
+      "cosine": 0.6407316241746756,
+      "lexical": 0.037037037037037035
+     },
+     {
+      "id": "DATA-02",
+      "instruction": "Use data input and output associations between data and activities. Data associations do not define execution order.",
+      "category": "Data and documentation artifacts",
+      "cosine": 0.628131459923912,
+      "lexical": 0.0
+     },
+     {
+      "id": "EVT-01",
+      "instruction": "Use start events for stated process triggers. A start event has no incoming sequence flow and is not the source of a message flow.",
+      "category": "Events",
+      "cosine": 0.6186733760624179,
+      "lexical": 0.07692307692307693
+     },
+     {
+      "id": "ACT-04",
+      "instruction": "Use bpmn:sendTask or bpmn:receiveTask when sending or waiting for a message is itself the modeled unit of work.",
+      "category": "Activities and task types",
+      "cosine": 0.6167789087275848,
+      "lexical": 0.0
+     },
+     {
+      "id": "SUB-04",
+      "instruction": "For an event subprocess set triggeredByEvent=true, use exactly one triggered start event, and add no incoming or outgoing sequence flow.",
+      "category": "Subprocesses, calls and repetition",
+      "cosine": 0.616714532140953,
+      "lexical": 0.037037037037037035
+     }
+    ],
+    "_learned_shown": [],
+    "_tools_used": [
+     "read_description",
+     "find_closest_documented_guidelines"
+    ],
+    "_trace": [
+     {
+      "step": 1,
+      "tool": "read_description",
+      "args": {},
+      "reason": "Verify what the process states about batch arrivals, building, and reordering before deciding whether a guideline is supported.",
+      "result": {
+       "process_description": "Title: Contract\n\nFor your contract project you need parts from several web shops.\nIn order to find out which web shop has the right parts, you have to query them all, and find out how much they can deliver, at which price, and how long it will take.\nCreate a list of parts that you order from each shop.\nIf one shop has not enough  parts, order from several shops.\nAlways use the cheapest parts.\nThe parts arrive in batches in a random order, typically they are +/- 2 days earlier/later.\nWhen the first parts arrive you start building.\nSometimes you have to reorder parts.\nIf your stock (for a single part) falls below 5, you reorder (the cheapest), if it falls below 3 you reorder again (the fastest).\nIf it is zero, you write a mail to your friends, complaining about the webshops."
+      }
+     },
+     {
+      "step": 2,
+      "tool": "find_closest_documented_guidelines",
+      "args": {
+       "text": "the description says items arrive in batches at random times and the process must wait for the arrival before the next activity; the arrival is a wait for an external event, not a task"
+      },
+      "reason": "Before proposing, I need to check whether a documented guideline already covers how to model waiting for batch arrivals, since the reference uses manualTasks and the generated model uses intermediate catch events.",
+      "result": [
+       {
+        "id": "ACT-07",
+        "category": "Activities and task types",
+        "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+       },
+       {
+        "id": "ACT-01",
+        "category": "Activities and task types",
+        "rule": "Use bpmn:task for atomic work when the execution mode is unspecified. A task contains no internal flow."
+       },
+       {
+        "id": "DATA-02",
+        "category": "Data and documentation artifacts",
+        "rule": "Use data input and output associations between data and activities. Data associations do not define execution order."
+       },
+       {
+        "id": "EVT-01",
+        "category": "Events",
+        "rule": "Use start events for stated process triggers. A start event has no incoming sequence flow and is not the source of a message flow."
+       },
+       {
+        "id": "ACT-04",
+        "category": "Activities and task types",
+        "rule": "Use bpmn:sendTask or bpmn:receiveTask when sending or waiting for a message is itself the modeled unit of work."
+       },
+       {
+        "id": "SUB-04",
+        "category": "Subprocesses, calls and repetition",
+        "rule": "For an event subprocess set triggeredByEvent=true, use exactly one triggered start event, and add no incoming or outgoing sequence flow."
+       }
+      ]
+     }
+    ]
+   },
+   "relation_judgement": {
+    "relation": "refines",
+    "rule_id": "ACT-01",
+    "reason": "The generated model waits for arrivals with intermediate catch events, which is correct BPMN, but it omits the building work between the first arrival and the 'Building finished?' decision, and it ends the flow at 'Building completed' (X6) without that work task. The description says building starts when the first parts arrive (S7), so that work is an atomic unit that must be a task before the com"
+   },
+   "rules_shown": [
+    "ACT-07",
+    "ACT-01",
+    "DATA-02",
+    "EVT-01",
+    "ACT-04",
+    "SUB-04"
+   ],
+   "learned_shown": [],
+   "status": "generalized",
+   "relation": {
+    "type": "refines",
+    "ref": "EVT-03"
+   },
+   "judged_by": "expert",
+   "detail": "general guideline covering EXS-071 (example 33) and this example",
+   "guideline_id": "LRN-082",
+   "candidate_before_generalization": {
+    "decision": "propose",
+    "trigger": "the description says work starts when an input first becomes available, and that work is then repeated or checked as further inputs arrive until a completion condition is met",
+    "instruction": "Model the work as an explicit task placed after the arrival event and before a decision gateway that tests the completion condition, with the loop returning from that gateway to the work task when the condition is not yet met. Keep the wait for each arrival as an intermediate catch event, and do not replace the work with a bare event or end the flow directly after the arrival.",
+    "category": "Activities and task types",
+    "cited": [
+     "S7",
+     "M4",
+     "X4",
+     "X7",
+     "X6"
+    ],
+    "reason": "The generated model waits for arrivals with intermediate catch events, which is correct BPMN, but it omits the building work between the first arrival and the 'Building finished?' decision, and it ends the flow at 'Building completed' (X6) without that work task. The description says building starts when the first parts arrive (S7), so that work is an atomic unit that must be a task before the completion check. ACT-01 already says to use a task for atomic work; this guideline adds when that applies: after an arrival event that begins repeated work checked by a decision. The reference's manualT",
+    "relation_answered": {
+     "relation": "refines ACT-01",
+     "rule_id": "ACT-01"
+    },
+    "_judged": {
+     "relation": "refines",
+     "rule_id": "ACT-01",
+     "reason": "The generated model waits for arrivals with intermediate catch events, which is correct BPMN, but it omits the building work between the first arrival and the 'Building finished?' decision, and it ends the flow at 'Building completed' (X6) without that work task. The description says building starts when the first parts arrive (S7), so that work is an atomic unit that must be a task before the com"
+    },
+    "_shown": [
+     {
+      "id": "ACT-07",
+      "instruction": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization.",
+      "category": "Activities and task types",
+      "cosine": 0.6550963268391701,
+      "lexical": 0.07142857142857142
+     },
+     {
+      "id": "ACT-01",
+      "instruction": "Use bpmn:task for atomic work when the execution mode is unspecified. A task contains no internal flow.",
+      "category": "Activities and task types",
+      "cosine": 0.6407316241746756,
+      "lexical": 0.037037037037037035
+     },
+     {
+      "id": "DATA-02",
+      "instruction": "Use data input and output associations between data and activities. Data associations do not define execution order.",
+      "category": "Data and documentation artifacts",
+      "cosine": 0.628131459923912,
+      "lexical": 0.0
+     },
+     {
+      "id": "EVT-01",
+      "instruction": "Use start events for stated process triggers. A start event has no incoming sequence flow and is not the source of a message flow.",
+      "category": "Events",
+      "cosine": 0.6186733760624179,
+      "lexical": 0.07692307692307693
+     },
+     {
+      "id": "ACT-04",
+      "instruction": "Use bpmn:sendTask or bpmn:receiveTask when sending or waiting for a message is itself the modeled unit of work.",
+      "category": "Activities and task types",
+      "cosine": 0.6167789087275848,
+      "lexical": 0.0
+     },
+     {
+      "id": "SUB-04",
+      "instruction": "For an event subprocess set triggeredByEvent=true, use exactly one triggered start event, and add no incoming or outgoing sequence flow.",
+      "category": "Subprocesses, calls and repetition",
+      "cosine": 0.616714532140953,
+      "lexical": 0.037037037037037035
+     }
+    ],
+    "_learned_shown": [],
+    "_tools_used": [
+     "read_description",
+     "find_closest_documented_guidelines"
+    ],
+    "_trace": [
+     {
+      "step": 1,
+      "tool": "read_description",
+      "args": {},
+      "reason": "Verify what the process states about batch arrivals, building, and reordering before deciding whether a guideline is supported.",
+      "result": {
+       "process_description": "Title: Contract\n\nFor your contract project you need parts from several web shops.\nIn order to find out which web shop has the right parts, you have to query them all, and find out how much they can deliver, at which price, and how long it will take.\nCreate a list of parts that you order from each shop.\nIf one shop has not enough  parts, order from several shops.\nAlways use the cheapest parts.\nThe parts arrive in batches in a random order, typically they are +/- 2 days earlier/later.\nWhen the first parts arrive you start building.\nSometimes you have to reorder parts.\nIf your stock (for a single part) falls below 5, you reorder (the cheapest), if it falls below 3 you reorder again (the fastest).\nIf it is zero, you write a mail to your friends, complaining about the webshops."
+      }
+     },
+     {
+      "step": 2,
+      "tool": "find_closest_documented_guidelines",
+      "args": {
+       "text": "the description says items arrive in batches at random times and the process must wait for the arrival before the next activity; the arrival is a wait for an external event, not a task"
+      },
+      "reason": "Before proposing, I need to check whether a documented guideline already covers how to model waiting for batch arrivals, since the reference uses manualTasks and the generated model uses intermediate catch events.",
+      "result": [
+       {
+        "id": "ACT-07",
+        "category": "Activities and task types",
+        "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+       },
+       {
+        "id": "ACT-01",
+        "category": "Activities and task types",
+        "rule": "Use bpmn:task for atomic work when the execution mode is unspecified. A task contains no internal flow."
+       },
+       {
+        "id": "DATA-02",
+        "category": "Data and documentation artifacts",
+        "rule": "Use data input and output associations between data and activities. Data associations do not define execution order."
+       },
+       {
+        "id": "EVT-01",
+        "category": "Events",
+        "rule": "Use start events for stated process triggers. A start event has no incoming sequence flow and is not the source of a message flow."
+       },
+       {
+        "id": "ACT-04",
+        "category": "Activities and task types",
+        "rule": "Use bpmn:sendTask or bpmn:receiveTask when sending or waiting for a message is itself the modeled unit of work."
+       },
+       {
+        "id": "SUB-04",
+        "category": "Subprocesses, calls and repetition",
+        "rule": "For an event subprocess set triggeredByEvent=true, use exactly one triggered start event, and add no incoming or outgoing sequence flow."
+       }
+      ]
+     }
+    ]
+   },
+   "agent_trace": {
+    "retriever": [
+     {
+      "step": 1,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "description"
+      },
+      "reason": "The description records state what the reference model should contain at the divergent points, so I need them to anchor the failure.",
+      "result": [
+       {
+        "id": "S1",
+        "text": "Title: Contract For your contract project you need parts from several web shops."
+       },
+       {
+        "id": "S2",
+        "text": "In order to find out which web shop has the right parts, you have to query them all, and find out how much they can deliver, at which price, and how long it will take."
+       },
+       {
+        "id": "S3",
+        "text": "Create a list of parts that you order from each shop."
+       },
+       {
+        "id": "S4",
+        "text": "If one shop has not enough parts, order from several shops."
+       },
+       {
+        "id": "S5",
+        "text": "Always use the cheapest parts."
+       },
+       {
+        "id": "S6",
+        "text": "The parts arrive in batches in a random order, typically they are +/- 2 days earlier/later."
+       },
+       {
+        "id": "S7",
+        "text": "When the first parts arrive you start building."
+       },
+       {
+        "id": "S8",
+        "text": "Sometimes you have to reorder parts."
+       },
+       {
+        "id": "S9",
+        "text": "If your stock (for a single part) falls below 5, you reorder (the cheapest), if it falls below 3 you reorder again (the fastest)."
+       },
+       {
+        "id": "S10",
+        "text": "If it is zero, you write a mail to your friends, complaining about the webshops."
+       }
+      ]
+     },
+     {
+      "step": 2,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "missing_element"
+      },
+      "reason": "The T5 failure is structural, so I need the reference elements the generated model lacks before choosing which description sentences to keep.",
+      "result": [
+       {
+        "id": "M1",
+        "text": "reference userTask \"Ask about quantity, price and deadline\" has no counterpart in the generated model (after sendTask \"Query all web shops\"; before exclusiveGateway \"Enough parts at one shop?\")"
+       },
+       {
+        "id": "M2",
+        "text": "reference manualTask \"Receive first batch of parts\" has no counterpart in the generated model"
+       },
+       {
+        "id": "M3",
+        "text": "reference manualTask \"Receive third batch of parts\" has no counterpart in the generated model"
+       },
+       {
+        "id": "M4",
+        "text": "reference manualTask \"Start/Continue building\" has no counterpart in the generated model (before exclusiveGateway \"Building finished?\")"
+       },
+       {
+        "id": "M5",
+        "text": "reference exclusiveGateway \"ExclusiveGateway_1\" has no counterpart in the generated model (after startEvent \"Contract project started\"; before sendTask \"Query all web shops\")"
+       },
+       {
+        "id": "M6",
+        "text": "reference exclusiveGateway \"More parts needed?\" has no counterpart in the generated model (after exclusiveGateway \"Orders placed\")"
+       },
+       {
+        "id": "M7",
+        "text": "reference exclusiveGateway \"ExclusiveGateway_6\" has no counterpart in the generated model (after exclusiveGateway \"Stock checked\", exclusiveGateway \"Building finished?\")"
+       },
+       {
+        "id": "M8",
+        "text": "reference exclusiveGateway \"Contract fullfilled?\" has no counterpart in the generated model"
+       },
+       {
+        "id": "M9",
+        "text": "reference parallelGateway \"ParallelGateway_1\" has no counterpart in the generated model (before sendTask \"Reorder cheapest parts\")"
+       },
+       {
+        "id": "M10",
+        "text": "reference complexGateway \"First parts arrived\" has no counterpart in the generated model (after sendTask \"Reorder cheapest parts\")"
+       },
+       {
+        "id": "M11",
+        "text": "reference endEvent \"Project completed\" has no counterpart in the generated model"
+       }
+      ]
+     },
+     {
+      "step": 3,
+      "tool": "find_counterparts",
+      "args": {
+       "record_id": "M2"
+      },
+      "reason": "M2 (receive first batch) is a central missing element tied to the description on batches and building start; checking whether it appears under a different name or type.",
+      "result": [
+       {
+        "id": "X4",
+        "text": "generated intermediateCatchEvent \"First parts arrive\" has no counterpart in the reference"
+       },
+       {
+        "id": "X7",
+        "text": "generated intermediateCatchEvent \"Next parts batch arrives\" has no counterpart in the reference"
+       }
+      ]
+     },
+     {
+      "step": 4,
+      "tool": "search_evidence",
+      "args": {
+       "words": "batch arrive arrives first third"
+      },
+      "reason": "This is my last tool call. The batch-arrival failures (M2, M3, X4, X7) and the batch-arrival description (S6, S7) are the core of the structural divergence. Searching for these terms should surface any missing or extra flows tied to the batch events before I choose the final evidence set.",
+      "result": [
+       {
+        "id": "S6",
+        "kind": "description",
+        "text": "The parts arrive in batches in a random order, typically they are +/- 2 days earlier/later."
+       },
+       {
+        "id": "S7",
+        "kind": "description",
+        "text": "When the first parts arrive you start building."
+       },
+       {
+        "id": "M2",
+        "kind": "missing_element",
+        "text": "reference manualTask \"Receive first batch of parts\" has no counterpart in the generated model"
+       },
+       {
+        "id": "M3",
+        "kind": "missing_element",
+        "text": "reference manualTask \"Receive third batch of parts\" has no counterpart in the generated model"
+       },
+       {
+        "id": "M10",
+        "kind": "missing_element",
+        "text": "reference complexGateway \"First parts arrived\" has no counterpart in the generated model (after sendTask \"Reorder cheapest parts\")"
+       },
+       {
+        "id": "X4",
+        "kind": "extra_element",
+        "text": "generated intermediateCatchEvent \"First parts arrive\" has no counterpart in the reference"
+       },
+       {
+        "id": "X7",
+        "kind": "extra_element",
+        "text": "generated intermediateCatchEvent \"Next parts batch arrives\" has no counterpart in the reference"
+       },
+       {
+        "id": "F5",
+        "kind": "missing_flow",
+        "text": "reference flow manualTask \"Receive first batch of parts\" -> complexGateway \"First parts arrived\" is absent from the generated model"
+       },
+       {
+        "id": "F6",
+        "kind": "missing_flow",
+        "text": "reference flow sendTask \"Reorder cheapest parts\" -> complexGateway \"First parts arrived\" is absent from the generated model"
+       },
+       {
+        "id": "F7",
+        "kind": "missing_flow",
+        "text": "reference flow manualTask \"Receive third batch of parts\" -> complexGateway \"First parts arrived\" is absent from the generated model"
+       },
+       {
+        "id": "F21",
+        "kind": "missing_flow",
+        "text": "reference flow parallelGateway -> manualTask \"Receive first batch of parts\" is absent from the generated model"
+       },
+       {
+        "id": "F23",
+        "kind": "missing_flow",
+        "text": "reference flow parallelGateway -> manualTask \"Receive third batch of parts\" is absent from the generated model"
+       },
+       {
+        "id": "F24",
+        "kind": "missing_flow",
+        "text": "reference flow complexGateway \"First parts arrived\" -> manualTask \"Start/Continue building\" is absent from the generated model"
+       },
+       {
+        "id": "G10",
+        "kind": "extra_flow",
+        "text": "generated flow exclusiveGateway \"Orders placed\" -> intermediateCatchEvent \"First parts arrive\" is absent from the reference"
+       },
+       {
+        "id": "G11",
+        "kind": "extra_flow",
+        "text": "generated flow intermediateCatchEvent \"First parts arrive\" -> task \"Build with parts\" is absent from the reference"
+       },
+       {
+        "id": "G17",
+        "kind": "extra_flow",
+        "text": "generated flow exclusiveGateway \"Stock checked\" -> intermediateCatchEvent \"Next parts batch arrives\" is absent from the reference"
+       },
+       {
+        "id": "G18",
+        "kind": "extra_flow",
+        "text": "generated flow intermediateCatchEvent \"Next parts batch arrives\" -> task \"Build with parts\" is absent from the reference"
+       }
+      ]
+     }
+    ],
+    "expert": [
+     {
+      "tools_used": [
+       "read_description"
+      ],
+      "trace": [
+       {
+        "step": 1,
+        "tool": "read_description",
+        "args": {},
+        "reason": "Verify what the full process description states about batches, building and reorders before concluding.",
+        "result": {
+         "process_description": "Title: Contract\n\nFor your contract project you need parts from several web shops.\nIn order to find out which web shop has the right parts, you have to query them all, and find out how much they can deliver, at which price, and how long it will take.\nCreate a list of parts that you order from each shop.\nIf one shop has not enough  parts, order from several shops.\nAlways use the cheapest parts.\nThe parts arrive in batches in a random order, typically they are +/- 2 days earlier/later.\nWhen the first parts arrive you start building.\nSometimes you have to reorder parts.\nIf your stock (for a single part) falls below 5, you reorder (the cheapest), if it falls below 3 you reorder again (the fastest).\nIf it is zero, you write a mail to your friends, complaining about the webshops."
+        }
+       },
+       {
+        "step": 2,
+        "tool": null,
+        "args": null,
+        "reason": "answer cut at the output limit",
+        "result": "asked again"
+       }
+      ]
+     },
+     {
+      "tools_used": [
+       "read_description",
+       "find_closest_documented_guidelines"
+      ],
+      "trace": [
+       {
+        "step": 1,
+        "tool": "read_description",
+        "args": {},
+        "reason": "Verify what the process states about batch arrivals, building, and reordering before deciding whether a guideline is supported.",
+        "result": {
+         "process_description": "Title: Contract\n\nFor your contract project you need parts from several web shops.\nIn order to find out which web shop has the right parts, you have to query them all, and find out how much they can deliver, at which price, and how long it will take.\nCreate a list of parts that you order from each shop.\nIf one shop has not enough  parts, order from several shops.\nAlways use the cheapest parts.\nThe parts arrive in batches in a random order, typically they are +/- 2 days earlier/later.\nWhen the first parts arrive you start building.\nSometimes you have to reorder parts.\nIf your stock (for a single part) falls below 5, you reorder (the cheapest), if it falls below 3 you reorder again (the fastest).\nIf it is zero, you write a mail to your friends, complaining about the webshops."
+        }
+       },
+       {
+        "step": 2,
+        "tool": "find_closest_documented_guidelines",
+        "args": {
+         "text": "the description says items arrive in batches at random times and the process must wait for the arrival before the next activity; the arrival is a wait for an external event, not a task"
+        },
+        "reason": "Before proposing, I need to check whether a documented guideline already covers how to model waiting for batch arrivals, since the reference uses manualTasks and the generated model uses intermediate catch events.",
+        "result": [
+         {
+          "id": "ACT-07",
+          "category": "Activities and task types",
+          "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+         },
+         {
+          "id": "ACT-01",
+          "category": "Activities and task types",
+          "rule": "Use bpmn:task for atomic work when the execution mode is unspecified. A task contains no internal flow."
+         },
+         {
+          "id": "DATA-02",
+          "category": "Data and documentation artifacts",
+          "rule": "Use data input and output associations between data and activities. Data associations do not define execution order."
+         },
+         {
+          "id": "EVT-01",
+          "category": "Events",
+          "rule": "Use start events for stated process triggers. A start event has no incoming sequence flow and is not the source of a message flow."
+         },
+         {
+          "id": "ACT-04",
+          "category": "Activities and task types",
+          "rule": "Use bpmn:sendTask or bpmn:receiveTask when sending or waiting for a message is itself the modeled unit of work."
+         },
+         {
+          "id": "SUB-04",
+          "category": "Subprocesses, calls and repetition",
+          "rule": "For an event subprocess set triggeredByEvent=true, use exactly one triggered start event, and add no incoming or outgoing sequence flow."
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "failure_type": "T6",
+   "example_id": "37",
+   "learning_mode": "tools",
+   "retrieved": [
+    "S1",
+    "S2",
+    "S3",
+    "S4",
+    "S5",
+    "S6",
+    "S7",
+    "S8",
+    "S9",
+    "S10",
+    "M1",
+    "P1"
+   ],
+   "retriever_reason": "tool_calls_left is 0, so no further lookups are possible. Selected 12 records: the description sentences that state what the model should contain (S1-S10, covering the contract, querying shops, ordering from several shops, cheapest-part rule, batch arrivals, building start, reorders, and the stock-threshold and complaint rules), plus M1 (the missing 'Ask about quantity, price and deadline' userTask) and P1 (the 'Building finished?' vs 'Any stock falls?' label divergence). Together these explain ",
+   "first_wording": {
+    "trigger": "the description says that an external party is queried and that the details of its answer (such as availability, price or lead time) must be found out before a later decision can be made",
+    "instruction": "After the send activity that issues the query, model a separate activity in which the answer is obtained and its details are recorded, such as a user task or a receive step. Place it before the decision gateway that uses those details. Do not let the query send step stand alone as the only activity for that information."
+   },
+   "words_to_avoid": [
+    "later",
+    "price",
+    "query"
+   ],
+   "candidate": {
+    "decision": "propose",
+    "trigger": "the description says that a performer must send a request to several outside parties and then find out, from their answers, the quantities, costs and times they offer, before a decision gateway uses these results",
+    "instruction": "After the send activity that issues the request to the outside parties, model a separate user task, performed by the responsible role, in which the answers are obtained and recorded. Place this task before the decision gateway that uses those answers, and connect it in sequence. Do not let the send activity stand alone as the only step that yields the information the decision needs.",
+    "category": "Activities and task types",
+    "cited": [
+     "S2",
+     "M1"
+    ],
+    "reason": "The reference has a userTask that records quantity, cost and lead-time answers between the request and the sourcing decision. The generated model has only a sendTask before the gateway, so the information the decision needs is never obtained. S2 states that each shop must be queried for these figures before choosing, and M1 confirms the missing activity. LRN-081 covers inquiries without a described message, and LRN-058 covers waits for replies that are events. This guideline covers the case where a send is described and the answers must still be recorded by a performer before the decision, so ",
+    "relation_answered": {
+     "relation": "new",
+     "rule_id": null
+    }
+   },
+   "relation_judgement": {
+    "relation": "new",
+    "rule_id": null,
+    "reason": "The reference has a userTask that records quantity, cost and lead-time answers between the request and the sourcing decision. The generated model has only a sendTask before the gateway, so the information the decision needs is never obtained. S2 states that each shop must be queried for these figures before choosing, and M1 confirms the missing activity. LRN-081 covers inquiries without a describe"
+   },
+   "rules_shown": [
+    "ACT-07",
+    "DATA-02",
+    "XML-06",
+    "FID-01",
+    "ACT-05",
+    "GW-07"
+   ],
+   "learned_shown": [
+    "LRN-058",
+    "LRN-081",
+    "LRN-072",
+    "LRN-075"
+   ],
+   "status": "promoted",
+   "relation": {
+    "type": "new",
+    "ref": null
+   },
+   "judged_by": "expert",
+   "detail": "new guideline (The reference has a userTask that records quantity, cost and lead-time answers between the request and the sourcing decision. The generated model has only a sendTask before the gateway, so the information the decision needs is never obtained. S2 states that each shop must be queried for these figures before choosing, and M1 confirms the missing activity. LRN-081 covers inquiries without a describe)",
+   "generalization": {
+    "status": "not_generalized",
+    "with": "EXS-058",
+    "reason": "The two guidelines describe different situations. The first concerns a send activity whose answers must be collected by a separate user task before a decision gateway uses them. The second concerns an exclusive gateway that routes several kinds of occurrence to different follow-up reporting obligati"
+   },
+   "guideline_id": "LRN-083",
+   "specific_wording_id": "EXS-085",
+   "agent_trace": {
+    "retriever": [
+     {
+      "step": 1,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "missing_element"
+      },
+      "reason": "T6 is a label divergence, and missing reference elements are the main unmatched activities. Listing them first shows which reference labels lack a generated counterpart.",
+      "result": [
+       {
+        "id": "M1",
+        "text": "reference userTask \"Ask about quantity, price and deadline\" has no counterpart in the generated model (after sendTask \"Query all web shops\"; before exclusiveGateway \"Enough parts at one shop?\")"
+       },
+       {
+        "id": "M2",
+        "text": "reference manualTask \"Receive first batch of parts\" has no counterpart in the generated model"
+       },
+       {
+        "id": "M3",
+        "text": "reference manualTask \"Receive third batch of parts\" has no counterpart in the generated model"
+       },
+       {
+        "id": "M4",
+        "text": "reference manualTask \"Start/Continue building\" has no counterpart in the generated model (before exclusiveGateway \"Building finished?\")"
+       },
+       {
+        "id": "M5",
+        "text": "reference exclusiveGateway \"ExclusiveGateway_1\" has no counterpart in the generated model (after startEvent \"Contract project started\"; before sendTask \"Query all web shops\")"
+       },
+       {
+        "id": "M6",
+        "text": "reference exclusiveGateway \"More parts needed?\" has no counterpart in the generated model (after exclusiveGateway \"Orders placed\")"
+       },
+       {
+        "id": "M7",
+        "text": "reference exclusiveGateway \"ExclusiveGateway_6\" has no counterpart in the generated model (after exclusiveGateway \"Stock checked\", exclusiveGateway \"Building finished?\")"
+       },
+       {
+        "id": "M8",
+        "text": "reference exclusiveGateway \"Contract fullfilled?\" has no counterpart in the generated model"
+       },
+       {
+        "id": "M9",
+        "text": "reference parallelGateway \"ParallelGateway_1\" has no counterpart in the generated model (before sendTask \"Reorder cheapest parts\")"
+       },
+       {
+        "id": "M10",
+        "text": "reference complexGateway \"First parts arrived\" has no counterpart in the generated model (after sendTask \"Reorder cheapest parts\")"
+       },
+       {
+        "id": "M11",
+        "text": "reference endEvent \"Project completed\" has no counterpart in the generated model"
+       }
+      ]
+     },
+     {
+      "step": 2,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "description"
+      },
+      "reason": "The missing elements (M1-M11) are the reference side of the failure. I need the description sentences that state what the model should contain at these points before I can select evidence.",
+      "result": [
+       {
+        "id": "S1",
+        "text": "Title: Contract For your contract project you need parts from several web shops."
+       },
+       {
+        "id": "S2",
+        "text": "In order to find out which web shop has the right parts, you have to query them all, and find out how much they can deliver, at which price, and how long it will take."
+       },
+       {
+        "id": "S3",
+        "text": "Create a list of parts that you order from each shop."
+       },
+       {
+        "id": "S4",
+        "text": "If one shop has not enough parts, order from several shops."
+       },
+       {
+        "id": "S5",
+        "text": "Always use the cheapest parts."
+       },
+       {
+        "id": "S6",
+        "text": "The parts arrive in batches in a random order, typically they are +/- 2 days earlier/later."
+       },
+       {
+        "id": "S7",
+        "text": "When the first parts arrive you start building."
+       },
+       {
+        "id": "S8",
+        "text": "Sometimes you have to reorder parts."
+       },
+       {
+        "id": "S9",
+        "text": "If your stock (for a single part) falls below 5, you reorder (the cheapest), if it falls below 3 you reorder again (the fastest)."
+       },
+       {
+        "id": "S10",
+        "text": "If it is zero, you write a mail to your friends, complaining about the webshops."
+       }
+      ]
+     },
+     {
+      "step": 3,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "label_pair"
+      },
+      "reason": "The failure is label-level divergence (activity similarity 0.43, 10 activities without partner). The label_pair records should show which reference and generated labels were matched or differ, so I need them before choosing evidence.",
+      "result": [
+       {
+        "id": "P1",
+        "text": "exclusiveGateway: generated \"Building finished?\" matched to reference \"Any stock falls?\" (label similarity 0.532)"
+       },
+       {
+        "id": "P2",
+        "text": "exclusiveGateway: generated \"Enough parts at one shop?\" matched to reference \"Terms acceptable?\" (label similarity 0.556)"
+       },
+       {
+        "id": "P3",
+        "text": "exclusiveGateway: generated \"Stock level of single part?\" matched to reference \"How much is the stock fall?\" (label similarity 0.669)"
+       },
+       {
+        "id": "P4",
+        "text": "manualTask: generated \"Write complaint mail to friends about web shops\" matched to reference \"Complain to the friends\" (label similarity 0.76)"
+       },
+       {
+        "id": "P5",
+        "text": "manualTask: generated \"Reorder cheapest parts\" matched to reference \"Receive second batch of parts\" (label similarity 0.763)"
+       },
+       {
+        "id": "P6",
+        "text": "userTask: generated \"Query all web shops\" matched to reference \"Query the next shop\" (label similarity 0.828)"
+       },
+       {
+        "id": "P7",
+        "text": "serviceTask: generated \"Order cheapest parts from one shop\" matched to reference \"Reorder the cheapest part\" (label similarity 0.837)"
+       },
+       {
+        "id": "P8",
+        "text": "serviceTask: generated \"Create list of parts per shop\" matched to reference \"Create a list of the parts\" (label similarity 0.867)"
+       },
+       {
+        "id": "P9",
+        "text": "startEvent: generated \"Contract project started\" matched to reference \"Contract project received\" (label similarity 0.902)"
+       },
+       {
+        "id": "P10",
+        "text": "serviceTask: generated \"Reorder fastest parts\" matched to reference \"Reorder the part as fast as possible\" (label similarity 0.931)"
+       }
+      ]
+     },
+     {
+      "step": 4,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "extra_element"
+      },
+      "reason": "The label-pair and missing-element records do not show which generated elements lack a reference counterpart. Listing the extra generated elements is the last way to see whether they are the same activities under different labels, before choosing the final evidence set.",
+      "result": [
+       {
+        "id": "X1",
+        "text": "generated receiveTask \"Receive offers from web shops\" has no counterpart in the reference"
+       },
+       {
+        "id": "X2",
+        "text": "generated task \"Compare offers\" has no counterpart in the reference"
+       },
+       {
+        "id": "X3",
+        "text": "generated sendTask \"Order cheapest parts from several shops\" has no counterpart in the reference"
+       },
+       {
+        "id": "X4",
+        "text": "generated intermediateCatchEvent \"First parts arrive\" has no counterpart in the reference"
+       },
+       {
+        "id": "X5",
+        "text": "generated task \"Build with parts\" has no counterpart in the reference"
+       },
+       {
+        "id": "X6",
+        "text": "generated endEvent \"Building completed\" has no counterpart in the reference"
+       },
+       {
+        "id": "X7",
+        "text": "generated intermediateCatchEvent \"Next parts batch arrives\" has no counterpart in the reference"
+       }
+      ]
+     }
+    ],
+    "expert": [
+     {
+      "tools_used": [
+       "find_closest_documented_guidelines"
+      ],
+      "trace": [
+       {
+        "step": 1,
+        "tool": "find_closest_documented_guidelines",
+        "args": {
+         "text": "the description says a person must find out information such as quantity, price and deadline from external parties before a decision, so model a user task that obtains this information"
+        },
+        "reason": "Check whether documented guidelines already cover a human information-gathering activity between a query and a decision gateway.",
+        "result": [
+         {
+          "id": "ACT-05",
+          "category": "Activities and task types",
+          "rule": "Distinguish message tasks from message events: a task models performed work; an event models a message occurrence affecting flow."
+         },
+         {
+          "id": "ACT-07",
+          "category": "Activities and task types",
+          "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+         },
+         {
+          "id": "ACT-04",
+          "category": "Activities and task types",
+          "rule": "Use bpmn:sendTask or bpmn:receiveTask when sending or waiting for a message is itself the modeled unit of work."
+         },
+         {
+          "id": "FID-01",
+          "category": "Faithfulness and modeling decisions",
+          "rule": "Model every distinct activity, event, participant, decision, branch, loop, message and outcome stated in the description. Do not invent process facts."
+         },
+         {
+          "id": "FID-04",
+          "category": "Faithfulness and modeling decisions",
+          "rule": "When the description does not justify a specialized construct, use the simplest compatible BPMN construct and do not guess missing semantics."
+         },
+         {
+          "id": "SUB-06",
+          "category": "Subprocesses, calls and repetition",
+          "rule": "Use transaction, ad-hoc or compensation behavior only when its specific semantics are explicitly described."
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tools_used": [
+       "find_closest_learned_guidelines",
+       "find_closest_documented_guidelines"
+      ],
+      "trace": [
+       {
+        "step": 1,
+        "tool": "find_closest_learned_guidelines",
+        "args": {
+         "text": "the description says that an external party is queried and that the details of its answer (such as availability, price or lead time) must be found out before a later decision can be made. After the send activity that issues the query, model a separate activity in which the answer is obtained and its details are recorded, placed before the decision gateway that uses those details."
+        },
+        "reason": "Check whether the previous guideline is already learned and how close it is to the missing query-answer step.",
+        "result": [
+         {
+          "id": "LRN-058",
+          "rule": "When the description says the process must collect a quantity or answer from other people (for example, what they need or want) before the next decision is made on it: Model the request to those other people as an activity that sends the request, then model the wait for their replies as an intermediate catch event placed before the decision gateway that uses the collected answers. Do not model the wait as a plain task, since the process cannot decide until the replies arrive."
+         },
+         {
+          "id": "LRN-081",
+          "rule": "When the description says that a performer must look up or inquire about several figures (for example quantities, costs and lead times) from several outside sources before making a decision, and does not state that a message is sent to those sources: Model the inquiry as a userTask performed by that performer, placed before the decision gateway that depends on its results. Do not model it as a sendTask, because no outgoing message is described."
+         },
+         {
+          "id": "LRN-072",
+          "rule": "When the description says the process sends material or feedback to an outside party, then sends further feedback in a repeated cycle, and a later decision checks whether the outcome is acceptable, so each reply must arrive before that decision: Model each send of material or feedback as an activity inside the cycle. Model the wait for the outside party's reply as an intermediate message catch event that follows the send and comes before the acceptance decision gateway, so every round is answered before the decision. Connect the decision's repeat branch back to the feedback send through a merging exclusive gateway, and keep the wait inside the loop. Do not model the reply wait as a plain task, and do not let the acceptance decision follow the send directly."
+         },
+         {
+          "id": "LRN-075",
+          "rule": "When the description states that a later activity can only begin after an external party has supplied the details or specifications that determine it (for example, requirements given to the producer before work starts): Model the act of obtaining or determining those details as its own activity (a user task performed by the responsible role) placed before the activities that depend on it, and connect it to them in sequence, rather than letting the dependent activities start directly from the start event."
+         }
+        ]
+       },
+       {
+        "step": 2,
+        "tool": "find_closest_documented_guidelines",
+        "args": {
+         "text": "the description says a performer must query several outside sources and find out their quantities, prices and lead times before a decision gateway uses those results. Model the query step, then a separate activity in which the performer records the answers, placed before the decision gateway."
+        },
+        "reason": "Check whether a documented guideline already covers sending a query and separately recording its answers before a decision.",
+        "result": [
+         {
+          "id": "ACT-07",
+          "category": "Activities and task types",
+          "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+         },
+         {
+          "id": "DATA-02",
+          "category": "Data and documentation artifacts",
+          "rule": "Use data input and output associations between data and activities. Data associations do not define execution order."
+         },
+         {
+          "id": "XML-06",
+          "category": "Document and XML structure",
+          "rule": "Follow the BPMN XML schema: never put a documentation element directly inside bpmn:definitions, and never nest a sequenceFlow inside a task, gateway or event. If you add an ioSpecification, it must contain its dataInput and dataOutput elements first, then at least one inputSet and one outputSet, even if empty: <bpmn:inputSet/><bpmn:outputSet/>."
+         },
+         {
+          "id": "FID-01",
+          "category": "Faithfulness and modeling decisions",
+          "rule": "Model every distinct activity, event, participant, decision, branch, loop, message and outcome stated in the description. Do not invent process facts."
+         },
+         {
+          "id": "ACT-05",
+          "category": "Activities and task types",
+          "rule": "Distinguish message tasks from message events: a task models performed work; an event models a message occurrence affecting flow."
+         },
+         {
+          "id": "GW-07",
+          "category": "Gateways, branches and joins",
+          "rule": "Use an event-based gateway when the first occurring event selects the path. Target supported catching events or receive tasks, not ordinary tasks."
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

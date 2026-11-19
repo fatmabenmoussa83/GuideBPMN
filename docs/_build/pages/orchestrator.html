@@ -1,0 +1,132 @@
+<div class="mb-3"><div class="kicker">Methodology</div><h1 class="h3 mb-0 text-gray-800 font-weight-bold">Orchestrator, budgets and failure types</h1></div>
+<p class="mb-4" style="max-width:62rem">The <strong>orchestrator</strong> is an LLM agent that works on one description at a time. At each step it receives a short
+  description of the situation and the list of actions that are allowed now, chooses one, and the matching tool runs. It never sees
+  the reference model or a similarity score; after the comparison it sees <strong>how many errors remain, per type</strong>. This page explains the actions,
+  the <strong>budgets</strong>, when the work on a description stops, how failures are detected, and how bonuses and penalties are counted.</p>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">The three settings of the study</h6></div>
+  <div class="card-body">
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Setting</th><th>Guidelines given to the generator</th><th>Learning</th><th>Runs</th></tr></thead>
+      <tbody>
+        <tr><td><strong>First</strong></td><td>Documentation guidelines only</td><td>No (first pass only)</td><td>3 separate runs &times; 55 descriptions</td></tr>
+        <tr><td><strong>Revised</strong></td><td>Documentation guidelines + the guidelines learned for this description</td>
+          <td>Yes, from an empty catalogue; <strong>3 next iterations forced</strong> for every description</td><td>3 separate runs &times; 55 descriptions (i1, i2, Learned = i3)</td></tr>
+        <tr><td><strong>Reuse</strong></td><td>Documentation guidelines + the <strong>confirmed</strong> generic guidelines learned on the 44 training descriptions</td>
+          <td>Training: as Revised. Test: no learning, first pass only, on the 11 unseen descriptions</td><td>Stratified 5-fold cross-validation, 1 run (5 rounds)</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">The actions and when each one is allowed</h6></div>
+  <div class="card-body">
+    <p>The loop is always the same: <strong>decide &rarr; run the tool &rarr; decide again</strong>. The code computes the allowed actions from the
+      state of the description; the agent chooses among them and gives its reason, which is saved in <code>decisions.json</code>.</p>
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Action</th><th>What the tool does</th><th>Allowed when</th></tr></thead>
+      <tbody>
+        <tr><td><code>generate</code></td><td>The generator writes the first draft</td><td>No draft exists yet</td></tr>
+        <tr><td><code>validate</code></td><td>The Structural validator checks the latest draft at levels L1 to L4</td><td>The latest draft is not validated</td></tr>
+        <tr><td><code>evaluate</code></td><td>The Similarity evaluator compares the draft with the reference</td><td>The draft is validated</td></tr>
+        <tr><td><code>detect_failures</code></td><td>The Failure detector turns the validator and similarity results into failure types T1 to T7</td><td>After <code>evaluate</code></td></tr>
+        <tr><td><code>learn</code></td><td>Runs the two tool-using guideline agents (<a href="guideline_learning.html">Retriever and Expert</a>, each in its own ReAct loop with its tools and a budget of tool calls); they propose guidelines, or abstain, and the Guideline catalogue is updated</td>
+          <td>Learning is on and a failure type was detected; not after the last next iteration (nothing could test it)</td></tr>
+        <tr><td><code>revise</code></td><td>Starts a <strong>next iteration</strong>: the guidelines learned for this description are sent back to the generator</td>
+          <td>Guidelines to send exist and the 3 next iterations are not reached</td></tr>
+        <tr><td><code>stop_success</code> / <code>stop_failure</code></td><td>Ends the description</td>
+          <td>Success when the kept draft is valid, failure when it is not or when a budget is used up</td></tr>
+      </tbody>
+    </table></div>
+    <p class="figcap mb-0">In the Revised runs and the Reuse training, the iterations are <strong>forced</strong>: while a failure type is detected and fewer than 3 next iterations were made,
+      the only allowed action is <code>learn</code>, then <code>revise</code>. So every description gets i1, i2 and i3 unless no failure is left. In First and in the Reuse tests, there is no learning: the description ends after the first pass.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4" id="budgets">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">The budgets of one description</h6></div>
+  <div class="card-body">
+    <p>Three numbers limit the work on one description. They are saved with the run in <code>models.json</code> under <code>limits</code>.</p>
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Budget</th><th>Value</th><th>What it limits</th><th>Command line</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Next iterations</strong></td><td>3 (0 in First and Reuse tests)</td><td>How many times the error-driven guidelines are sent back to the generator for the same description</td><td><code>--next-iterations</code></td></tr>
+        <tr><td><strong>Tool calls</strong></td><td>40</td><td>Total number of tools run; every action except the final stop counts as one</td><td><code>--max-tool-calls</code></td></tr>
+        <tr><td><strong>Orchestrator decisions</strong></td><td>48</td><td>Total number of decisions of the agent, plus the final stop</td><td><code>--max-decisions</code></td></tr>
+      </tbody>
+    </table></div>
+    <div class="eq"><span>first pass</span> = generate + validate + evaluate + detect = 4 (+ learn = 5 when learning is on)</div>
+    <div class="eq"><span>one next iteration</span> = revise + validate + evaluate + detect = 4</div>
+    <div class="eq"><span>learning between two next iterations</span> = 1 learn, so N &minus; 1 in total</div>
+    <div class="eq"><span>maximum tool calls</span> = 5 + 4N + (N &minus; 1)
+      <span class="eq-gap"></span><span>maximum decisions</span> = maximum tool calls + 1</div>
+    <p class="eq-note mb-0">With N = 3: 5 + 12 + 2 = 19 tool calls and 20 decisions, inside the budgets of 40 and 48.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">When the work stops and which model is kept</h6></div>
+  <div class="card-body">
+    <p class="mb-1"><strong>Next iterations stop</strong> at the first of these:</p>
+    <ol class="mb-2">
+      <li>the 3 next iterations are done;</li>
+      <li>no failure type is detected on the current model, so there is nothing to learn from;</li>
+      <li>the agents learned nothing to send (they abstained, or only repeated guidelines already sent);</li>
+      <li>the tool-call or decision budget is used up.</li>
+    </ol>
+    <p class="mb-1"><strong>Which model is kept.</strong> After a next iteration, the new model replaces the previous one only if it is not less valid and has not more errors:</p>
+    <div class="eq"><span>the new model is kept</span> when errors of T1 to T7 after the iteration &le; errors before it, and it is not less valid</div>
+    <p class="eq-note">Otherwise the previous model is kept and carried forward: the next iteration starts again from it, and the reported value of that iteration is the kept model.
+      An empty draft (for example a truncated answer) is never kept. Example: 40 errors before, 44 after: the new model is not kept.</p>
+    <p class="mb-1"><strong>Confirmation of a guideline.</strong> A guideline sent in a next iteration is <strong>confirmed</strong> when the errors of its own type (T1 to T7) decrease.
+      Only confirmed generic guidelines are reused on unseen descriptions in the Reuse tests.</p>
+    <div class="note-honest mb-0"><i class="fas fa-lock mr-1"></i> In the first pass, the comparison with the reference is <strong>never</strong> used to choose a draft.
+      In a next iteration the number of errors is used as stated above; this is why Revised i1, i2 and Learned are reported apart from First, and why Reuse is measured on descriptions never seen in training.</div>
+  </div>
+</div>
+
+<div class="card shadow mb-4" id="failures">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Failure types T1 to T7</h6></div>
+  <div class="card-body">
+    <p>The Failure detector is a rule, not a model, and it uses <strong>no threshold</strong>. T1 to T4 come from the Structural validator.
+      T5 to T7 are detected as soon as the <a href="similarity.html">Similarity evaluator</a> finds at least one difference of that kind
+      between the kept draft and the reference.</p>
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Type</th><th>Meaning</th><th>Detected when</th><th>One error of this type is</th></tr></thead>
+      <tbody>
+        <tr><td><strong>T1</strong></td><td>Invalid XML or schema</td><td>Validator level L1 (syntax &amp; schema) fails</td><td>one incorrect element at L1</td></tr>
+        <tr><td><strong>T2</strong></td><td>Incorrect gateway use</td><td>Validator level L2 (gateways) fails</td><td>one incorrect gateway</td></tr>
+        <tr><td><strong>T3</strong></td><td>Incorrect control flow</td><td>Validator level L3 (sequence flows) fails</td><td>one incorrect flow node, or one problem of a whole process</td></tr>
+        <tr><td><strong>T4</strong></td><td>Malformed pools, lanes or message flows</td><td>Validator level L4 (collaboration) fails</td><td>one incorrect lane or message flow</td></tr>
+        <tr><td><strong>T5</strong></td><td>Connections or flow order differ from the reference</td><td>A sequence flow, or an order relation, is missing or additional</td><td>one sequence flow missing or additional</td></tr>
+        <tr><td><strong>T6</strong></td><td>Label meaning differs from the reference</td><td>An activity of the reference or of the generated model has no partner</td><td>one activity without a partner</td></tr>
+        <tr><td><strong>T7</strong></td><td>Participants differ from the reference</td><td>A pool, lane, membership or message flow is missing or additional</td><td>one such relation missing or additional</td></tr>
+      </tbody>
+    </table></div>
+    <div class="eq"><span>errors of T5</span> = sequence flows missing (FN) + sequence flows additional (FP)</div>
+    <div class="eq"><span>errors of T6</span> = reference activities + generated activities &minus; 2 &times; paired activities</div>
+    <div class="eq"><span>errors of T7</span> = participant relations (pools, lanes, memberships, message flows) missing (FN) + additional (FP)</div>
+    <p class="eq-note">Two activities worded differently but with the same meaning (cosine similarity of at least 0.75, BAAI/bge-base-en-v1.5) are paired, so a different wording alone is
+      <strong>not</strong> an error. Example: the reference has 10 activities, the generated model 8, and 6 are paired: T6 has 10 + 8 &minus; 2 &times; 6 = 6 errors.</p>
+    <p class="mb-0">A failure type only <strong>opens the door to learning</strong>: T1 to T7 are passed, with their evidence, to the guideline agents (the Retriever and the Expert).
+      They do not change the scores that are reported.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Bonuses and penalties</h6></div>
+  <div class="card-body">
+    <p>This is a record of the orchestrator's work, <strong>error by error</strong>: three incorrect elements at L3 are three errors of type T3.</p>
+    <ul>
+      <li><strong>Penalty: &minus;1</strong> for each error, at the step that finds it.</li>
+      <li><strong>Bonus: +1</strong> for each error that is gone, at the step that shows it.</li>
+    </ul>
+    <div class="eq"><span>penalty of a step</span> = sum over the types of max(0, errors now &minus; errors before)</div>
+    <div class="eq"><span>bonus of a step</span> = sum over the types of max(0, errors before &minus; errors now)</div>
+    <div class="eq"><span>score of a description</span> = total bonuses &minus; total penalties = &minus; (errors still open at the end)</div>
+    <p class="eq-note mb-0">Example: the first draft has 3 incorrect elements at L3 (&minus;3). The comparison then finds 4 flow errors and 2 activities without a partner (&minus;6).
+      After the next iteration, 1 L3 error and 1 flow error remain (+2 for T3, +3 for T5, +2 for T6). Bonuses 7, penalties 9, score &minus;2: two errors are still open.</p>
+  </div>
+</div>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Chainsaw" targetNamespace="urn:chainsaw:custom-production">
+  <bpmn:message id="Msg_CustomOrder" name="Custom order (properties)"/>
+  <bpmn:message id="Msg_ProductionUpdate" name="Production update"/>
+  <bpmn:message id="Msg_FirstSaw" name="First chainsaw"/>
+  <bpmn:message id="Msg_Feedback" name="Customer feedback"/>
+  <bpmn:message id="Msg_RemainingSaws" name="Remaining chainsaws"/>
+
+  <bpmn:collaboration id="Collab_Chainsaw">
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_Producer" name="Chainsaw Producer" processRef="Process_Producer"/>
+    <bpmn:messageFlow id="MF_Order" name="Custom order (properties)" sourceRef="Participant_Customer" targetRef="StartEvent_CustomOrder"/>
+    <bpmn:messageFlow id="MF_Update" name="Production update" sourceRef="SendTask_Update" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MF_FirstSaw" name="First chainsaw" sourceRef="SendTask_FirstSaw" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MF_Feedback" name="Customer feedback" sourceRef="Participant_Customer" targetRef="Event_CustomerFeedback"/>
+    <bpmn:messageFlow id="MF_RemainingSaws" name="Remaining chainsaws" sourceRef="SendTask_RemainingSaws" targetRef="Participant_Customer"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Producer" name="Chainsaw production" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_CustomOrder" name="Custom order with properties received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_CustomOrder" messageRef="Msg_CustomOrder"/>
+    </bpmn:startEvent>
+    <bpmn:userTask id="UserTask_DetermineProperties" name="Determine chainsaw specification from customer properties">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:task id="Task_OrderParts" name="Order parts from various online sources">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false"/>
+    </bpmn:task>
+    <bpmn:sendTask id="SendTask_Update" name="Send production update to customer" messageRef="Msg_ProductionUpdate">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="Event_PartsArrived" name="Parts arrived">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Task_InspectParts" name="Manually inspect all parts">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:task id="Task_AssembleFirstSaw" name="Assemble parts into first chainsaw">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="SendTask_FirstSaw" name="Send first chainsaw to customer" messageRef="Msg_FirstSaw">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="Event_CustomerFeedback" name="Customer feedback received">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Feedback" messageRef="Msg_Feedback"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_CustomerLikesSaw" name="Customer likes first chainsaw?" default="Flow_NotLiked">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_Liked</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotLiked</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ProduceRemainingSaws" name="Produce rest of customer order">
+      <bpmn:incoming>Flow_Liked</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="SendTask_RemainingSaws" name="Send remaining chainsaws to customer" messageRef="Msg_RemainingSaws">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_OrderCompleted" name="Order completed">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_OrderNotContinued" name="Rest of order not produced">
+      <bpmn:incoming>Flow_NotLiked</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_CustomOrder" targetRef="UserTask_DetermineProperties"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_DetermineProperties" targetRef="Task_OrderParts"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_OrderParts" targetRef="SendTask_Update"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="SendTask_Update" targetRef="Event_PartsArrived"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Event_PartsArrived" targetRef="Task_InspectParts"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_InspectParts" targetRef="Task_AssembleFirstSaw"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_AssembleFirstSaw" targetRef="SendTask_FirstSaw"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="SendTask_FirstSaw" targetRef="Event_CustomerFeedback"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Event_CustomerFeedback" targetRef="Gateway_CustomerLikesSaw"/>
+    <bpmn:sequenceFlow id="Flow_Liked" name="Yes" sourceRef="Gateway_CustomerLikesSaw" targetRef="Task_ProduceRemainingSaws">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${customerLikesSaw == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotLiked" name="No" sourceRef="Gateway_CustomerLikesSaw" targetRef="End_OrderNotContinued"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_ProduceRemainingSaws" targetRef="SendTask_RemainingSaws"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="SendTask_RemainingSaws" targetRef="End_OrderCompleted"/>
+  </bpmn:process>
+</bpmn:definitions>

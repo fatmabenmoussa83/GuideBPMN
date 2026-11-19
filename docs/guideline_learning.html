@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="description" content="How the Retriever and Expert agents learn error-driven guidelines: their ReAct loops, their tools, the code guards and the catalogue.">
+<title>Guideline learning (agents) | GuideBPMN</title>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link href="assets/vendor/fontawesome/css/all.min.css?v=202611182000" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Nunito:400,600,700,800,900&display=swap" rel="stylesheet">
+<link href="assets/css/sb-admin-2.min.css?v=202611182000" rel="stylesheet">
+<link href="assets/css/guidebpmn.css?v=202611182000" rel="stylesheet">
+</head>
+<body id="page-top" data-page="learning" data-title="Guideline learning (agents)">
+<div id="wrapper">
+<div id="sidebar-slot"></div>
+<div id="content-wrapper" class="d-flex flex-column">
+<div id="content">
+<div id="topbar-slot"></div>
+<main class="container-fluid">
+<div class="mb-3"><div class="kicker">Methodology</div><h1 class="h3 mb-0 text-gray-800 font-weight-bold">Guideline learning: the Retriever and Expert agents</h1></div>
+<p class="mb-4" style="max-width:62rem">Steps <strong>6</strong> and <strong>7</strong> of the pipeline. When the orchestrator calls its <code>learn</code> tool, two LLM agents turn each
+  failure type detected by the <strong>Failure detector</strong> (step 5) into an <strong>error-driven guideline</strong>, and the <strong>Guideline catalogue</strong> is updated.
+  This page describes exactly what runs in the code: what is decided by an agent, what is computed by code, and what is kept in the trace.
+  Every run on the <a href="run.html">Run</a> page shows, for each description, every tool call of both agents, and the files of a description, traces included, can be downloaded there as a zip.
+  The figure on the <a href="index.html">Overview</a> page names the tools of each agent; this page says what each one does.</p>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">The sequence inside the orchestrator's <code>learn</code> tool</h6></div>
+  <div class="card-body">
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>#</th><th>Who</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Code</strong></td><td>Builds the <strong>evidence records</strong>, numbered so that the agents can cite them: the sentences of the process description (S1, S2&hellip;),
+          the elements the Structural validator marked as incorrect at the failed level with the reason (V-L3-1&hellip;), and the differences found by the Similarity evaluator:
+          reference elements without counterpart (M), generated elements without counterpart (X), label pairs (P), missing and extra flows (F, G), participant differences (C).
+          For each failure type, a fixed table says which kinds of records it may use (T1&ndash;T4: the description and that level's validator records; T5: flows and elements; T6: labels; T7: participants).</td></tr>
+        <tr><td>2</td><td><strong>Retriever agent</strong></td><td>Selects, with its tools, the records that explain the failure (at most 12), and explains the error in one sentence.</td></tr>
+        <tr><td>3</td><td><strong>Expert agent</strong></td><td>Reads the description and the selected records with its tools, consults the closest documentation guidelines and error-driven guidelines,
+          checks its wording, and answers with one guideline and its relation to the existing guidelines, or abstains.</td></tr>
+        <tr><td>4</td><td><strong>Code</strong></td><td>Guards the answer (citations, no reference-only label, near-copies), then updates the catalogue: stores, consolidates, or rejects.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="figcap mb-0">The agents never open the gold BPMN file: they work on the Similarity evaluator's results. The orchestrator sees only the outcome of the step (which guidelines were learned), never a score.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4" id="react">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">How each agent runs: a ReAct loop with tools and a budget</h6></div>
+  <div class="card-body">
+    <p>Both agents follow the <strong>reason-and-act</strong> pattern of ReAct (Yao et al., ICLR 2023): the LLM alternates between reasoning and actions, and each action is a tool call whose
+      result is fed back to it. The same single-agent, tool-using pattern is used by CP-Agent (Szeider, AGENT@ICSE 2026) with LangGraph. In GuideBPMN:</p>
+    <ol class="mb-2">
+      <li><strong>Observe.</strong> At each step the agent receives its task, the list of its tools (name, description, arguments), the steps it has already made with their results, and the number of tool calls left.</li>
+      <li><strong>Decide.</strong> It answers with one JSON object: either a tool call <code>{"action": "tool", "tool": &lt;name&gt;, "args": {&hellip;}, "reason": &hellip;}</code>
+        or its final answer <code>{"action": "final", &hellip;}</code>. The reason it gives for each call is kept in the trace.</li>
+      <li><strong>Act.</strong> The code runs the tool and returns the result; the loop continues until the agent gives its final answer or the budget is reached.</li>
+    </ol>
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Rule of the loop</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>Budget</td><td>Retriever: <strong>4</strong> tool calls; Expert: <strong>6</strong>. When no call is left, the agent is told so and must answer.</td></tr>
+        <tr><td>Unknown tool or wrong arguments</td><td>The agent gets an error message as the result and continues; nothing crashes.</td></tr>
+        <tr><td>Expert proposes without having consulted the documentation guidelines</td><td>Its answer is <strong>sent back</strong>: &ldquo;call <code>find_closest_documented_guidelines</code> first and classify your guideline against what it returns&rdquo;. So the relation is always the Expert's own decision.</td></tr>
+        <tr><td>Answer cut at the output limit</td><td>The agent is asked once more, briefly (the JSON object only); if it is cut again, a last time with the tool results shortened. Each event is recorded in the trace.</td></tr>
+        <tr><td>Trace</td><td>Every step (tool, arguments, result, reason), every send-back and the final answer are saved in <code>guideline_learning_history.json</code>, for every learn call of every description.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="mb-0">The loop is the same for both LLMs (GPT-6 Luna and Claude Haiku 5.5): it uses the plain chat call of each provider, not a provider-specific tool API.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4" id="retriever">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">The Retriever agent &mdash; selects the evidence and explains the error</h6></div>
+  <div class="card-body">
+    <p><strong>Receives:</strong> the failure type (T1&ndash;T7) with its meaning, the summary of the Failure detector, and how many records of each kind exist. It does <strong>not</strong> see the records at first: it has to look for them.</p>
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Tool</th><th>Arguments</th><th>Returns</th></tr></thead>
+      <tbody>
+        <tr><td><code>list_evidence</code></td><td><code>kind</code>: description, validator_L1&hellip;L4, missing_element, extra_element, missing_flow, extra_flow, label_pair, collaboration, counts, metrics</td><td>The records of that kind (id and text), at most 40</td></tr>
+        <tr><td><code>search_evidence</code></td><td><code>words</code></td><td>The records whose text contains one of the words</td></tr>
+        <tr><td><code>find_counterparts</code></td><td><code>record_id</code> of a missing reference element</td><td>The generated elements without counterpart whose wording overlaps it: the same element may have been modeled differently (another type, another pool)</td></tr>
+      </tbody>
+    </table></div>
+    <p class="mb-1"><strong>Final answer:</strong> <code>{"selected": [ids], "reason": &hellip;}</code>: at most 12 records, and the reason is its explanation of the error, which the Expert receives.</p>
+    <p class="mb-0"><strong>Code after it:</strong> ids that do not exist are dropped; the generated counterparts of the selected missing elements are added when the agent did not select them (completeness, logged as <em>added by code</em>).</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4" id="expert">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">The Expert agent &mdash; reviews the evidence, proposes the guideline and decides its relation</h6></div>
+  <div class="card-body">
+    <p><strong>Receives:</strong> the failure type, the records selected by the Retriever with its explanation, and the list of categories of the documentation guidelines.</p>
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Tool</th><th>Arguments</th><th>Returns</th><th>Computed by</th></tr></thead>
+      <tbody>
+        <tr><td><code>read_description</code></td><td>none</td><td>The full process description</td><td>code (reads the text)</td></tr>
+        <tr><td><code>find_closest_documented_guidelines</code></td><td><code>text</code></td><td>The <strong>6</strong> documentation guidelines closest to the text (id, category, rule)</td>
+          <td>code: sentence embeddings with BAAI/bge-base-en-v1.5, the same model the Similarity evaluator uses to compare labels, then cosine similarity; a word-overlap score (Jaccard index of the words longer than 3 letters) is computed too and the higher of the two ranks. No threshold: the Expert decides.</td></tr>
+        <tr><td><code>find_closest_learned_guidelines</code></td><td><code>text</code></td><td>The <strong>4</strong> error-driven guidelines of the run's catalogue closest to the text</td><td>same</td></tr>
+        <tr><td><code>check_wording</code></td><td><code>text</code></td><td>Whether the text is tied to this one process, and by which words</td>
+          <td>code: a word is tied when it appears in this description and in fewer than 3 of the descriptions in scope, and is not generic or BPMN vocabulary</td></tr>
+      </tbody>
+    </table></div>
+    <p class="mb-1"><strong>Final answer:</strong> <code>decision</code> (propose or abstain), <code>trigger</code> (the situation: what the description states, written in general terms, starting with &ldquo;the description&hellip;&rdquo;),
+      <code>instruction</code> (what to model), <code>category</code>, <code>cited</code> (the records it relies on), <code>relation</code> and <code>rule_id</code>, <code>reason</code>.</p>
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Relation decided by the Expert</th><th>Meaning</th><th>Effect on the catalogue</th></tr></thead>
+      <tbody>
+        <tr><td><strong>contradicts</strong> (checked first)</td><td>The guideline asks for a model that a documentation guideline forbids or advises against</td><td>Returned once to the Expert to be rewritten so that it respects that guideline; if it still contradicts it, rejected. No stored guideline goes against the BPMN specification.</td></tr>
+        <tr><td><strong>not_applied</strong> (restates)</td><td>A documentation guideline already says the same thing; the generator did not apply it</td><td>Nothing stored; that documentation guideline is sent back to the generator in the next iteration</td></tr>
+        <tr><td><strong>refines</strong></td><td>A documentation guideline covers the topic; this one adds when or how to apply it</td><td>Stored, with a link to the refined guideline</td></tr>
+        <tr><td><strong>new</strong></td><td>No guideline covers it</td><td>Stored</td></tr>
+        <tr><td><strong>same_as_learned</strong></td><td>An error-driven guideline already says essentially the same thing</td><td><strong>Consolidated</strong>: not duplicated; the description is added to the descriptions that guideline was learned from (its support)</td></tr>
+      </tbody>
+    </table></div>
+    <p class="mb-1"><strong>When the Expert is asked again.</strong> Once if it abstains while the failure is still detected on the model; once if its wording is still tied to the process (with the words to avoid); once if its guideline contradicts a documentation guideline.</p>
+    <p class="mb-0"><strong>Generic or example-specific.</strong> A guideline still worded in terms of its own process after the rewrite is kept as <em>example-specific</em>: it is sent back to its own description only and never given to another description. Otherwise it is <em>generic</em>. A confirmed example-specific guideline is given to the Expert once more to be written in general terms (promotion).</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4" id="guards">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">The code guards, and what they never do</h6></div>
+  <div class="card-body">
+    <p>After the Expert's final answer, the code checks it. These checks are guards, like the orchestrator's allowed actions: they can reject or correct an answer, they never write a guideline.</p>
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Guard</th><th>Rule</th><th>Outcome</th></tr></thead>
+      <tbody>
+        <tr><td>Citations</td><td>Every cited record must be one the Expert was given; trigger and instruction must not be empty</td><td>rejected (bad citation / incomplete)</td></tr>
+        <tr><td>No reference label</td><td>The guideline must not contain a label that exists only in the reference model (the agents never see that file; this catches a leak through the evidence)</td><td>rejected (reference label)</td></tr>
+        <tr><td>Named guideline</td><td>The id the Expert names must be one its tools returned</td><td>otherwise the relation is not used</td></tr>
+        <tr><td>Near-copy</td><td>A proposal nearly identical to an existing guideline (cosine &ge; 0.88 or word overlap &ge; 0.60) is treated as that guideline, even if the Expert said &ldquo;new&rdquo;</td><td>not applied (documentation) or consolidated (error-driven)</td></tr>
+        <tr><td>Fallback</td><td>Only if the Expert gave no usable relation (it spent its whole budget without consulting the documentation guidelines): the similarity thresholds decide (cosine &ge; 0.72 = refines the closest, otherwise new)</td><td>logged as <em>judged by similarity</em> instead of <em>judged by the Expert</em></td></tr>
+      </tbody>
+    </table></div>
+    <div class="eq"><span>confirmed</span> = after the guideline was sent back, the errors of its own type (T1&ndash;T7) decreased and the new model was kept</div>
+    <p class="eq-note mb-0">Only confirmed generic guidelines are reused on unseen descriptions in the Reuse setting.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4" id="example">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">A real trace (GPT-6 Luna, Revised run 1 of the study, description 04, failure T5, first learn call)</h6></div>
+  <div class="card-body small">
+    <p class="mb-2 text-muted">Copied from <code>id_04/guideline_learning_history.json</code> of the run; the wording of the agents is theirs. The same view, for every description of every run, is on the <a href="run.html">Run</a> page.</p>
+    <p class="mb-1"><strong>Retriever agent</strong> (4 tool calls, its whole budget)</p>
+    <ol class="mb-2">
+      <li><code>list_evidence(kind: description)</code> &rarr; 5 records S1&ndash;S5. <span class="text-muted">Why: &ldquo;Read the reference description sentences that specify what the process should contain.&rdquo;</span></li>
+      <li><code>list_evidence(kind: missing_element)</code> &rarr; 7 records M1&ndash;M7. <span class="text-muted">Why: &ldquo;Identify absent reference elements and then check for generated counterparts that may represent them differently.&rdquo;</span></li>
+      <li><code>list_evidence(kind: missing_flow)</code> &rarr; 20 records F1&ndash;F20. <span class="text-muted">Why: &ldquo;Inspect the missing connections to identify the main structural divergences and relevant description points.&rdquo;</span></li>
+      <li><code>find_counterparts(record_id: M1)</code> &rarr; X1, a generated intermediate catch event. <span class="text-muted">Why: &ldquo;Check whether the missing campaign-period-end task is represented by a differently named or modeled generated element before selecting evidence.&rdquo;</span></li>
+      <li><strong>Final:</strong> selected S1&ndash;S5, M1&ndash;M5, M7, X1 (12 records). Explanation: <span class="text-muted">&ldquo;The descriptions establish the intended campaign stages, while the selected missing elements show structural differences at campaign setup, lead handling, and performance analysis. X1 is included as the generated event that may correspond to the missing campaign-period-ending task.&rdquo;</span></li>
+    </ol>
+    <p class="mb-1"><strong>Expert agent</strong> (4 of its 6 tool calls)</p>
+    <ol class="mb-2">
+      <li><code>read_description()</code>. <span class="text-muted">Why: &ldquo;Verify the process sequence and whether campaign completion and the parallel activities are stated in the description.&rdquo;</span></li>
+      <li><code>find_closest_documented_guidelines(text: &ldquo;When a process description says a period ends or an activity waits until a specified time, model the wait as a timer intermediate catch event rather than as a task&hellip;&rdquo;)</code> &rarr; EVT-13, PROC-04, EVT-03, EVT-02, ACT-07, ACT-04.
+        <span class="text-muted">Why: &ldquo;Check documented guidance most relevant to the event-type mismatch and gateway differences before proposing a guideline.&rdquo;</span></li>
+      <li><code>find_closest_learned_guidelines(text: &ldquo;When a description identifies multiple required activities as independent work that may proceed concurrently, model them as parallel branches&hellip;&rdquo;)</code> &rarr; LRN-010, LRN-013, LRN-009, LRN-011.
+        <span class="text-muted">Why: &ldquo;Check whether an error-driven guideline already covers the missing parallel gateways.&rdquo;</span></li>
+      <li><code>check_wording(text: &ldquo;the description lists multiple distinct activities as required parts of a phase before subsequent work&hellip;&rdquo;)</code> &rarr; not tied to this process, no word to avoid.
+        <span class="text-muted">Why: &ldquo;Verify that the proposed guideline is general and does not rely on wording specific to this process.&rdquo;</span></li>
+      <li><strong>Final:</strong> propose &mdash; <em>when the description lists multiple distinct activities as required components of the same phase before later work:</em>
+        model the activities as parallel branches and synchronize all branches with a parallel gateway before the later work. Category: gateways, branches and joins. Cites S2, M5.
+        Relation: <strong>same_as_learned LRN-010</strong>. <span class="text-muted">Reason: &ldquo;The description lists several activities in one phase, and the reference includes a parallel gateway before them. This matches learned guideline LRN-010. The campaign-period end is represented by a generated intermediate catch event (X1), so that item is a difference in element choice, not a missing element.&rdquo;</span></li>
+    </ol>
+    <p class="mb-0"><strong>Code guards:</strong> S2 and M5 exist among the records it was given, no reference-only label, LRN-010 is among the guidelines its tool returned &rarr; <strong>consolidated with LRN-010</strong> (judged by the Expert); description 04 is added to the support of LRN-010. Nothing new is stored, and LRN-010 is sent back to the generator in the next iteration.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4" id="code">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Where it is in the code, and how to run it</h6></div>
+  <div class="card-body">
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>What</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>The ReAct loop (<code>ToolAgent</code>), the Retriever's tools and system prompt, the Expert's tools and system prompt, the send-back rule</td><td><code>bpmn_pipeline/guideline_agents_tools.py</code></td></tr>
+        <tr><td>The evidence records, the code guards, the relations and the catalogue update</td><td><code>bpmn_pipeline/guideline_agents.py</code></td></tr>
+        <tr><td>The orchestrator's <code>learn</code> tool that calls them</td><td><code>bpmn_pipeline/orchestrator_tools.py</code></td></tr>
+        <tr><td>The catalogues</td><td><code>guidelines/learned/&lt;model&gt;/agents/replicates/rN/</code> (Revised run N), <code>&hellip;/agents/folds/fold_k/</code> (Reuse round k), <code>&hellip;/agents/trials/trial_&lt;time&gt;/</code> (a trial on a few descriptions)</td></tr>
+        <tr><td>The traces</td><td><code>runs/batch_&hellip;_agents/id_NN/guideline_learning_history.json</code>: every learn call of description NN with every step of both agents</td></tr>
+      </tbody>
+    </table></div>
+    <p class="mb-0">Command line: <code>python run_batch.py --arm documentation --next-iterations 3 --force-iterations --promote-confirmed --replicate 1</code> for a Revised run,
+      <code>&hellip; --ids 07 --trial</code> for one description from zero, or <code>.\run_kfold.ps1 -Phase revised</code> for the study. The <a href="run.html">Run</a> page does the same from the browser.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">References</h6></div>
+  <div class="card-body small">
+    <p class="mb-1">S. Yao, J. Zhao, D. Yu, N. Du, I. Shafran, K. Narasimhan, Y. Cao. <em>ReAct: Synergizing Reasoning and Acting in Language Models.</em> ICLR 2023.</p>
+    <p class="mb-1">S. Szeider. <em>CP-Agent: Agentic Constraint Programming.</em> International Workshop on Agentic Engineering (AGENT@ICSE 2026). arXiv:2508.07468.</p>
+    <p class="mb-0">S. Xiao, Z. Liu, P. Zhang, N. Muennighoff, D. Lian, J.-Y. Nie. <em>C-Pack: Packed Resources For General Chinese Embeddings</em> (the BGE embedding models, FlagEmbedding). arXiv:2309.07597, 2023&ndash;2024.</p>
+  </div>
+</div>
+</main>
+</div>
+<div id="footer-slot"></div>
+</div>
+</div>
+<a class="scroll-to-top rounded" href="#page-top" aria-label="Back to top"><i class="fas fa-angle-up"></i></a>
+<script src="assets/vendor/jquery/jquery.min.js?v=202611182000"></script>
+<script src="assets/vendor/bootstrap/bootstrap.bundle.min.js?v=202611182000"></script>
+<script src="assets/vendor/jquery-easing/jquery.easing.min.js?v=202611182000"></script>
+<script src="assets/js/layout.js?v=202611182000"></script>
+<script src="assets/js/sb-admin-2.min.js?v=202611182000"></script>
+
+</body>
+</html>

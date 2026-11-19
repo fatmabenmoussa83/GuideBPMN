@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_NightRun" targetNamespace="http://example.org/bpmn/vienna-night-run">
+  <bpmn:process id="Process_NightRun" name="App For Participating at the Vienna Night Run" isExecutable="false">
+    <bpmn:documentation>Some of the information is entered into the app by the participant; some information is collected by fitness gadgets.</bpmn:documentation>
+    <bpmn:startEvent id="Start_Participate" name="Want to participate at Vienna Night Run">
+      <bpmn:outgoing>Flow_ToSelectBlock</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_SelectStartingBlock" name="Select starting block">
+      <bpmn:incoming>Flow_ToSelectBlock</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelectToRunMerge</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_RunMerge" name="Run 5km">
+      <bpmn:incoming>Flow_SelectToRunMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_TrainLoop</bpmn:incoming>
+      <bpmn:outgoing>Flow_RunMergeToRun</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_RunAndMeasure" name="Run 5km and measure time">
+      <bpmn:incoming>Flow_RunMergeToRun</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToTimeCheck</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_TimeCheck" name="Less than 25 minutes?" default="Flow_NotQualified">
+      <bpmn:incoming>Flow_ToTimeCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_Qualified</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotQualified</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_TrainAndCheck" name="Train and check">
+      <bpmn:incoming>Flow_NotQualified</bpmn:incoming>
+      <bpmn:outgoing>Flow_TrainLoop</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_GetStartingNumber" name="Get starting number">
+      <bpmn:incoming>Flow_Qualified</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToCalculateTimeLeft</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CalculateTimeLeft" name="Calculate time between starting time and end of workday">
+      <bpmn:incoming>Flow_ToCalculateTimeLeft</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToWorkdayCheck</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_WorkdayCheck" name="More than one hour left?" default="Flow_LeaveFromWork">
+      <bpmn:incoming>Flow_ToWorkdayCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_GoFromHome</bpmn:outgoing>
+      <bpmn:outgoing>Flow_LeaveFromWork</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_GoFromHome" name="Go there from home">
+      <bpmn:incoming>Flow_GoFromHome</bpmn:incoming>
+      <bpmn:outgoing>Flow_FromHomeToMerge</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_LeaveFromWork" name="Leave directly from work">
+      <bpmn:incoming>Flow_LeaveFromWork</bpmn:incoming>
+      <bpmn:outgoing>Flow_FromWorkToMerge</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_TravelMerge" name="Travel to Night Run">
+      <bpmn:incoming>Flow_FromHomeToMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_FromWorkToMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToParallelSplit</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:parallelGateway id="Gateway_RunSplit" name="Run and drink">
+      <bpmn:incoming>Flow_ToParallelSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToRunNightRun</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToDrink</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_RunNightRun" name="Run at Night Run">
+      <bpmn:incoming>Flow_ToRunNightRun</bpmn:incoming>
+      <bpmn:outgoing>Flow_RunToJoin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_DrinkWhileRunning" name="Drink while running">
+      <bpmn:incoming>Flow_ToDrink</bpmn:incoming>
+      <bpmn:outgoing>Flow_DrinkToJoin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Gateway_RunJoin" name="Running and drinking finished">
+      <bpmn:incoming>Flow_RunToJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_DrinkToJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToReceiveTime</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_ReceiveFinalTime" name="Receive final running time">
+      <bpmn:incoming>Flow_ToReceiveTime</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_FinalTime" name="Final running time received">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ToSelectBlock" sourceRef="Start_Participate" targetRef="Task_SelectStartingBlock"/>
+    <bpmn:sequenceFlow id="Flow_SelectToRunMerge" sourceRef="Task_SelectStartingBlock" targetRef="Gateway_RunMerge"/>
+    <bpmn:sequenceFlow id="Flow_RunMergeToRun" sourceRef="Gateway_RunMerge" targetRef="Task_RunAndMeasure"/>
+    <bpmn:sequenceFlow id="Flow_ToTimeCheck" sourceRef="Task_RunAndMeasure" targetRef="Gateway_TimeCheck"/>
+    <bpmn:sequenceFlow id="Flow_Qualified" name="Yes" sourceRef="Gateway_TimeCheck" targetRef="Task_GetStartingNumber">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${runningTimeMinutes &lt; 25}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotQualified" name="No" sourceRef="Gateway_TimeCheck" targetRef="Task_TrainAndCheck"/>
+    <bpmn:sequenceFlow id="Flow_TrainLoop" sourceRef="Task_TrainAndCheck" targetRef="Gateway_RunMerge"/>
+    <bpmn:sequenceFlow id="Flow_ToCalculateTimeLeft" sourceRef="Task_GetStartingNumber" targetRef="Task_CalculateTimeLeft"/>
+    <bpmn:sequenceFlow id="Flow_ToWorkdayCheck" sourceRef="Task_CalculateTimeLeft" targetRef="Gateway_WorkdayCheck"/>
+    <bpmn:sequenceFlow id="Flow_GoFromHome" name="Yes" sourceRef="Gateway_WorkdayCheck" targetRef="Task_GoFromHome">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${minutesBetweenStartAndWorkdayEnd &gt; 60}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_LeaveFromWork" name="No" sourceRef="Gateway_WorkdayCheck" targetRef="Task_LeaveFromWork"/>
+    <bpmn:sequenceFlow id="Flow_FromHomeToMerge" sourceRef="Task_GoFromHome" targetRef="Gateway_TravelMerge"/>
+    <bpmn:sequenceFlow id="Flow_FromWorkToMerge" sourceRef="Task_LeaveFromWork" targetRef="Gateway_TravelMerge"/>
+    <bpmn:sequenceFlow id="Flow_ToParallelSplit" sourceRef="Gateway_TravelMerge" targetRef="Gateway_RunSplit"/>
+    <bpmn:sequenceFlow id="Flow_ToRunNightRun" sourceRef="Gateway_RunSplit" targetRef="Task_RunNightRun"/>
+    <bpmn:sequenceFlow id="Flow_ToDrink" sourceRef="Gateway_RunSplit" targetRef="Task_DrinkWhileRunning"/>
+    <bpmn:sequenceFlow id="Flow_RunToJoin" sourceRef="Task_RunNightRun" targetRef="Gateway_RunJoin"/>
+    <bpmn:sequenceFlow id="Flow_DrinkToJoin" sourceRef="Task_DrinkWhileRunning" targetRef="Gateway_RunJoin"/>
+    <bpmn:sequenceFlow id="Flow_ToReceiveTime" sourceRef="Gateway_RunJoin" targetRef="Task_ReceiveFinalTime"/>
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="Task_ReceiveFinalTime" targetRef="End_FinalTime"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,69 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Contract" targetNamespace="http://example.org/bpmn/contract">
+  <bpmn:message id="Msg_Query" name="Parts query"/>
+  <bpmn:message id="Msg_Offers" name="Offer: quantity, price and delivery time"/>
+  <bpmn:message id="Msg_Order" name="Parts order"/>
+  <bpmn:message id="Msg_PartsBatch" name="Parts batch delivered"/>
+  <bpmn:collaboration id="Collab_Contract">
+    <bpmn:participant id="Participant_Contractor" name="Contract project" processRef="Process_Contract"/>
+    <bpmn:participant id="Participant_WebShops" name="Web shops"/>
+    <bpmn:messageFlow id="MF_Query" name="Query parts" messageRef="Msg_Query" sourceRef="SendTask_QueryShops" targetRef="Participant_WebShops"/>
+    <bpmn:messageFlow id="MF_Offers" name="Offers" messageRef="Msg_Offers" sourceRef="Participant_WebShops" targetRef="Event_OffersReceived"/>
+    <bpmn:messageFlow id="MF_OrderSingle" name="Order parts" messageRef="Msg_Order" sourceRef="SendTask_OrderSingleShop" targetRef="Participant_WebShops"/>
+    <bpmn:messageFlow id="MF_OrderSeveral" name="Order parts" messageRef="Msg_Order" sourceRef="SendTask_OrderSeveralShops" targetRef="Participant_WebShops"/>
+    <bpmn:messageFlow id="MF_ReorderCheapest" name="Reorder cheapest parts" messageRef="Msg_Order" sourceRef="SendTask_ReorderCheapest" targetRef="Participant_WebShops"/>
+    <bpmn:messageFlow id="MF_ReorderFastest" name="Reorder fastest parts" messageRef="Msg_Order" sourceRef="SendTask_ReorderFastest" targetRef="Participant_WebShops"/>
+    <bpmn:messageFlow id="MF_PartsBatch" name="Parts batch" messageRef="Msg_PartsBatch" sourceRef="Participant_WebShops" targetRef="Event_FirstBatchArrives"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Contract" name="Contract" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_ProjectNeedsParts" name="Contract project needs parts"/>
+    <bpmn:sendTask id="SendTask_QueryShops" name="Query all web shops for parts"/>
+    <bpmn:intermediateCatchEvent id="Event_OffersReceived" name="Offers received">
+      <bpmn:messageEventDefinition id="MED_OffersReceived" messageRef="Msg_Offers"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="UserTask_CollectOffers" name="Determine quantity, price and delivery time per shop"/>
+    <bpmn:task id="Task_CreatePartsList" name="Create list of parts to order from each shop"/>
+    <bpmn:exclusiveGateway id="Gateway_SingleShopEnough" name="Single web shop has enough parts?"/>
+    <bpmn:sendTask id="SendTask_OrderSingleShop" name="Order cheapest parts from one shop"/>
+    <bpmn:sendTask id="SendTask_OrderSeveralShops" name="Order cheapest parts from several shops"/>
+    <bpmn:exclusiveGateway id="Gateway_OrderMerge" name="Orders placed"/>
+    <bpmn:intermediateCatchEvent id="Event_FirstBatchArrives" name="First parts batch arrives">
+      <bpmn:documentation>Parts arrive in batches in random order, typically +/- 2 days earlier or later.</bpmn:documentation>
+      <bpmn:messageEventDefinition id="MED_FirstBatch" messageRef="Msg_PartsBatch"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Task_ReceiveFirstBatch" name="Receive first parts batch"/>
+    <bpmn:task id="Task_StartBuilding" name="Start building"/>
+    <bpmn:exclusiveGateway id="Gateway_BuildMerge" name="Build loop merge"/>
+    <bpmn:task id="Task_Build" name="Build with parts in stock"/>
+    <bpmn:exclusiveGateway id="Gateway_BuildFinished" name="Building finished?"/>
+    <bpmn:exclusiveGateway id="Gateway_StockCheck" name="Stock level of each part"/>
+    <bpmn:sendTask id="SendTask_ReorderCheapest" name="Reorder cheapest parts"/>
+    <bpmn:sendTask id="SendTask_ReorderFastest" name="Reorder fastest parts"/>
+    <bpmn:task id="Task_WriteComplaintMail" name="Write mail to friends complaining about web shops"/>
+    <bpmn:endEvent id="EndEvent_Built" name="Building finished"/>
+
+    <bpmn:sequenceFlow id="SF_Start_Query" sourceRef="StartEvent_ProjectNeedsParts" targetRef="SendTask_QueryShops"/>
+    <bpmn:sequenceFlow id="SF_Query_Offers" sourceRef="SendTask_QueryShops" targetRef="Event_OffersReceived"/>
+    <bpmn:sequenceFlow id="SF_Offers_Collect" sourceRef="Event_OffersReceived" targetRef="UserTask_CollectOffers"/>
+    <bpmn:sequenceFlow id="SF_Collect_List" sourceRef="UserTask_CollectOffers" targetRef="Task_CreatePartsList"/>
+    <bpmn:sequenceFlow id="SF_List_Split" sourceRef="Task_CreatePartsList" targetRef="Gateway_SingleShopEnough"/>
+    <bpmn:sequenceFlow id="SF_Single_Yes" name="Yes" sourceRef="Gateway_SingleShopEnough" targetRef="SendTask_OrderSingleShop"/>
+    <bpmn:sequenceFlow id="SF_Single_No" name="No" sourceRef="Gateway_SingleShopEnough" targetRef="SendTask_OrderSeveralShops"/>
+    <bpmn:sequenceFlow id="SF_OrderSingle_Merge" sourceRef="SendTask_OrderSingleShop" targetRef="Gateway_OrderMerge"/>
+    <bpmn:sequenceFlow id="SF_OrderSeveral_Merge" sourceRef="SendTask_OrderSeveralShops" targetRef="Gateway_OrderMerge"/>
+    <bpmn:sequenceFlow id="SF_OrderMerge_Batch" sourceRef="Gateway_OrderMerge" targetRef="Event_FirstBatchArrives"/>
+    <bpmn:sequenceFlow id="SF_Batch_Receive" sourceRef="Event_FirstBatchArrives" targetRef="Task_ReceiveFirstBatch"/>
+    <bpmn:sequenceFlow id="SF_Receive_Start" sourceRef="Task_ReceiveFirstBatch" targetRef="Task_StartBuilding"/>
+    <bpmn:sequenceFlow id="SF_Start_BuildMerge" sourceRef="Task_StartBuilding" targetRef="Gateway_BuildMerge"/>
+    <bpmn:sequenceFlow id="SF_BuildMerge_Build" sourceRef="Gateway_BuildMerge" targetRef="Task_Build"/>
+    <bpmn:sequenceFlow id="SF_Build_Finished" sourceRef="Task_Build" targetRef="Gateway_BuildFinished"/>
+    <bpmn:sequenceFlow id="SF_NotFinished_Stock" name="No" sourceRef="Gateway_BuildFinished" targetRef="Gateway_StockCheck"/>
+    <bpmn:sequenceFlow id="SF_Finished_End" name="Yes" sourceRef="Gateway_BuildFinished" targetRef="EndEvent_Built"/>
+    <bpmn:sequenceFlow id="SF_Stock_OK" name="All parts at 5 or more" sourceRef="Gateway_StockCheck" targetRef="Gateway_BuildMerge"/>
+    <bpmn:sequenceFlow id="SF_Stock_Cheapest" name="Below 5 but not below 3" sourceRef="Gateway_StockCheck" targetRef="SendTask_ReorderCheapest"/>
+    <bpmn:sequenceFlow id="SF_Stock_Fastest" name="Below 3 but not zero" sourceRef="Gateway_StockCheck" targetRef="SendTask_ReorderFastest"/>
+    <bpmn:sequenceFlow id="SF_Stock_Zero" name="Zero" sourceRef="Gateway_StockCheck" targetRef="Task_WriteComplaintMail"/>
+    <bpmn:sequenceFlow id="SF_Cheapest_Merge" sourceRef="SendTask_ReorderCheapest" targetRef="Gateway_BuildMerge"/>
+    <bpmn:sequenceFlow id="SF_Fastest_Merge" sourceRef="SendTask_ReorderFastest" targetRef="Gateway_BuildMerge"/>
+    <bpmn:sequenceFlow id="SF_Mail_Merge" sourceRef="Task_WriteComplaintMail" targetRef="Gateway_BuildMerge"/>
+  </bpmn:process>
+</bpmn:definitions>

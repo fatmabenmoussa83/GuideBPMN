@@ -1,0 +1,336 @@
+{
+ "id": "33",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 20,
+  "T6": 6
+ },
+ "first_pass_error_counts": {
+  "T1": 1,
+  "T5": 29,
+  "T6": 10
+ },
+ "guidelines": [
+  {
+   "failure_type": "T1",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-066 (cosine 0.97)",
+   "guideline_id": "LRN-066",
+   "ref": "LRN-066",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-006 (The reference has a task 'Check color level' between the stock decision and the shopping-list decision, and the description states that checking the remaining amount is an action performed when the color is in stock, before the under-100-gram decision. The generated model omits this action, so the stated action disappears from the model. Documented FID-02 supports not merging or dropping separatel)",
+   "guideline_id": "LRN-006",
+   "ref": "LRN-006",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines FID-02 (The reference models 'Check color level' on the in-stock branch and 'Order color' on the not-in-stock branch, both stated in the description (S4, S6). The generated model lacks both tasks and instead has 'Order plastic' (X3), which replaces the described object with a broader one, and the gateway is matched to a differently worded reference gateway (P1). The guideline targets this branch-action an)",
+   "guideline_id": "LRN-077",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline (M3 and M4 show that the reference models the wait for the ordered color as a receive task and a manual task, and the generated model has no counterpart. S6 says the color is ordered and S7 says the process proceeds only once the plastic is available. Under BPMN 2.0.2 a wait for an external delivery is an event, not a task, so the correct element is an intermediate catch event. I did not copy the r)",
+   "guideline_id": "LRN-078",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: result",
+   "guideline_id": "EXS-079",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: sketches",
+   "guideline_id": "EXS-080",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: continuously",
+   "guideline_id": "EXS-081",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-066",
+   "instruction": "When the description states that a person makes a choice on incoming items (for example accepting or denying them) and the generated model gives that human action its own task element that also needs a role or performer child: Keep every sequenceFlow as a direct child of the process (or subprocess) element, never inside the task that carries the human action. Put any resource or performer information for that task inside the task element itself, then list the sequence flows separately after all flow nodes in the owning process.",
+   "situation": "the description has a person performing an action, such as choosing, checking or confirming something, that the model gives its own task element, and that task also needs a resource role or performer child",
+   "source": "learned guideline (refines XML-06)",
+   "failure_type": "T1"
+  },
+  {
+   "rule_id": "LRN-006",
+   "instruction": "When the description states that an activity is performed on selected items, and only afterwards does the process branch according to a choice that each item states about how the next step is carried out: Model the stated activity as its own task, placed after the preceding step and connected to it by a sequence flow. Place the decision gateway after that task, not directly after the preceding step, so that the stated activity appears in the model and the branches are driven by the condition each item states.",
+   "situation": "the description states a conditional branch in which an actor performs a stated action on one branch (for example, checking a quantity) and that action is followed by a further decision on the same branch, with no wait for a message, signal, time or condition",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-077",
+   "instruction": "When the description states that an exclusive decision on whether a stocked item is on hand has one branch where the item is checked or obtained, and the other branch requires a separate action on that item, each stated with its own verb and object: Model the action of each branch as its own task on that branch's sequence flow, labelled with the verb and the exact object the description gives for that branch. Do not replace that object with a broader category or with a different object that the description uses elsewhere. If the description then tests a condition on the outcome of the checking task, place that task before a further exclusive gateway on that branch.",
+   "situation": "the description states that an exclusive decision on whether a stocked item is on hand has one branch where the item is checked or obtained, and the other branch requires a separate action on that item, each stated with its own verb and object",
+   "source": "learned guideline (refines FID-02)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-078",
+   "instruction": "When the description says an item or material is ordered from an outside supplier, and a later activity or decision can only proceed once that item is in hand: Model the arrival of the ordered item as a bpmn:intermediateCatchEvent in the process's own pool, placed after the ordering activity and before the activity or exclusive gateway that uses the item. Do not connect the ordering activity directly to the using activity, and do not model the arrival wait as a manual or other task.",
+   "situation": "the description says an item or material is ordered from an outside supplier, and a later activity or decision can only proceed once that item is in hand",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "EXS-079",
+   "instruction": "When the description says the actor sends items or a request to another participant and then states that the actor must wait for that participant's reply, confirmation, result, or ongoing status updates before continuing: Model each such wait as an explicit receiving element (a receive task, or an intermediate message catch event where a task is not the unit of work) in the actor's own lane, placed directly after the sending element and before the next element that depends on the reply. Do not connect the sending element straight to the dependent element. When the description says the participant keeps reporting status while the actor does other work, place the receiving element on its own branch that runs alongside that other work, so the repeated updates are not dropped.",
+   "situation": "the description says the actor sends items or a request to another participant and then states that the actor must wait for that participant's reply, confirmation, result, or ongoing status updates before continuing",
+   "source": "example-specific guideline",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "EXS-080",
+   "instruction": "When the description says an actor sends a request, sketches, or material to a separate external participant, and then says the actor receives a reply, confirmation, or continuous status back from that participant that must arrive before a following activity or decision: Model the awaited incoming message as a bpmn:receiveTask in the lane of the waiting actor, placed directly after the sending task and before any gateway whose condition depends on its content. If the description says the incoming status keeps arriving while another activity runs, fork with a parallel gateway so the receiveTask and that activity run side by side, and join them afterwards. Do not replace the awaited message with a task that performs the action itself, and do not omit the receiveTask.",
+   "situation": "the description says an actor sends a request, sketches, or material to a separate external participant, and then says the actor receives a reply, confirmation, or continuous status back from that participant that must arrive before a following activity or decision",
+   "source": "example-specific guideline",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "EXS-081",
+   "instruction": "When the description says that a device or external party, after it has been started or sent material, continuously sends back its status while the process carries on with other work in parallel, and the process must receive these returns: Model each continuing return as an intermediate message catch event in the process pool. Place it on the branch that must react to the returns, after the action that starts the external party. Run the other work in a separate branch of a parallel gateway, so the wait does not block it. Do not model the repeated wait as a plain task, and do not model it as a single one-time wait with no loop back to the catch event.",
+   "situation": "the description says that a device or external party, after it has been started or sent material, continuously sends back its status while the process carries on with other work in parallel, and the process must receive these returns",
+   "source": "example-specific guideline",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T1",
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

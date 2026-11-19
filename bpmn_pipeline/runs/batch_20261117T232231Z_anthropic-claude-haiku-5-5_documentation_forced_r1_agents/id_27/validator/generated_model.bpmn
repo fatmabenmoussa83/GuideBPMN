@@ -1,0 +1,107 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_WorkAccident" targetNamespace="http://example.org/bpmn/work-accident">
+  <bpmn:message id="Msg_AccidentNotice" name="Accident notification"/>
+  <bpmn:message id="Msg_LabourReport" name="Report to Labour Inspectorate"/>
+  <bpmn:message id="Msg_DirectorateReport" name="Accident report to competent directorate"/>
+  <bpmn:message id="Msg_ProviderReport" name="Accident report to accident insurance provider"/>
+
+  <bpmn:collaboration id="Collab_WorkAccident" name="Work Accident">
+    <bpmn:participant id="Participant_Insured" name="Insured Person" processRef="Process_Insured"/>
+    <bpmn:participant id="Participant_Employer" name="Employer" processRef="Process_Employer"/>
+    <bpmn:participant id="Participant_Educational" name="Educational Institution" processRef="Process_Educational"/>
+    <bpmn:participant id="Participant_LabourInspectorate" name="Labour Inspectorate"/>
+    <bpmn:participant id="Participant_AccidentInsuranceProvider" name="Accident Insurance Provider"/>
+    <bpmn:participant id="Participant_CompetentDirectorate" name="Competent Directorate"/>
+
+    <bpmn:messageFlow id="MF_EmployerNotice" name="Inform employer" sourceRef="Task_InformEmployer" targetRef="Start_EmployerNotice" messageRef="Msg_AccidentNotice"/>
+    <bpmn:messageFlow id="MF_LabourReport" name="Report to Labour Inspectorate" sourceRef="Task_ReportLabour" targetRef="Participant_LabourInspectorate" messageRef="Msg_LabourReport"/>
+    <bpmn:messageFlow id="MF_DirectorateReport" name="Report to directorate" sourceRef="Task_ReportDirectorate" targetRef="Participant_CompetentDirectorate" messageRef="Msg_DirectorateReport"/>
+    <bpmn:messageFlow id="MF_ProviderReportSelf" name="Report to provider" sourceRef="Task_ReportProviderSelf" targetRef="Participant_AccidentInsuranceProvider" messageRef="Msg_ProviderReport"/>
+    <bpmn:messageFlow id="MF_ProviderReportEdu" name="Report to provider" sourceRef="Task_EduReportProvider" targetRef="Participant_AccidentInsuranceProvider" messageRef="Msg_ProviderReport"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Insured" name="Insured Person Process" isExecutable="false">
+    <bpmn:startEvent id="Start_AccidentOccurs" name="Work accident or near miss occurs">
+      <bpmn:outgoing>SF_I1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:businessRuleTask id="Task_CheckCriteria" name="Check work accident criteria">
+      <bpmn:incoming>SF_I1</bpmn:incoming>
+      <bpmn:outgoing>SF_I2</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:exclusiveGateway id="Gateway_InsuredStatus" name="Insured status?">
+      <bpmn:incoming>SF_I2</bpmn:incoming>
+      <bpmn:outgoing>SF_I3</bpmn:outgoing>
+      <bpmn:outgoing>SF_I4</bpmn:outgoing>
+      <bpmn:outgoing>SF_I5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_InformEmployer" name="Inform employer immediately">
+      <bpmn:incoming>SF_I3</bpmn:incoming>
+      <bpmn:outgoing>SF_I6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Task_ReportDirectorate" name="Report accident to competent directorate">
+      <bpmn:incoming>SF_I4</bpmn:incoming>
+      <bpmn:outgoing>SF_I7</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Task_ReportProviderSelf" name="Report accident to accident insurance provider in good time">
+      <bpmn:incoming>SF_I5</bpmn:incoming>
+      <bpmn:outgoing>SF_I8</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_EmployerInformed" name="Employer informed">
+      <bpmn:incoming>SF_I6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_DirectorateReported" name="Directorate notified">
+      <bpmn:incoming>SF_I7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_ProviderReported" name="Provider notified">
+      <bpmn:incoming>SF_I8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SF_I1" sourceRef="Start_AccidentOccurs" targetRef="Task_CheckCriteria"/>
+    <bpmn:sequenceFlow id="SF_I2" sourceRef="Task_CheckCriteria" targetRef="Gateway_InsuredStatus"/>
+    <bpmn:sequenceFlow id="SF_I3" name="Employee" sourceRef="Gateway_InsuredStatus" targetRef="Task_InformEmployer"/>
+    <bpmn:sequenceFlow id="SF_I4" name="Student or schoolchild" sourceRef="Gateway_InsuredStatus" targetRef="Task_ReportDirectorate"/>
+    <bpmn:sequenceFlow id="SF_I5" name="Self-employed" sourceRef="Gateway_InsuredStatus" targetRef="Task_ReportProviderSelf"/>
+    <bpmn:sequenceFlow id="SF_I6" sourceRef="Task_InformEmployer" targetRef="End_EmployerInformed"/>
+    <bpmn:sequenceFlow id="SF_I7" sourceRef="Task_ReportDirectorate" targetRef="End_DirectorateReported"/>
+    <bpmn:sequenceFlow id="SF_I8" sourceRef="Task_ReportProviderSelf" targetRef="End_ProviderReported"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Employer" name="Employer Process" isExecutable="false">
+    <bpmn:startEvent id="Start_EmployerNotice" name="Accident notice received">
+      <bpmn:outgoing>SF_E1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_EmployerNotice" messageRef="Msg_AccidentNotice"/>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_LabourReport" name="Fatality or serious injury not reported to emergency services?">
+      <bpmn:incoming>SF_E1</bpmn:incoming>
+      <bpmn:outgoing>SF_E2</bpmn:outgoing>
+      <bpmn:outgoing>SF_E3</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_ReportLabour" name="Report to Labour Inspectorate immediately">
+      <bpmn:incoming>SF_E2</bpmn:incoming>
+      <bpmn:outgoing>SF_E4</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_LabourReported" name="Labour Inspectorate reported">
+      <bpmn:incoming>SF_E4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_NoLabourReport" name="No Labour Inspectorate report required">
+      <bpmn:incoming>SF_E3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SF_E1" sourceRef="Start_EmployerNotice" targetRef="Gateway_LabourReport"/>
+    <bpmn:sequenceFlow id="SF_E2" name="Yes" sourceRef="Gateway_LabourReport" targetRef="Task_ReportLabour"/>
+    <bpmn:sequenceFlow id="SF_E3" name="No" sourceRef="Gateway_LabourReport" targetRef="End_NoLabourReport"/>
+    <bpmn:sequenceFlow id="SF_E4" sourceRef="Task_ReportLabour" targetRef="End_LabourReported"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Educational" name="Educational Institution Process" isExecutable="false">
+    <bpmn:startEvent id="Start_PupilAccident" name="Work accident of insured pupil or student occurs">
+      <bpmn:outgoing>SF_Ed1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_EduReportProvider" name="Report accident to accident insurance provider in triplicate within five days">
+      <bpmn:incoming>SF_Ed1</bpmn:incoming>
+      <bpmn:outgoing>SF_Ed2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_EduReported" name="Provider notified">
+      <bpmn:incoming>SF_Ed2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SF_Ed1" sourceRef="Start_PupilAccident" targetRef="Task_EduReportProvider"/>
+    <bpmn:sequenceFlow id="SF_Ed2" sourceRef="Task_EduReportProvider" targetRef="End_EduReported"/>
+  </bpmn:process>
+</bpmn:definitions>

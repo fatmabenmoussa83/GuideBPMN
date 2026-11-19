@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_OrderProcess" targetNamespace="http://example.com/bpmn/order-process">
+  <bpmn:message id="Message_Order" name="Order"/>
+  <bpmn:message id="Message_OrderConfirmation" name="Order confirmation"/>
+  <bpmn:message id="Message_ShipmentHandover" name="Shipment handover"/>
+  <bpmn:message id="Message_TrackingInformation" name="Tracking information"/>
+  <bpmn:message id="Message_CustomerFeedback" name="Customer feedback"/>
+  <bpmn:message id="Message_Return" name="Return"/>
+  <bpmn:process id="Process_OrderFulfillment" name="Order fulfillment" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_OrderReceived" name="Order placed online or by phone">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_OrderReceived" messageRef="Message_Order"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_GenerateConfirmation" name="Generate order confirmation"/>
+    <bpmn:sendTask id="Task_SendConfirmation" name="Send order confirmation" messageRef="Message_OrderConfirmation"/>
+    <bpmn:task id="Task_PickAndPack" name="Pick and pack items"/>
+    <bpmn:task id="Task_GenerateShippingLabel" name="Generate shipping label"/>
+    <bpmn:sendTask id="Task_HandOverShipment" name="Hand over shipment to logistics provider" messageRef="Message_ShipmentHandover"/>
+    <bpmn:sendTask id="Task_SendTracking" name="Send tracking information" messageRef="Message_TrackingInformation"/>
+    <bpmn:task id="Task_MonitorShipment" name="Monitor shipment until it reaches the customer address"/>
+    <bpmn:endEvent id="EndEvent_SuccessfulDelivery" name="Successful delivery"/>
+    <bpmn:sequenceFlow id="Flow_OrderToGenerateConfirmation" sourceRef="StartEvent_OrderReceived" targetRef="Task_GenerateConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_GenerateToSendConfirmation" sourceRef="Task_GenerateConfirmation" targetRef="Task_SendConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_SendConfirmationToPickPack" sourceRef="Task_SendConfirmation" targetRef="Task_PickAndPack"/>
+    <bpmn:sequenceFlow id="Flow_PickPackToLabel" sourceRef="Task_PickAndPack" targetRef="Task_GenerateShippingLabel"/>
+    <bpmn:sequenceFlow id="Flow_LabelToHandover" sourceRef="Task_GenerateShippingLabel" targetRef="Task_HandOverShipment"/>
+    <bpmn:sequenceFlow id="Flow_HandoverToTracking" sourceRef="Task_HandOverShipment" targetRef="Task_SendTracking"/>
+    <bpmn:sequenceFlow id="Flow_TrackingToMonitor" sourceRef="Task_SendTracking" targetRef="Task_MonitorShipment"/>
+    <bpmn:sequenceFlow id="Flow_MonitorToDelivery" sourceRef="Task_MonitorShipment" targetRef="EndEvent_SuccessfulDelivery"/>
+  </bpmn:process>
+  <bpmn:process id="Process_PostDeliveryActions" name="Post-delivery actions" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_FeedbackReceived" name="Customer feedback received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_FeedbackReceived" messageRef="Message_CustomerFeedback"/>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="StartEvent_ReturnReceived" name="Return received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_ReturnReceived" messageRef="Message_Return"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_TriggerFurtherAction" name="Trigger further action"/>
+    <bpmn:endEvent id="EndEvent_PostDeliveryActionTriggered" name="Further action triggered"/>
+    <bpmn:sequenceFlow id="Flow_FeedbackToAction" sourceRef="StartEvent_FeedbackReceived" targetRef="Task_TriggerFurtherAction"/>
+    <bpmn:sequenceFlow id="Flow_ReturnToAction" sourceRef="StartEvent_ReturnReceived" targetRef="Task_TriggerFurtherAction"/>
+    <bpmn:sequenceFlow id="Flow_ActionToEnd" sourceRef="Task_TriggerFurtherAction" targetRef="EndEvent_PostDeliveryActionTriggered"/>
+  </bpmn:process>
+  <bpmn:collaboration id="Collaboration_OrderProcess">
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_OrderFulfillment" name="Order fulfillment" processRef="Process_OrderFulfillment"/>
+    <bpmn:participant id="Participant_LogisticsProvider" name="Logistics provider"/>
+    <bpmn:participant id="Participant_PostDeliveryActions" name="Post-delivery actions" processRef="Process_PostDeliveryActions"/>
+    <bpmn:messageFlow id="MessageFlow_CustomerOrder" name="Order" sourceRef="Participant_Customer" targetRef="StartEvent_OrderReceived" messageRef="Message_Order"/>
+    <bpmn:messageFlow id="MessageFlow_OrderConfirmation" name="Order confirmation" sourceRef="Task_SendConfirmation" targetRef="Participant_Customer" messageRef="Message_OrderConfirmation"/>
+    <bpmn:messageFlow id="MessageFlow_ShipmentHandover" name="Shipment handover" sourceRef="Task_HandOverShipment" targetRef="Participant_LogisticsProvider" messageRef="Message_ShipmentHandover"/>
+    <bpmn:messageFlow id="MessageFlow_TrackingInformation" name="Tracking information" sourceRef="Task_SendTracking" targetRef="Participant_Customer" messageRef="Message_TrackingInformation"/>
+    <bpmn:messageFlow id="MessageFlow_CustomerFeedback" name="Customer feedback" sourceRef="Participant_Customer" targetRef="StartEvent_FeedbackReceived" messageRef="Message_CustomerFeedback"/>
+    <bpmn:messageFlow id="MessageFlow_Return" name="Return" sourceRef="Participant_Customer" targetRef="StartEvent_ReturnReceived" messageRef="Message_Return"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

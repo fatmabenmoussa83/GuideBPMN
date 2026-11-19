@@ -1,0 +1,102 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_RoomService" targetNamespace="http://example.com/bpmn/evanstonian-room-service">
+  <bpmn:message id="Msg_RoomServiceCall" name="Room service call"/>
+  <bpmn:collaboration id="Collab_RoomService">
+    <bpmn:participant id="Participant_Guest" name="Guest"/>
+    <bpmn:participant id="Participant_RoomService" name="The Evanstonian room service" processRef="Process_RoomService"/>
+    <bpmn:messageFlow id="MessageFlow_GuestCall" name="Calls room service" sourceRef="Participant_Guest" targetRef="StartEvent_RoomServiceCall"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_RoomService" name="Room service order handling" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_RoomService">
+      <bpmn:lane id="Lane_RoomServiceManager" name="Room-service manager">
+        <bpmn:flowNodeRef>StartEvent_RoomServiceCall</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TakeOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitTicket</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Prep_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Alcohol_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GiveOrderToSommelier</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Alcohol_Merge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AssignOrderToWaiter</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Kitchen" name="Kitchen">
+        <bpmn:flowNodeRef>Task_PrepareFood</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Sommelier" name="Sommelier">
+        <bpmn:flowNodeRef>Task_FetchWine</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Waiter" name="Waiter">
+        <bpmn:flowNodeRef>Gateway_Waiter_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReadyCart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PrepareNonalcoholicDrinks</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Ready_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DeliverToRoom</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Return_Merge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReturnToStation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Pending_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_OtherOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DebitGuestAccount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Billed</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_RoomServiceCall" name="Room service called">
+      <bpmn:messageEventDefinition id="MED_RoomServiceCall" messageRef="Msg_RoomServiceCall"/>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_TakeOrder" name="Take down order"/>
+    <bpmn:task id="Task_SubmitTicket" name="Submit order ticket to kitchen"/>
+
+    <bpmn:parallelGateway id="Gateway_Prep_Split" name="Start preparation"/>
+
+    <bpmn:task id="Task_PrepareFood" name="Prepare food"/>
+
+    <bpmn:exclusiveGateway id="Gateway_Alcohol_Split" name="Order includes wine or other alcoholic beverage?" default="Flow_NoAlcohol"/>
+    <bpmn:task id="Task_GiveOrderToSommelier" name="Give order to sommelier"/>
+    <bpmn:task id="Task_FetchWine" name="Fetch wine and prepare other alcoholic beverages"/>
+    <bpmn:exclusiveGateway id="Gateway_Alcohol_Merge" name="Alcohol handling done"/>
+
+    <bpmn:task id="Task_AssignOrderToWaiter" name="Assign order to waiter"/>
+
+    <bpmn:parallelGateway id="Gateway_Waiter_Split" name="Start waiter work"/>
+    <bpmn:task id="Task_ReadyCart" name="Ready cart (tablecloth and silverware)"/>
+    <bpmn:task id="Task_PrepareNonalcoholicDrinks" name="Prepare nonalcoholic drinks"/>
+    <bpmn:parallelGateway id="Gateway_Ready_Join" name="Food, wine and cart ready"/>
+
+    <bpmn:task id="Task_DeliverToRoom" name="Deliver order to guest room"/>
+
+    <bpmn:exclusiveGateway id="Gateway_Return_Merge" name="Waiter at room-service station"/>
+    <bpmn:task id="Task_ReturnToStation" name="Return to room-service station"/>
+    <bpmn:exclusiveGateway id="Gateway_Pending_Split" name="Waiter has another order to prepare or deliver?" default="Flow_DebitNow"/>
+    <bpmn:task id="Task_OtherOrder" name="Prepare or deliver other order"/>
+    <bpmn:task id="Task_DebitGuestAccount" name="Debit guest account"/>
+    <bpmn:endEvent id="EndEvent_Billed" name="Guest account debited"/>
+
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_RoomServiceCall" targetRef="Task_TakeOrder"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_TakeOrder" targetRef="Task_SubmitTicket"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_SubmitTicket" targetRef="Gateway_Prep_Split"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Gateway_Prep_Split" targetRef="Task_PrepareFood"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Gateway_Prep_Split" targetRef="Gateway_Alcohol_Split"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_PrepareFood" targetRef="Gateway_Ready_Join"/>
+    <bpmn:sequenceFlow id="Flow_07" name="Yes (about 80% of orders)" sourceRef="Gateway_Alcohol_Split" targetRef="Task_GiveOrderToSommelier">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">includesAlcoholicBeverage == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoAlcohol" name="No" sourceRef="Gateway_Alcohol_Split" targetRef="Gateway_Alcohol_Merge"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_GiveOrderToSommelier" targetRef="Task_FetchWine"/>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_FetchWine" targetRef="Gateway_Alcohol_Merge"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Gateway_Alcohol_Merge" targetRef="Task_AssignOrderToWaiter"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_AssignOrderToWaiter" targetRef="Gateway_Waiter_Split"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Gateway_Waiter_Split" targetRef="Task_ReadyCart"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Gateway_Waiter_Split" targetRef="Task_PrepareNonalcoholicDrinks"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_ReadyCart" targetRef="Gateway_Ready_Join"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_PrepareNonalcoholicDrinks" targetRef="Gateway_Ready_Join"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Gateway_Ready_Join" targetRef="Task_DeliverToRoom"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Task_DeliverToRoom" targetRef="Gateway_Return_Merge"/>
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Gateway_Return_Merge" targetRef="Task_ReturnToStation"/>
+    <bpmn:sequenceFlow id="Flow_19" sourceRef="Task_ReturnToStation" targetRef="Gateway_Pending_Split"/>
+    <bpmn:sequenceFlow id="Flow_20" name="Yes (postpone billing)" sourceRef="Gateway_Pending_Split" targetRef="Task_OtherOrder">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">hasAnotherOrderPending == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_DebitNow" name="No" sourceRef="Gateway_Pending_Split" targetRef="Task_DebitGuestAccount"/>
+    <bpmn:sequenceFlow id="Flow_21" sourceRef="Task_OtherOrder" targetRef="Gateway_Return_Merge"/>
+    <bpmn:sequenceFlow id="Flow_22" sourceRef="Task_DebitGuestAccount" targetRef="EndEvent_Billed"/>
+  </bpmn:process>
+</bpmn:definitions>

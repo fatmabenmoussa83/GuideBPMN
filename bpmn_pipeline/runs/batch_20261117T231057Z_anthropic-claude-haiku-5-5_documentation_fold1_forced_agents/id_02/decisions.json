@@ -1,0 +1,317 @@
+{
+ "id": "02",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5"
+ ],
+ "error_counts": {
+  "T5": 8
+ },
+ "first_pass_error_counts": {
+  "T5": 29,
+  "T6": 5
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines EVT-01 (The generated model labels the start event with the department's action ('Need for new hire identified'), so the reference's task 'Identify need for new hire' is missing (X1, M1). S1 describes a participant performing an action that starts the process, which is work rather than a triggering occurrence. EVT-01 says to use start events for stated triggers but does not say how to handle an actor's ac)",
+   "guideline_id": "LRN-005",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines GW-04 (The reference models the paperwork, orientation and training activities as parallel branches opened by one parallel gateway and closed by another before the process concludes. The generated model has no such gateways, and it lacks the paperwork task (M2, M6, M7). The description states these activities without an order and requires all of them to finish before the next step (S6, S7). GW-04 covers )",
+   "guideline_id": "LRN-006",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-004 (cosine 0.88)",
+   "guideline_id": "LRN-004",
+   "ref": "LRN-004",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines FID-01 (The reference has a task that sends the request to the selected candidates before the choice gateway, and the generated model omits it. The description states this action explicitly (S4), so it is a distinct activity that must not be dropped. The generated model's other differences (gateways for salary negotiation, the onboarding start, the end event) are weaker or are already covered by learned g)",
+   "guideline_id": "LRN-007",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines FID-02 (cosine 0.75)",
+   "guideline_id": "LRN-008",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines GW-03 (The reference splits and merges the optional salary negotiation with two exclusive gateways (M2, M3), and the description says salary negotiations 'may take place' (S5). The generated model omits both gateways and runs the step unconditionally. GW-03 already covers exclusive merges for alternative paths but does not say when an optional activity needs a skip path, so this guideline adds that trigg)",
+   "guideline_id": "LRN-009",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-005",
+   "instruction": "When the description states that a participant performs an action (for example, identifying a need) that begins the process, and the action is described as work the participant does rather than as an occurrence that starts the process: Model a generic start event with no label that describes the action. Place a task, named after the participant's action, immediately after that start event and before the first step that follows from it. Do not use the start event label to carry the action.",
+   "situation": "the description states that a participant performs an action (for example, identifying a need) that begins the process, and the action is described as work the participant does rather than as an occurrence that starts the process",
+   "source": "learned guideline (refines EVT-01)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-006",
+   "instruction": "When the description lists several activities that all belong to one stage, have no stated order between them, and a later step waits until every one of them has finished: Model each listed activity as its own task. Open the branches with a parallel gateway placed before the first of these tasks, and close them with a matching parallel gateway placed before the next step. Do not sequence the tasks unless the description states an order, and do not merge them into one task.",
+   "situation": "the description lists several activities that all belong to one stage, have no stated order between them, and a later step waits until every one of them has finished",
+   "source": "learned guideline (refines GW-04)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-004",
+   "instruction": "When the description states a conditional outcome (for example 'if X is interested') where one outcome leads to its own end and the other continues to later steps, and the continuing path is also reached from earlier steps before the decision: Model the outcome check as an exclusive gateway placed immediately before the conditional step, with one labelled outgoing flow per outcome, and route the not-taken outcome to its own end event. Where the flows from earlier steps converge into a shared step or decision point, join them with an exclusive merge gateway before that step rather than connecting several incoming flows directly to one activity. Do not add parallel gateways unless the description requires concurrent or synchronized branches.",
+   "situation": "the description states that an activity may optionally take place after a step, and the process then continues to the same next step whether or not the optional activity is performed",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-007",
+   "instruction": "When the description states that a set of selected items each receive a notification or request to take part, and that each item's own choice then determines which of several follow-up paths is taken: Model the notification or request sent to the selected items as its own task, placed on the sequence flow after the preceding step and before the gateway that splits on each item's choice. Do not drop this action, and do not connect the preceding task directly to the choice gateway.",
+   "situation": "the description states that a set of selected items each receive a notification or request to take part, and that each item's own choice then determines which of several follow-up paths is taken",
+   "source": "learned guideline (refines FID-01)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-008",
+   "instruction": "When the description states that a stage of work begins only after a previously sent outcome has been accepted, and that this stage then consists of several activities that run side by side before the process concludes: Model the acceptance as an exclusive gateway with one outgoing flow per outcome (accepted and not accepted), as the approval guideline requires. Do not model the acceptance itself as a task that stands in for the stage start. On the accepted path, add a task that names the start of the following stage, and connect it to the parallel gateway that opens the stage's concurrent activities. Do not connect the acceptance gateway directly to the parallel split. Close the parallel branches with a matching parallel join, and connect that join to the end event that concludes the process.",
+   "situation": "the description states that a stage of work begins only after a previously sent outcome has been accepted, and that this stage then consists of several activities that run side by side before the process concludes",
+   "source": "learned guideline (refines FID-02)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-009",
+   "instruction": "When the description states that an activity may or may not take place (for example, 'may take place' or 'may occur'), so the activity is optional and its execution depends on circumstances the description leaves open: Model an exclusive gateway before the optional activity, with one outgoing flow into the activity and one skip flow that bypasses it. Place a second exclusive gateway after the activity that merges the activity path and the skip path before the next step. Do not model the optional activity as unconditional in the main sequence.",
+   "situation": "the description states that an activity may or may not take place (for example, 'may take place' or 'may occur'), so the activity is optional and its execution depends on circumstances the description leaves open",
+   "source": "learned guideline (refines GW-03)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

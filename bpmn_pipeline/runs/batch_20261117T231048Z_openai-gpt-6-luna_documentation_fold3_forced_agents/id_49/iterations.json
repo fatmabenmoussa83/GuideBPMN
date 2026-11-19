@@ -1,0 +1,811 @@
+{
+ "id": "49",
+ "kept_round": 2,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 85.1,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 154,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 15,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 66,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.116237,
+    "workflow_order_similarity": 0.088384,
+    "connection_f1": 0.043011,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.151515,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.112818,
+    "activity_semantic_similarity": 0.232473,
+    "activity_label_precision": 0.272727,
+    "activity_label_recall": 0.9,
+    "activity_label_f1": 0.418605
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  id=\"Definitions_ComputerRepair\"\n                  targetNamespace=\"http://example.com/bpmn/computer-repair\">\n  <bpmn:message id=\"Message_ComputerHandover\" name=\"Defective computer\"/>\n  <bpmn:message id=\"Message_RepairCost\" name=\"Repair cost calculation\"/>\n  <bpmn:message id=\"Message_Acceptance\" name=\"Cost acceptance\"/>\n  <bpmn:message id=\"Message_Rejection\" name=\"Cost rejection\"/>\n\n  <bpmn:collaboration id=\"Collaboration_ComputerRepair\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\" processRef=\"Process_Customer\"/>\n    <bpmn:participant id=\"Participant_CRS\" name=\"CRS\" processRef=\"Process_CRS\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Computer\" sourceRef=\"Task_BringComputer\" targetRef=\"Start_ComputerReceived\" messageRef=\"Message_ComputerHandover\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Cost\" sourceRef=\"Task_SendCost\" targetRef=\"Task_ReceiveCost\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Acceptance\" sourceRef=\"Task_SendAcceptance\" targetRef=\"Task_ReceiveAcceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Rejection\" sourceRef=\"Task_SendRejection\" targetRef=\"Task_ReceiveRejection\" messageRef=\"Message_Rejection\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Customer\" name=\"Customer process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Customer\" name=\"Customer brings defective computer\"/>\n    <bpmn:sendTask id=\"Task_BringComputer\" name=\"Bring in defective computer\" messageRef=\"Message_ComputerHandover\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveCost\" name=\"Receive repair cost calculation\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_CustomerDecision\" name=\"Are the costs acceptable?\"/>\n    <bpmn:sendTask id=\"Task_SendAcceptance\" name=\"Send cost acceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:endEvent id=\"End_CustomerAccepts\" name=\"Costs accepted\"/>\n    <bpmn:sendTask id=\"Task_SendRejection\" name=\"Send cost rejection\" messageRef=\"Message_Rejection\"/>\n    <bpmn:task id=\"Task_TakeComputerHome\" name=\"Take computer home unrepaired\"/>\n    <bpmn:endEvent id=\"End_CustomerRejects\" name=\"Computer taken home unrepaired\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Customer_1\" sourceRef=\"Start_Customer\" targetRef=\"Task_BringComputer\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_2\" sourceRef=\"Task_BringComputer\" targetRef=\"Task_ReceiveCost\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_3\" sourceRef=\"Task_ReceiveCost\" targetRef=\"Gateway_CustomerDecision\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_Accept\" name=\"Accept\" sourceRef=\"Gateway_CustomerDecision\" targetRef=\"Task_SendAcceptance\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${costsAcceptable}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Customer_AcceptEnd\" sourceRef=\"Task_SendAcceptance\" targetRef=\"End_CustomerAccepts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_Reject\" name=\"Reject\" sourceRef=\"Gateway_CustomerDecision\" targetRef=\"Task_SendRejection\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${not costsAcceptable}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Customer_RejectHome\" sourceRef=\"Task_SendRejection\" targetRef=\"Task_TakeComputerHome\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_RejectEnd\" sourceRef=\"Task_TakeComputerHome\" targetRef=\"End_CustomerRejects\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_CRS\" name=\"CRS repair process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_ComputerReceived\" name=\"Defective computer received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_ComputerReceived\" messageRef=\"Message_ComputerHandover\"/>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Task_CheckDefect\" name=\"Check defect\"/>\n    <bpmn:sendTask id=\"Task_SendCost\" name=\"Hand out repair cost calculation\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForCustomerDecision\" name=\"Wait for customer decision\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveAcceptance\" name=\"Receive cost acceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveRejection\" name=\"Receive cost rejection\" messageRef=\"Message_Rejection\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_RepairOrder\" name=\"Choose repair order\" default=\"Flow_Order_SoftwareFirst\"/>\n    <bpmn:endEvent id=\"End_RepairFinished\" name=\"Repair finished\"/>\n    <bpmn:endEvent id=\"End_RepairDeclined\" name=\"Repair declined\"/>\n\n    <bpmn:task id=\"Task_HardwareFirst\" name=\"Check and repair hardware\"/>\n    <bpmn:task id=\"Task_TestHardwareFirst\" name=\"Test system functionality after hardware repair\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_HardwareFirstTest\" name=\"Error detected after hardware test?\" default=\"Flow_HardwareFirst_NoError\"/>\n    <bpmn:subProcess id=\"SubProcess_ExtraRepair_HardwareFirst\" name=\"Perform additional repairs until no error is detected\">\n      <bpmn:startEvent id=\"Start_ExtraRepair_HardwareFirst\" name=\"Start additional repair\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_ChooseExtraRepair_HardwareFirst\" name=\"Choose repair activity\"/>\n      <bpmn:task id=\"Task_ExtraHardware_HardwareFirst\" name=\"Check and repair hardware\"/>\n      <bpmn:task id=\"Task_TestExtraHardware_HardwareFirst\" name=\"Test system functionality after hardware repair\"/>\n      <bpmn:task id=\"Task_ExtraSoftware_HardwareFirst\" name=\"Check and configure software\"/>\n      <bpmn:task id=\"Task_TestExtraSoftware_HardwareFirst\" name=\"Test system functionality after software configuration\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_ExtraRepairResult_HardwareFirst\" name=\"Error detected?\" default=\"Flow_ExtraRepairDone_HardwareFirst\"/>\n      <bpmn:endEvent id=\"End_ExtraRepair_HardwareFirst\" name=\"No error detected\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraStart_HardwareFirst\" sourceRef=\"Start_ExtraRepair_HardwareFirst\" targetRef=\"Gateway_ChooseExtraRepair_HardwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraChooseHardware_HardwareFirst\" sourceRef=\"Gateway_ChooseExtraRepair_HardwareFirst\" targetRef=\"Task_ExtraHardware_HardwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraChooseSoftware_HardwareFirst\" sourceRef=\"Gateway_ChooseExtraRepair_HardwareFirst\" targetRef=\"Task_ExtraSoftware_HardwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraHardwareTest_HardwareFirst\" sourceRef=\"Task_ExtraHardware_HardwareFirst\" targetRef=\"Task_TestExtraHardware_HardwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraSoftwareTest_HardwareFirst\" sourceRef=\"Task_ExtraSoftware_HardwareFirst\" targetRef=\"Task_TestExtraSoftware_HardwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraHardwareResult_HardwareFirst\" sourceRef=\"Task_TestExtraHardware_HardwareFirst\" targetRef=\"Gateway_ExtraRepairResult_HardwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraSoftwareResult_HardwareFirst\" sourceRef=\"Task_TestExtraSoftware_HardwareFirst\" targetRef=\"Gateway_ExtraRepairResult_HardwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraRepairAgain_HardwareFirst\" name=\"Error detected\" sourceRef=\"Gateway_ExtraRepairResult_HardwareFirst\" targetRef=\"Gateway_ChooseExtraRepair_HardwareFirst\">\n        <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n      </bpmn:sequenceFlow>\n      <bpmn:sequenceFlow id=\"Flow_ExtraRepairDone_HardwareFirst\" name=\"No error detected\" sourceRef=\"Gateway_ExtraRepairResult_HardwareFirst\" targetRef=\"End_ExtraRepair_HardwareFirst\"/>\n    </bpmn:subProcess>\n    <bpmn:task id=\"Task_SoftwareAfterHardware\" name=\"Check and configure software\"/>\n    <bpmn:task id=\"Task_TestSoftwareAfterHardware\" name=\"Test system functionality after software configuration\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_SoftwareAfterHardwareTest\" name=\"Error detected after software test?\" default=\"Flow_SoftwareAfterHardware_NoError\"/>\n    <bpmn:subProcess id=\"SubProcess_ExtraRepair_SoftwareAfterHardware\" name=\"Perform additional repairs until no error is detected\">\n      <bpmn:startEvent id=\"Start_ExtraRepair_SoftwareAfterHardware\" name=\"Start additional repair\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_ChooseExtraRepair_SoftwareAfterHardware\" name=\"Choose repair activity\"/>\n      <bpmn:task id=\"Task_ExtraHardware_SoftwareAfterHardware\" name=\"Check and repair hardware\"/>\n      <bpmn:task id=\"Task_TestExtraHardware_SoftwareAfterHardware\" name=\"Test system functionality after hardware repair\"/>\n      <bpmn:task id=\"Task_ExtraSoftware_SoftwareAfterHardware\" name=\"Check and configure software\"/>\n      <bpmn:task id=\"Task_TestExtraSoftware_SoftwareAfterHardware\" name=\"Test system functionality after software configuration\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_ExtraRepairResult_SoftwareAfterHardware\" name=\"Error detected?\" default=\"Flow_ExtraRepairDone_SoftwareAfterHardware\"/>\n      <bpmn:endEvent id=\"End_ExtraRepair_SoftwareAfterHardware\" name=\"No error detected\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraStart_SoftwareAfterHardware\" sourceRef=\"Start_ExtraRepair_SoftwareAfterHardware\" targetRef=\"Gateway_ChooseExtraRepair_SoftwareAfterHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraChooseHardware_SoftwareAfterHardware\" sourceRef=\"Gateway_ChooseExtraRepair_SoftwareAfterHardware\" targetRef=\"Task_ExtraHardware_SoftwareAfterHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraChooseSoftware_SoftwareAfterHardware\" sourceRef=\"Gateway_ChooseExtraRepair_SoftwareAfterHardware\" targetRef=\"Task_ExtraSoftware_SoftwareAfterHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraHardwareTest_SoftwareAfterHardware\" sourceRef=\"Task_ExtraHardware_SoftwareAfterHardware\" targetRef=\"Task_TestExtraHardware_SoftwareAfterHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraSoftwareTest_SoftwareAfterHardware\" sourceRef=\"Task_ExtraSoftware_SoftwareAfterHardware\" targetRef=\"Task_TestExtraSoftware_SoftwareAfterHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraHardwareResult_SoftwareAfterHardware\" sourceRef=\"Task_TestExtraHardware_SoftwareAfterHardware\" targetRef=\"Gateway_ExtraRepairResult_SoftwareAfterHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraSoftwareResult_SoftwareAfterHardware\" sourceRef=\"Task_TestExtraSoftware_SoftwareAfterHardware\" targetRef=\"Gateway_ExtraRepairResult_SoftwareAfterHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraRepairAgain_SoftwareAfterHardware\" name=\"Error detected\" sourceRef=\"Gateway_ExtraRepairResult_SoftwareAfterHardware\" targetRef=\"Gateway_ChooseExtraRepair_SoftwareAfterHardware\">\n        <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n      </bpmn:sequenceFlow>\n      <bpmn:sequenceFlow id=\"Flow_ExtraRepairDone_SoftwareAfterHardware\" name=\"No error detected\" sourceRef=\"Gateway_ExtraRepairResult_SoftwareAfterHardware\" targetRef=\"End_ExtraRepair_SoftwareAfterHardware\"/>\n    </bpmn:subProcess>\n\n    <bpmn:task id=\"Task_SoftwareFirst\" name=\"Check and configure software\"/>\n    <bpmn:task id=\"Task_TestSoftwareFirst\" name=\"Test system functionality after software configuration\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_SoftwareFirstTest\" name=\"Error detected after software test?\" default=\"Flow_SoftwareFirst_NoError\"/>\n    <bpmn:subProcess id=\"SubProcess_ExtraRepair_SoftwareFirst\" name=\"Perform additional repairs until no error is detected\">\n      <bpmn:startEvent id=\"Start_ExtraRepair_SoftwareFirst\" name=\"Start additional repair\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_ChooseExtraRepair_SoftwareFirst\" name=\"Choose repair activity\"/>\n      <bpmn:task id=\"Task_ExtraHardware_SoftwareFirst\" name=\"Check and repair hardware\"/>\n      <bpmn:task id=\"Task_TestExtraHardware_SoftwareFirst\" name=\"Test system functionality after hardware repair\"/>\n      <bpmn:task id=\"Task_ExtraSoftware_SoftwareFirst\" name=\"Check and configure software\"/>\n      <bpmn:task id=\"Task_TestExtraSoftware_SoftwareFirst\" name=\"Test system functionality after software configuration\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_ExtraRepairResult_SoftwareFirst\" name=\"Error detected?\" default=\"Flow_ExtraRepairDone_SoftwareFirst\"/>\n      <bpmn:endEvent id=\"End_ExtraRepair_SoftwareFirst\" name=\"No error detected\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraStart_SoftwareFirst\" sourceRef=\"Start_ExtraRepair_SoftwareFirst\" targetRef=\"Gateway_ChooseExtraRepair_SoftwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraChooseHardware_SoftwareFirst\" sourceRef=\"Gateway_ChooseExtraRepair_SoftwareFirst\" targetRef=\"Task_ExtraHardware_SoftwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraChooseSoftware_SoftwareFirst\" sourceRef=\"Gateway_ChooseExtraRepair_SoftwareFirst\" targetRef=\"Task_ExtraSoftware_SoftwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraHardwareTest_SoftwareFirst\" sourceRef=\"Task_ExtraHardware_SoftwareFirst\" targetRef=\"Task_TestExtraHardware_SoftwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraSoftwareTest_SoftwareFirst\" sourceRef=\"Task_ExtraSoftware_SoftwareFirst\" targetRef=\"Task_TestExtraSoftware_SoftwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraHardwareResult_SoftwareFirst\" sourceRef=\"Task_TestExtraHardware_SoftwareFirst\" targetRef=\"Gateway_ExtraRepairResult_SoftwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraSoftwareResult_SoftwareFirst\" sourceRef=\"Task_TestExtraSoftware_SoftwareFirst\" targetRef=\"Gateway_ExtraRepairResult_SoftwareFirst\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraRepairAgain_SoftwareFirst\" name=\"Error detected\" sourceRef=\"Gateway_ExtraRepairResult_SoftwareFirst\" targetRef=\"Gateway_ChooseExtraRepair_SoftwareFirst\">\n        <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n      </bpmn:sequenceFlow>\n      <bpmn:sequenceFlow id=\"Flow_ExtraRepairDone_SoftwareFirst\" name=\"No error detected\" sourceRef=\"Gateway_ExtraRepairResult_SoftwareFirst\" targetRef=\"End_ExtraRepair_SoftwareFirst\"/>\n    </bpmn:subProcess>\n    <bpmn:task id=\"Task_HardwareAfterSoftware\" name=\"Check and repair hardware\"/>\n    <bpmn:task id=\"Task_TestHardwareAfterSoftware\" name=\"Test system functionality after hardware repair\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_HardwareAfterSoftwareTest\" name=\"Error detected after hardware test?\" default=\"Flow_HardwareAfterSoftware_NoError\"/>\n    <bpmn:subProcess id=\"SubProcess_ExtraRepair_HardwareAfterSoftware\" name=\"Perform additional repairs until no error is detected\">\n      <bpmn:startEvent id=\"Start_ExtraRepair_HardwareAfterSoftware\" name=\"Start additional repair\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_ChooseExtraRepair_HardwareAfterSoftware\" name=\"Choose repair activity\"/>\n      <bpmn:task id=\"Task_ExtraHardware_HardwareAfterSoftware\" name=\"Check and repair hardware\"/>\n      <bpmn:task id=\"Task_TestExtraHardware_HardwareAfterSoftware\" name=\"Test system functionality after hardware repair\"/>\n      <bpmn:task id=\"Task_ExtraSoftware_HardwareAfterSoftware\" name=\"Check and configure software\"/>\n      <bpmn:task id=\"Task_TestExtraSoftware_HardwareAfterSoftware\" name=\"Test system functionality after software configuration\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_ExtraRepairResult_HardwareAfterSoftware\" name=\"Error detected?\" default=\"Flow_ExtraRepairDone_HardwareAfterSoftware\"/>\n      <bpmn:endEvent id=\"End_ExtraRepair_HardwareAfterSoftware\" name=\"No error detected\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraStart_HardwareAfterSoftware\" sourceRef=\"Start_ExtraRepair_HardwareAfterSoftware\" targetRef=\"Gateway_ChooseExtraRepair_HardwareAfterSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraChooseHardware_HardwareAfterSoftware\" sourceRef=\"Gateway_ChooseExtraRepair_HardwareAfterSoftware\" targetRef=\"Task_ExtraHardware_HardwareAfterSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraChooseSoftware_HardwareAfterSoftware\" sourceRef=\"Gateway_ChooseExtraRepair_HardwareAfterSoftware\" targetRef=\"Task_ExtraSoftware_HardwareAfterSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraHardwareTest_HardwareAfterSoftware\" sourceRef=\"Task_ExtraHardware_HardwareAfterSoftware\" targetRef=\"Task_TestExtraHardware_HardwareAfterSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraSoftwareTest_HardwareAfterSoftware\" sourceRef=\"Task_ExtraSoftware_HardwareAfterSoftware\" targetRef=\"Task_TestExtraSoftware_HardwareAfterSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraHardwareResult_HardwareAfterSoftware\" sourceRef=\"Task_TestExtraHardware_HardwareAfterSoftware\" targetRef=\"Gateway_ExtraRepairResult_HardwareAfterSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraSoftwareResult_HardwareAfterSoftware\" sourceRef=\"Task_TestExtraSoftware_HardwareAfterSoftware\" targetRef=\"Gateway_ExtraRepairResult_HardwareAfterSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ExtraRepairAgain_HardwareAfterSoftware\" name=\"Error detected\" sourceRef=\"Gateway_ExtraRepairResult_HardwareAfterSoftware\" targetRef=\"Gateway_ChooseExtraRepair_HardwareAfterSoftware\">\n        <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n      </bpmn:sequenceFlow>\n      <bpmn:sequenceFlow id=\"Flow_ExtraRepairDone_HardwareAfterSoftware\" name=\"No error detected\" sourceRef=\"Gateway_ExtraRepairResult_HardwareAfterSoftware\" targetRef=\"End_ExtraRepair_HardwareAfterSoftware\"/>\n    </bpmn:subProcess>\n\n    <bpmn:sequenceFlow id=\"Flow_CRS_1\" sourceRef=\"Start_ComputerReceived\" targetRef=\"Task_CheckDefect\"/>\n    <bpmn:sequenceFlow id=\"Flow_CRS_2\" sourceRef=\"Task_CheckDefect\" targetRef=\"Task_SendCost\"/>\n    <bpmn:sequenceFlow id=\"Flow_CRS_3\" sourceRef=\"Task_SendCost\" targetRef=\"Gateway_WaitForCustomerDecision\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Accept\" sourceRef=\"Gateway_WaitForCustomerDecision\" targetRef=\"Task_ReceiveAcceptance\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Reject\" sourceRef=\"Gateway_WaitForCustomerDecision\" targetRef=\"Task_ReceiveRejection\"/>\n    <bpmn:sequenceFlow id=\"Flow_Accept_Order\" sourceRef=\"Task_ReceiveAcceptance\" targetRef=\"Gateway_RepairOrder\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reject_End\" sourceRef=\"Task_ReceiveRejection\" targetRef=\"End_RepairDeclined\"/>\n    <bpmn:sequenceFlow id=\"Flow_Order_HardwareFirst\" name=\"Hardware first\" sourceRef=\"Gateway_RepairOrder\" targetRef=\"Task_HardwareFirst\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${hardwareFirst}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Order_SoftwareFirst\" name=\"Software first\" sourceRef=\"Gateway_RepairOrder\" targetRef=\"Task_SoftwareFirst\"/>\n    <bpmn:sequenceFlow id=\"Flow_HardwareFirst_Test\" sourceRef=\"Task_HardwareFirst\" targetRef=\"Task_TestHardwareFirst\"/>\n    <bpmn:sequenceFlow id=\"Flow_HardwareFirst_Decision\" sourceRef=\"Task_TestHardwareFirst\" targetRef=\"Gateway_HardwareFirstTest\"/>\n    <bpmn:sequenceFlow id=\"Flow_HardwareFirst_Error\" name=\"Error detected\" sourceRef=\"Gateway_HardwareFirstTest\" targetRef=\"SubProcess_ExtraRepair_HardwareFirst\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_HardwareFirst_NoError\" name=\"No error detected\" sourceRef=\"Gateway_HardwareFirstTest\" targetRef=\"Task_SoftwareAfterHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_ExtraHardwareFirst_Continue\" sourceRef=\"SubProcess_ExtraRepair_HardwareFirst\" targetRef=\"Task_SoftwareAfterHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_SoftwareAfterHardware_Test\" sourceRef=\"Task_SoftwareAfterHardware\" targetRef=\"Task_TestSoftwareAfterHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_SoftwareAfterHardware_Decision\" sourceRef=\"Task_TestSoftwareAfterHardware\" targetRef=\"Gateway_SoftwareAfterHardwareTest\"/>\n    <bpmn:sequenceFlow id=\"Flow_SoftwareAfterHardware_Error\" name=\"Error detected\" sourceRef=\"Gateway_SoftwareAfterHardwareTest\" targetRef=\"SubProcess_ExtraRepair_SoftwareAfterHardware\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SoftwareAfterHardware_NoError\" name=\"No error detected\" sourceRef=\"Gateway_SoftwareAfterHardwareTest\" targetRef=\"End_RepairFinished\"/>\n    <bpmn:sequenceFlow id=\"Flow_ExtraSoftwareAfterHardware_Continue\" sourceRef=\"SubProcess_ExtraRepair_SoftwareAfterHardware\" targetRef=\"End_RepairFinished\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_SoftwareFirst_Test\" sourceRef=\"Task_SoftwareFirst\" targetRef=\"Task_TestSoftwareFirst\"/>\n    <bpmn:sequenceFlow id=\"Flow_SoftwareFirst_Decision\" sourceRef=\"Task_TestSoftwareFirst\" targetRef=\"Gateway_SoftwareFirstTest\"/>\n    <bpmn:sequenceFlow id=\"Flow_SoftwareFirst_Error\" name=\"Error detected\" sourceRef=\"Gateway_SoftwareFirstTest\" targetRef=\"SubProcess_ExtraRepair_SoftwareFirst\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SoftwareFirst_NoError\" name=\"No error detected\" sourceRef=\"Gateway_SoftwareFirstTest\" targetRef=\"Task_HardwareAfterSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_ExtraSoftwareFirst_Continue\" sourceRef=\"SubProcess_ExtraRepair_SoftwareFirst\" targetRef=\"Task_HardwareAfterSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_HardwareAfterSoftware_Test\" sourceRef=\"Task_HardwareAfterSoftware\" targetRef=\"Task_TestHardwareAfterSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_HardwareAfterSoftware_Decision\" sourceRef=\"Task_TestHardwareAfterSoftware\" targetRef=\"Gateway_HardwareAfterSoftwareTest\"/>\n    <bpmn:sequenceFlow id=\"Flow_HardwareAfterSoftware_Error\" name=\"Error detected\" sourceRef=\"Gateway_HardwareAfterSoftwareTest\" targetRef=\"SubProcess_ExtraRepair_HardwareAfterSoftware\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_HardwareAfterSoftware_NoError\" name=\"No error detected\" sourceRef=\"Gateway_HardwareAfterSoftwareTest\" targetRef=\"End_RepairFinished\"/>\n    <bpmn:sequenceFlow id=\"Flow_ExtraHardwareAfterSoftware_Continue\" sourceRef=\"SubProcess_ExtraRepair_HardwareAfterSoftware\" targetRef=\"End_RepairFinished\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": false,
+   "failed_levels": [
+    "L3"
+   ],
+   "seconds": 537.7,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 104,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 10,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": false,
+     "correct": 43,
+     "incorrect": 1,
+     "accuracy": 0.9773,
+     "incorrect_elements": [
+      {
+       "id": "Gateway_RepairJoin",
+       "tag": "parallelGateway",
+       "line": 107,
+       "reason": "deadlock: parallelGateway 'Gateway_RepairJoin' waits for flow(s) Flow_AdditionalHardware_Join, Flow_AdditionalSoftware_Join that can no longer receive a token"
+      }
+     ]
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.17841,
+    "workflow_order_similarity": 0.093023,
+    "connection_f1": 0.121212,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.255814,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.17048,
+    "activity_semantic_similarity": 0.365315,
+    "activity_label_precision": 0.428571,
+    "activity_label_recall": 0.9,
+    "activity_label_f1": 0.580645
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_ComputerRepair\"\n                  targetNamespace=\"http://example.com/bpmn/computer-repair\">\n  <bpmn:message id=\"Message_ComputerHandover\" name=\"Defective computer\"/>\n  <bpmn:message id=\"Message_RepairCost\" name=\"Repair cost calculation\"/>\n  <bpmn:message id=\"Message_Acceptance\" name=\"Cost acceptance\"/>\n  <bpmn:message id=\"Message_Rejection\" name=\"Cost rejection\"/>\n\n  <bpmn:collaboration id=\"Collaboration_ComputerRepair\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\" processRef=\"Process_Customer\"/>\n    <bpmn:participant id=\"Participant_CRS\" name=\"CRS\" processRef=\"Process_CRS\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Computer\" sourceRef=\"Task_BringComputer\" targetRef=\"Start_ComputerReceived\" messageRef=\"Message_ComputerHandover\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Cost\" sourceRef=\"Task_SendCost\" targetRef=\"Task_ReceiveCost\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Acceptance\" sourceRef=\"Task_SendAcceptance\" targetRef=\"Task_ReceiveAcceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Rejection\" sourceRef=\"Task_SendRejection\" targetRef=\"Task_ReceiveRejection\" messageRef=\"Message_Rejection\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Customer\" name=\"Customer process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Customer\" name=\"Customer brings defective computer\"/>\n    <bpmn:sendTask id=\"Task_BringComputer\" name=\"Bring in defective computer\" messageRef=\"Message_ComputerHandover\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveCost\" name=\"Receive repair cost calculation\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_CustomerDecision\" name=\"Are the costs acceptable?\"/>\n    <bpmn:sendTask id=\"Task_SendAcceptance\" name=\"Send cost acceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:endEvent id=\"End_CustomerAccepts\" name=\"Costs accepted\"/>\n    <bpmn:sendTask id=\"Task_SendRejection\" name=\"Send cost rejection\" messageRef=\"Message_Rejection\"/>\n    <bpmn:task id=\"Task_TakeComputerHome\" name=\"Take computer home unrepaired\"/>\n    <bpmn:endEvent id=\"End_CustomerRejects\" name=\"Computer taken home unrepaired\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Customer_1\" sourceRef=\"Start_Customer\" targetRef=\"Task_BringComputer\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_2\" sourceRef=\"Task_BringComputer\" targetRef=\"Task_ReceiveCost\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_3\" sourceRef=\"Task_ReceiveCost\" targetRef=\"Gateway_CustomerDecision\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_Accept\" name=\"Accept\" sourceRef=\"Gateway_CustomerDecision\" targetRef=\"Task_SendAcceptance\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${costsAcceptable}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Customer_AcceptEnd\" sourceRef=\"Task_SendAcceptance\" targetRef=\"End_CustomerAccepts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_Reject\" name=\"Reject\" sourceRef=\"Gateway_CustomerDecision\" targetRef=\"Task_SendRejection\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${not costsAcceptable}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Customer_RejectHome\" sourceRef=\"Task_SendRejection\" targetRef=\"Task_TakeComputerHome\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_RejectEnd\" sourceRef=\"Task_TakeComputerHome\" targetRef=\"End_CustomerRejects\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_CRS\" name=\"CRS repair process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_ComputerReceived\" name=\"Defective computer received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_ComputerReceived\" messageRef=\"Message_ComputerHandover\"/>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Task_CheckDefect\" name=\"Check defect\"/>\n    <bpmn:sendTask id=\"Task_SendCost\" name=\"Hand out repair cost calculation\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForCustomerDecision\" name=\"Wait for customer decision\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveAcceptance\" name=\"Receive cost acceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveRejection\" name=\"Receive cost rejection\" messageRef=\"Message_Rejection\"/>\n    <bpmn:endEvent id=\"End_RepairDeclined\" name=\"Repair declined\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_RepairSplit\" name=\"Perform both repair activities\" gatewayDirection=\"Diverging\"/>\n    <bpmn:task id=\"Task_Hardware\" name=\"Check and repair hardware\"/>\n    <bpmn:task id=\"Task_TestHardware\" name=\"Test system functionality after hardware repair\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_HardwareResult\" name=\"Error detected after hardware test?\" default=\"Flow_Hardware_NoError\"/>\n    <bpmn:subProcess id=\"SubProcess_AdditionalRepairHardware\" name=\"Perform additional repairs until no error is detected\">\n      <bpmn:startEvent id=\"Start_AdditionalRepairHardware\" name=\"Start additional repair\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_ChooseRepairHardware\" name=\"Choose repair activity\"/>\n      <bpmn:task id=\"Task_AdditionalHardware\" name=\"Check and repair hardware\"/>\n      <bpmn:task id=\"Task_TestAdditionalHardware\" name=\"Test system functionality after hardware repair\"/>\n      <bpmn:task id=\"Task_AdditionalSoftware\" name=\"Check and configure software\"/>\n      <bpmn:task id=\"Task_TestAdditionalSoftware\" name=\"Test system functionality after software configuration\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_AdditionalRepairResultHardware\" name=\"Error detected?\" default=\"Flow_AdditionalRepairDoneHardware\"/>\n      <bpmn:endEvent id=\"End_AdditionalRepairHardware\" name=\"No error detected\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalRepairStartHardware\" sourceRef=\"Start_AdditionalRepairHardware\" targetRef=\"Gateway_ChooseRepairHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ChooseHardwareHardware\" name=\"Hardware\" sourceRef=\"Gateway_ChooseRepairHardware\" targetRef=\"Task_AdditionalHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ChooseSoftwareHardware\" name=\"Software\" sourceRef=\"Gateway_ChooseRepairHardware\" targetRef=\"Task_AdditionalSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalHardwareTestHardware\" sourceRef=\"Task_AdditionalHardware\" targetRef=\"Task_TestAdditionalHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalSoftwareTestHardware\" sourceRef=\"Task_AdditionalSoftware\" targetRef=\"Task_TestAdditionalSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalHardwareResultHardware\" sourceRef=\"Task_TestAdditionalHardware\" targetRef=\"Gateway_AdditionalRepairResultHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalSoftwareResultHardware\" sourceRef=\"Task_TestAdditionalSoftware\" targetRef=\"Gateway_AdditionalRepairResultHardware\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalRepairAgainHardware\" name=\"Error detected\" sourceRef=\"Gateway_AdditionalRepairResultHardware\" targetRef=\"Gateway_ChooseRepairHardware\">\n        <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n      </bpmn:sequenceFlow>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalRepairDoneHardware\" name=\"No error detected\" sourceRef=\"Gateway_AdditionalRepairResultHardware\" targetRef=\"End_AdditionalRepairHardware\"/>\n    </bpmn:subProcess>\n\n    <bpmn:task id=\"Task_Software\" name=\"Check and configure software\"/>\n    <bpmn:task id=\"Task_TestSoftware\" name=\"Test system functionality after software configuration\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_SoftwareResult\" name=\"Error detected after software test?\" default=\"Flow_Software_NoError\"/>\n    <bpmn:subProcess id=\"SubProcess_AdditionalRepairSoftware\" name=\"Perform additional repairs until no error is detected\">\n      <bpmn:startEvent id=\"Start_AdditionalRepairSoftware\" name=\"Start additional repair\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_ChooseRepairSoftware\" name=\"Choose repair activity\"/>\n      <bpmn:task id=\"Task_AdditionalHardwareSoftwareBranch\" name=\"Check and repair hardware\"/>\n      <bpmn:task id=\"Task_TestAdditionalHardwareSoftwareBranch\" name=\"Test system functionality after hardware repair\"/>\n      <bpmn:task id=\"Task_AdditionalSoftwareSoftwareBranch\" name=\"Check and configure software\"/>\n      <bpmn:task id=\"Task_TestAdditionalSoftwareSoftwareBranch\" name=\"Test system functionality after software configuration\"/>\n      <bpmn:exclusiveGateway id=\"Gateway_AdditionalRepairResultSoftware\" name=\"Error detected?\" default=\"Flow_AdditionalRepairDoneSoftware\"/>\n      <bpmn:endEvent id=\"End_AdditionalRepairSoftware\" name=\"No error detected\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalRepairStartSoftware\" sourceRef=\"Start_AdditionalRepairSoftware\" targetRef=\"Gateway_ChooseRepairSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_ChooseHardwareSoftware\" name=\"Hardware\" sourceRef=\"Gateway_ChooseRepairSoftware\" targetRef=\"Task_AdditionalHardwareSoftwareBranch\"/>\n      <bpmn:sequenceFlow id=\"Flow_ChooseSoftwareSoftware\" name=\"Software\" sourceRef=\"Gateway_ChooseRepairSoftware\" targetRef=\"Task_AdditionalSoftwareSoftwareBranch\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalHardwareTestSoftware\" sourceRef=\"Task_AdditionalHardwareSoftwareBranch\" targetRef=\"Task_TestAdditionalHardwareSoftwareBranch\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalSoftwareTestSoftware\" sourceRef=\"Task_AdditionalSoftwareSoftwareBranch\" targetRef=\"Task_TestAdditionalSoftwareSoftwareBranch\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalHardwareResultSoftware\" sourceRef=\"Task_TestAdditionalHardwareSoftwareBranch\" targetRef=\"Gateway_AdditionalRepairResultSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalSoftwareResultSoftware\" sourceRef=\"Task_TestAdditionalSoftwareSoftwareBranch\" targetRef=\"Gateway_AdditionalRepairResultSoftware\"/>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalRepairAgainSoftware\" name=\"Error detected\" sourceRef=\"Gateway_AdditionalRepairResultSoftware\" targetRef=\"Gateway_ChooseRepairSoftware\">\n        <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n      </bpmn:sequenceFlow>\n      <bpmn:sequenceFlow id=\"Flow_AdditionalRepairDoneSoftware\" name=\"No error detected\" sourceRef=\"Gateway_AdditionalRepairResultSoftware\" targetRef=\"End_AdditionalRepairSoftware\"/>\n    </bpmn:subProcess>\n\n    <bpmn:parallelGateway id=\"Gateway_RepairJoin\" name=\"Both activities complete\" gatewayDirection=\"Converging\"/>\n    <bpmn:endEvent id=\"End_RepairFinished\" name=\"Repair finished\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_CRS_1\" sourceRef=\"Start_ComputerReceived\" targetRef=\"Task_CheckDefect\"/>\n    <bpmn:sequenceFlow id=\"Flow_CRS_2\" sourceRef=\"Task_CheckDefect\" targetRef=\"Task_SendCost\"/>\n    <bpmn:sequenceFlow id=\"Flow_CRS_3\" sourceRef=\"Task_SendCost\" targetRef=\"Gateway_WaitForCustomerDecision\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Accept\" sourceRef=\"Gateway_WaitForCustomerDecision\" targetRef=\"Task_ReceiveAcceptance\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Reject\" sourceRef=\"Gateway_WaitForCustomerDecision\" targetRef=\"Task_ReceiveRejection\"/>\n    <bpmn:sequenceFlow id=\"Flow_Accept_Split\" sourceRef=\"Task_ReceiveAcceptance\" targetRef=\"Gateway_RepairSplit\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reject_End\" sourceRef=\"Task_ReceiveRejection\" targetRef=\"End_RepairDeclined\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Split_Hardware\" sourceRef=\"Gateway_RepairSplit\" targetRef=\"Task_Hardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_Software\" sourceRef=\"Gateway_RepairSplit\" targetRef=\"Task_Software\"/>\n    <bpmn:sequenceFlow id=\"Flow_Hardware_Test\" sourceRef=\"Task_Hardware\" targetRef=\"Task_TestHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_Hardware_Result\" sourceRef=\"Task_TestHardware\" targetRef=\"Gateway_HardwareResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_Hardware_Error\" name=\"Error detected\" sourceRef=\"Gateway_HardwareResult\" targetRef=\"SubProcess_AdditionalRepairHardware\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Hardware_NoError\" name=\"No error detected\" sourceRef=\"Gateway_HardwareResult\" targetRef=\"Gateway_RepairJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_AdditionalHardware_Join\" sourceRef=\"SubProcess_AdditionalRepairHardware\" targetRef=\"Gateway_RepairJoin\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Software_Test\" sourceRef=\"Task_Software\" targetRef=\"Task_TestSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_Software_Result\" sourceRef=\"Task_TestSoftware\" targetRef=\"Gateway_SoftwareResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_Software_Error\" name=\"Error detected\" sourceRef=\"Gateway_SoftwareResult\" targetRef=\"SubProcess_AdditionalRepairSoftware\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Software_NoError\" name=\"No error detected\" sourceRef=\"Gateway_SoftwareResult\" targetRef=\"Gateway_RepairJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_AdditionalSoftware_Join\" sourceRef=\"SubProcess_AdditionalRepairSoftware\" targetRef=\"Gateway_RepairJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_RepairJoin_End\" sourceRef=\"Gateway_RepairJoin\" targetRef=\"End_RepairFinished\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1534.6,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 79,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 31,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.25572,
+    "workflow_order_similarity": 0.262523,
+    "connection_f1": 0.264151,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.419355,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.239738,
+    "activity_semantic_similarity": 0.451271,
+    "activity_label_precision": 0.529412,
+    "activity_label_recall": 0.9,
+    "activity_label_f1": 0.666667
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_ComputerRepair\"\n                  targetNamespace=\"http://example.com/bpmn/computer-repair\">\n  <bpmn:message id=\"Message_Computer\" name=\"Defective computer\"/>\n  <bpmn:message id=\"Message_RepairCost\" name=\"Repair cost calculation\"/>\n  <bpmn:message id=\"Message_Acceptance\" name=\"Cost acceptance\"/>\n  <bpmn:message id=\"Message_Rejection\" name=\"Cost rejection\"/>\n\n  <bpmn:collaboration id=\"Collaboration_ComputerRepair\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\" processRef=\"Process_Customer\"/>\n    <bpmn:participant id=\"Participant_CRS\" name=\"CRS\" processRef=\"Process_CRS\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Computer\" sourceRef=\"Task_BringComputer\" targetRef=\"Start_ComputerReceived\" messageRef=\"Message_Computer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_RepairCost\" sourceRef=\"Task_SendRepairCost\" targetRef=\"Task_ReceiveRepairCost\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Acceptance\" sourceRef=\"Task_SendAcceptance\" targetRef=\"Task_ReceiveAcceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Rejection\" sourceRef=\"Task_SendRejection\" targetRef=\"Task_ReceiveRejection\" messageRef=\"Message_Rejection\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Customer\" name=\"Customer process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Customer\"/>\n    <bpmn:sendTask id=\"Task_BringComputer\" name=\"Bring in defective computer\" messageRef=\"Message_Computer\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveRepairCost\" name=\"Receive repair cost calculation\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_CustomerDecision\" name=\"Are the costs acceptable?\"/>\n    <bpmn:sendTask id=\"Task_SendAcceptance\" name=\"Send cost acceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:endEvent id=\"End_CustomerAccepts\" name=\"Costs accepted\"/>\n    <bpmn:sendTask id=\"Task_SendRejection\" name=\"Send cost rejection\" messageRef=\"Message_Rejection\"/>\n    <bpmn:task id=\"Task_TakeComputerHome\" name=\"Take computer home unrepaired\"/>\n    <bpmn:endEvent id=\"End_CustomerRejects\" name=\"Computer taken home unrepaired\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Customer_1\" sourceRef=\"Start_Customer\" targetRef=\"Task_BringComputer\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_2\" sourceRef=\"Task_BringComputer\" targetRef=\"Task_ReceiveRepairCost\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_3\" sourceRef=\"Task_ReceiveRepairCost\" targetRef=\"Gateway_CustomerDecision\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_Accept\" name=\"Accept\" sourceRef=\"Gateway_CustomerDecision\" targetRef=\"Task_SendAcceptance\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${costsAcceptable}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Customer_AcceptEnd\" sourceRef=\"Task_SendAcceptance\" targetRef=\"End_CustomerAccepts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_Reject\" name=\"Reject\" sourceRef=\"Gateway_CustomerDecision\" targetRef=\"Task_SendRejection\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${not costsAcceptable}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Customer_RejectHome\" sourceRef=\"Task_SendRejection\" targetRef=\"Task_TakeComputerHome\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_RejectEnd\" sourceRef=\"Task_TakeComputerHome\" targetRef=\"End_CustomerRejects\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_CRS\" name=\"CRS repair process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_ComputerReceived\" name=\"Defective computer received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_ComputerReceived\" messageRef=\"Message_Computer\"/>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Task_CheckDefect\" name=\"Check defect\"/>\n    <bpmn:sendTask id=\"Task_SendRepairCost\" name=\"Hand out repair cost calculation\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForDecision\" name=\"Wait for customer decision\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveAcceptance\" name=\"Receive cost acceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveRejection\" name=\"Receive cost rejection\" messageRef=\"Message_Rejection\"/>\n    <bpmn:endEvent id=\"End_RepairDeclined\" name=\"Repair declined\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_RepairSplit\" name=\"Perform both repair activities\"/>\n    <bpmn:task id=\"Task_RepairHardware\" name=\"Check and repair hardware\"/>\n    <bpmn:task id=\"Task_TestHardware\" name=\"Test system functionality after hardware repair\"/>\n    <bpmn:task id=\"Task_ConfigureSoftware\" name=\"Check and configure software\"/>\n    <bpmn:task id=\"Task_TestSoftware\" name=\"Test system functionality after software configuration\"/>\n    <bpmn:parallelGateway id=\"Gateway_RepairJoin\" name=\"Both activities tested\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_InitialError\" name=\"Error detected?\" default=\"Flow_Initial_NoError\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ChooseAdditionalRepair\" name=\"Choose another repair activity\"/>\n    <bpmn:task id=\"Task_AdditionalHardware\" name=\"Check and repair hardware\"/>\n    <bpmn:task id=\"Task_TestAdditionalHardware\" name=\"Test system functionality after hardware repair\"/>\n    <bpmn:task id=\"Task_AdditionalSoftware\" name=\"Check and configure software\"/>\n    <bpmn:task id=\"Task_TestAdditionalSoftware\" name=\"Test system functionality after software configuration\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_AdditionalRepairMerge\" name=\"Repair activity completed\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_AdditionalError\" name=\"Error detected?\" default=\"Flow_Additional_NoError\"/>\n    <bpmn:endEvent id=\"End_RepairFinished\" name=\"Repair finished\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_CRS_1\" sourceRef=\"Start_ComputerReceived\" targetRef=\"Task_CheckDefect\"/>\n    <bpmn:sequenceFlow id=\"Flow_CRS_2\" sourceRef=\"Task_CheckDefect\" targetRef=\"Task_SendRepairCost\"/>\n    <bpmn:sequenceFlow id=\"Flow_CRS_3\" sourceRef=\"Task_SendRepairCost\" targetRef=\"Gateway_WaitForDecision\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Acceptance\" sourceRef=\"Gateway_WaitForDecision\" targetRef=\"Task_ReceiveAcceptance\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Rejection\" sourceRef=\"Gateway_WaitForDecision\" targetRef=\"Task_ReceiveRejection\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reject_End\" sourceRef=\"Task_ReceiveRejection\" targetRef=\"End_RepairDeclined\"/>\n    <bpmn:sequenceFlow id=\"Flow_Accept_Split\" sourceRef=\"Task_ReceiveAcceptance\" targetRef=\"Gateway_RepairSplit\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Split_Hardware\" sourceRef=\"Gateway_RepairSplit\" targetRef=\"Task_RepairHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_Hardware_Test\" sourceRef=\"Task_RepairHardware\" targetRef=\"Task_TestHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_TestHardware_Join\" sourceRef=\"Task_TestHardware\" targetRef=\"Gateway_RepairJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_Software\" sourceRef=\"Gateway_RepairSplit\" targetRef=\"Task_ConfigureSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_Software_Test\" sourceRef=\"Task_ConfigureSoftware\" targetRef=\"Task_TestSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_TestSoftware_Join\" sourceRef=\"Task_TestSoftware\" targetRef=\"Gateway_RepairJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_Join_InitialError\" sourceRef=\"Gateway_RepairJoin\" targetRef=\"Gateway_InitialError\"/>\n    <bpmn:sequenceFlow id=\"Flow_Initial_Error\" name=\"Error detected\" sourceRef=\"Gateway_InitialError\" targetRef=\"Gateway_ChooseAdditionalRepair\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Initial_NoError\" name=\"No error detected\" sourceRef=\"Gateway_InitialError\" targetRef=\"End_RepairFinished\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Choose_AdditionalHardware\" sourceRef=\"Gateway_ChooseAdditionalRepair\" targetRef=\"Task_AdditionalHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_Choose_AdditionalSoftware\" sourceRef=\"Gateway_ChooseAdditionalRepair\" targetRef=\"Task_AdditionalSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_AdditionalHardware_Test\" sourceRef=\"Task_AdditionalHardware\" targetRef=\"Task_TestAdditionalHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_AdditionalSoftware_Test\" sourceRef=\"Task_AdditionalSoftware\" targetRef=\"Task_TestAdditionalSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_TestAdditionalHardware_Merge\" sourceRef=\"Task_TestAdditionalHardware\" targetRef=\"Gateway_AdditionalRepairMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_TestAdditionalSoftware_Merge\" sourceRef=\"Task_TestAdditionalSoftware\" targetRef=\"Gateway_AdditionalRepairMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_AdditionalMerge_Decision\" sourceRef=\"Gateway_AdditionalRepairMerge\" targetRef=\"Gateway_AdditionalError\"/>\n    <bpmn:sequenceFlow id=\"Flow_Additional_Error\" name=\"Error detected\" sourceRef=\"Gateway_AdditionalError\" targetRef=\"Gateway_ChooseAdditionalRepair\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Additional_NoError\" name=\"No error detected\" sourceRef=\"Gateway_AdditionalError\" targetRef=\"End_RepairFinished\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1981.2,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 87,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 35,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.259931,
+    "workflow_order_similarity": 0.24,
+    "connection_f1": 0.245614,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.4,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.24549,
+    "activity_semantic_similarity": 0.42084,
+    "activity_label_precision": 0.47619,
+    "activity_label_recall": 1.0,
+    "activity_label_f1": 0.645161
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_ComputerRepair\"\n                  targetNamespace=\"http://example.com/bpmn/computer-repair\">\n  <bpmn:message id=\"Message_Computer\" name=\"Defective computer\"/>\n  <bpmn:message id=\"Message_RepairCost\" name=\"Repair cost calculation\"/>\n  <bpmn:message id=\"Message_Acceptance\" name=\"Cost acceptance\"/>\n  <bpmn:message id=\"Message_Rejection\" name=\"Cost rejection\"/>\n\n  <bpmn:collaboration id=\"Collaboration_ComputerRepair\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\" processRef=\"Process_Customer\"/>\n    <bpmn:participant id=\"Participant_CRS\" name=\"CRS\" processRef=\"Process_CRS\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Computer\" sourceRef=\"Task_BringComputer\" targetRef=\"Start_ComputerReceived\" messageRef=\"Message_Computer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_RepairCost\" sourceRef=\"Task_SendRepairCost\" targetRef=\"Task_ReceiveRepairCost\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Acceptance\" sourceRef=\"Task_SendAcceptance\" targetRef=\"Task_ReceiveAcceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Rejection\" sourceRef=\"Task_SendRejection\" targetRef=\"Task_ReceiveRejection\" messageRef=\"Message_Rejection\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Customer\" name=\"Customer process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Customer\"/>\n    <bpmn:task id=\"Task_BringComputer\" name=\"Bring in defective computer\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveRepairCost\" name=\"Receive repair cost calculation\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_CustomerDecision\" name=\"Are the costs acceptable?\"/>\n    <bpmn:sendTask id=\"Task_SendAcceptance\" name=\"Send cost acceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:endEvent id=\"End_CustomerAccepts\" name=\"Costs accepted\"/>\n    <bpmn:sendTask id=\"Task_SendRejection\" name=\"Send cost rejection\" messageRef=\"Message_Rejection\"/>\n    <bpmn:task id=\"Task_TakeComputerHome\" name=\"Take computer home unrepaired\"/>\n    <bpmn:endEvent id=\"End_CustomerRejects\" name=\"Computer taken home unrepaired\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Customer_1\" sourceRef=\"Start_Customer\" targetRef=\"Task_BringComputer\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_2\" sourceRef=\"Task_BringComputer\" targetRef=\"Task_ReceiveRepairCost\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_3\" sourceRef=\"Task_ReceiveRepairCost\" targetRef=\"Gateway_CustomerDecision\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_Accept\" name=\"Accept\" sourceRef=\"Gateway_CustomerDecision\" targetRef=\"Task_SendAcceptance\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${costsAcceptable}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Customer_AcceptEnd\" sourceRef=\"Task_SendAcceptance\" targetRef=\"End_CustomerAccepts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_Reject\" name=\"Reject\" sourceRef=\"Gateway_CustomerDecision\" targetRef=\"Task_SendRejection\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${not costsAcceptable}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Customer_RejectHome\" sourceRef=\"Task_SendRejection\" targetRef=\"Task_TakeComputerHome\"/>\n    <bpmn:sequenceFlow id=\"Flow_Customer_RejectEnd\" sourceRef=\"Task_TakeComputerHome\" targetRef=\"End_CustomerRejects\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_CRS\" name=\"CRS repair process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_ComputerReceived\" name=\"Defective computer received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_ComputerReceived\" messageRef=\"Message_Computer\"/>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Task_CheckDefect\" name=\"Check defect\"/>\n    <bpmn:sendTask id=\"Task_SendRepairCost\" name=\"Hand out repair cost calculation\" messageRef=\"Message_RepairCost\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForDecision\" name=\"Wait for customer decision\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveAcceptance\" name=\"Receive cost acceptance\" messageRef=\"Message_Acceptance\"/>\n    <bpmn:receiveTask id=\"Task_ReceiveRejection\" name=\"Receive cost rejection\" messageRef=\"Message_Rejection\"/>\n    <bpmn:endEvent id=\"End_RepairDeclined\" name=\"Repair declined\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_RepairSplit\" name=\"Perform both repair activities\"/>\n    <bpmn:task id=\"Task_CheckHardware\" name=\"Check hardware\"/>\n    <bpmn:task id=\"Task_RepairHardware\" name=\"Repair hardware\"/>\n    <bpmn:task id=\"Task_TestHardware\" name=\"Test hardware functionality\"/>\n    <bpmn:task id=\"Task_CheckSoftware\" name=\"Check software\"/>\n    <bpmn:task id=\"Task_ConfigureSoftware\" name=\"Configure software\"/>\n    <bpmn:task id=\"Task_TestSoftware\" name=\"Test software functionality\"/>\n    <bpmn:parallelGateway id=\"Gateway_RepairJoin\" name=\"Both activities tested\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_InitialError\" name=\"Error detected?\" default=\"Flow_Initial_NoError\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ChooseAdditionalRepair\" name=\"Choose another repair activity\"/>\n    <bpmn:task id=\"Task_AdditionalCheckHardware\" name=\"Check hardware\"/>\n    <bpmn:task id=\"Task_AdditionalRepairHardware\" name=\"Repair hardware\"/>\n    <bpmn:task id=\"Task_TestAdditionalHardware\" name=\"Test hardware functionality\"/>\n    <bpmn:task id=\"Task_AdditionalCheckSoftware\" name=\"Check software\"/>\n    <bpmn:task id=\"Task_AdditionalConfigureSoftware\" name=\"Configure software\"/>\n    <bpmn:task id=\"Task_TestAdditionalSoftware\" name=\"Test software functionality\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_AdditionalRepairMerge\" name=\"Repair activity completed\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_AdditionalError\" name=\"Error detected?\" default=\"Flow_Additional_NoError\"/>\n    <bpmn:endEvent id=\"End_RepairFinished\" name=\"Repair finished\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_CRS_1\" sourceRef=\"Start_ComputerReceived\" targetRef=\"Task_CheckDefect\"/>\n    <bpmn:sequenceFlow id=\"Flow_CRS_2\" sourceRef=\"Task_CheckDefect\" targetRef=\"Task_SendRepairCost\"/>\n    <bpmn:sequenceFlow id=\"Flow_CRS_3\" sourceRef=\"Task_SendRepairCost\" targetRef=\"Gateway_WaitForDecision\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Acceptance\" sourceRef=\"Gateway_WaitForDecision\" targetRef=\"Task_ReceiveAcceptance\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Rejection\" sourceRef=\"Gateway_WaitForDecision\" targetRef=\"Task_ReceiveRejection\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reject_End\" sourceRef=\"Task_ReceiveRejection\" targetRef=\"End_RepairDeclined\"/>\n    <bpmn:sequenceFlow id=\"Flow_Accept_Split\" sourceRef=\"Task_ReceiveAcceptance\" targetRef=\"Gateway_RepairSplit\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Split_Hardware\" sourceRef=\"Gateway_RepairSplit\" targetRef=\"Task_CheckHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckHardware_Repair\" sourceRef=\"Task_CheckHardware\" targetRef=\"Task_RepairHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_Hardware_Test\" sourceRef=\"Task_RepairHardware\" targetRef=\"Task_TestHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_TestHardware_Join\" sourceRef=\"Task_TestHardware\" targetRef=\"Gateway_RepairJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_Software\" sourceRef=\"Gateway_RepairSplit\" targetRef=\"Task_CheckSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckSoftware_Configure\" sourceRef=\"Task_CheckSoftware\" targetRef=\"Task_ConfigureSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_Software_Test\" sourceRef=\"Task_ConfigureSoftware\" targetRef=\"Task_TestSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_TestSoftware_Join\" sourceRef=\"Task_TestSoftware\" targetRef=\"Gateway_RepairJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_Join_InitialError\" sourceRef=\"Gateway_RepairJoin\" targetRef=\"Gateway_InitialError\"/>\n    <bpmn:sequenceFlow id=\"Flow_Initial_Error\" name=\"Error detected\" sourceRef=\"Gateway_InitialError\" targetRef=\"Gateway_ChooseAdditionalRepair\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Initial_NoError\" name=\"No error detected\" sourceRef=\"Gateway_InitialError\" targetRef=\"End_RepairFinished\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Choose_AdditionalHardware\" sourceRef=\"Gateway_ChooseAdditionalRepair\" targetRef=\"Task_AdditionalCheckHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_Choose_AdditionalSoftware\" sourceRef=\"Gateway_ChooseAdditionalRepair\" targetRef=\"Task_AdditionalCheckSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_AdditionalCheckHardware_Repair\" sourceRef=\"Task_AdditionalCheckHardware\" targetRef=\"Task_AdditionalRepairHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_AdditionalHardware_Test\" sourceRef=\"Task_AdditionalRepairHardware\" targetRef=\"Task_TestAdditionalHardware\"/>\n    <bpmn:sequenceFlow id=\"Flow_AdditionalCheckSoftware_Configure\" sourceRef=\"Task_AdditionalCheckSoftware\" targetRef=\"Task_AdditionalConfigureSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_AdditionalSoftware_Test\" sourceRef=\"Task_AdditionalConfigureSoftware\" targetRef=\"Task_TestAdditionalSoftware\"/>\n    <bpmn:sequenceFlow id=\"Flow_TestAdditionalHardware_Merge\" sourceRef=\"Task_TestAdditionalHardware\" targetRef=\"Gateway_AdditionalRepairMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_TestAdditionalSoftware_Merge\" sourceRef=\"Task_TestAdditionalSoftware\" targetRef=\"Gateway_AdditionalRepairMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_AdditionalMerge_Decision\" sourceRef=\"Gateway_AdditionalRepairMerge\" targetRef=\"Gateway_AdditionalError\"/>\n    <bpmn:sequenceFlow id=\"Flow_Additional_Error\" name=\"Error detected\" sourceRef=\"Gateway_AdditionalError\" targetRef=\"Gateway_ChooseAdditionalRepair\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${errorDetected}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Additional_NoError\" name=\"No error detected\" sourceRef=\"Gateway_AdditionalError\" targetRef=\"End_RepairFinished\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": true,
+  "failed_levels": [],
+  "metrics": {
+   "semantic_similarity": 0.116237,
+   "activity_semantic_similarity": 0.232473,
+   "activity_label_precision": 0.272727,
+   "activity_label_recall": 0.9,
+   "activity_label_f1": 0.418605,
+   "activity_matched": 9,
+   "activity_reference": 10,
+   "activity_generated": 33,
+   "alignment_coverage": 0.151515,
+   "connection_precision": 0.027397,
+   "connection_recall": 0.1,
+   "connection_f1": 0.043011,
+   "connection_tp": 2,
+   "connection_fp": 71,
+   "connection_fn": 18,
+   "workflow_order_similarity": 0.088384,
+   "order_consistency": 0.583333,
+   "order_coverage": 0.151515,
+   "order_tp": 35,
+   "order_fp": 0,
+   "order_fn": 25,
+   "collaboration_similarity": null,
+   "collaboration_applicable": false,
+   "collaboration_tp": 0,
+   "collaboration_fp": 0,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 0.2424,
+   "type_recall_diagnostic": 0.8889,
+   "type_f1_diagnostic": 0.381,
+   "counts": {
+    "gold_nodes": 18,
+    "generated_nodes": 66,
+    "gold_flows": 20,
+    "generated_flows": 73
+   },
+   "collaboration_ignored": true,
+   "semantic_similarity_strict": 0.112818,
+   "activity_semantic_similarity_strict": 0.232473,
+   "alignment_coverage_strict": 0.151515,
+   "connection_precision_strict": 0.027397,
+   "connection_recall_strict": 0.1,
+   "connection_f1_strict": 0.043011,
+   "workflow_order_similarity_strict": 0.088384,
+   "collaboration_similarity_strict": 0.0,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T5",
+   "T6"
+  ],
+  "error_counts": {
+   "T5": 89,
+   "T6": 25
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-016",
+    "instruction": "When the description states that multiple follow-up activities after the same point must all occur, without describing them as alternatives: Model the activities as concurrent branches using a parallel gateway, and synchronize them with a parallel gateway before any subsequent activity that depends on all branches being complete.",
+    "situation": "the description requires every one of multiple work steps to occur but allows their order to vary",
+    "source": "learned guideline (refines GW-04)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "FID-02",
+    "instruction": "Do not merge separately described actions into one task or split one stated action without a process reason. Preserve described dependencies.",
+    "situation": "the description presents multiple distinct actions as components of a work activity",
+    "source": "documentation rule not applied",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-079",
+    "instruction": "When the description states that a participant performs an action that initiates the process: Model the described action as a task in the process flow; do not also represent that same action as a start event.",
+    "situation": "the description states that a participant performs an action that initiates the process",
+    "source": "learned guideline (refines EVT-10)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-020",
+    "instruction": "When the description names multiple distinct activities together in one sentence or clause, including as a coordinated list: Represent each distinct activity as its own BPMN task, and preserve only the ordering or dependencies that the description states.",
+    "situation": "the description names multiple distinct work actions together as one compound activity",
+    "source": "learned guideline (refines FID-02)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-080",
+    "instruction": "When the description says that an external participant performs a concrete action that initiates the modeled workflow: Model the stated action as a task; use a start event to mark the workflow’s start rather than substituting a start event or a message-sending task for the action.",
+    "situation": "the description says that an external participant performs a concrete action that initiates the modeled workflow",
+    "source": "learned guideline (refines ACT-01)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-039",
+    "instruction": "When the description distinguishes activities or outcomes by their action, object, recipient, or stage: Use BPMN labels that preserve those stated distinctions rather than substituting a different action or outcome.",
+    "situation": "the description assigns different actions or objects to separate workflow steps",
+    "source": "learned guideline (refines FID-03)",
+    "failure_type": "T6"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-016",
+    "FID-02"
+   ],
+   "before": {
+    "semantic_similarity": 0.116237,
+    "workflow_order_similarity": 0.088384,
+    "connection_f1": 0.043011,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.151515,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.112818,
+    "activity_semantic_similarity": 0.232473,
+    "activity_label_precision": 0.272727,
+    "activity_label_recall": 0.9,
+    "activity_label_f1": 0.418605
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 89,
+    "T6": 25
+   },
+   "after": {
+    "semantic_similarity": 0.116237,
+    "workflow_order_similarity": 0.088384,
+    "connection_f1": 0.043011,
+    "alignment_coverage": 0.151515
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 0,
+   "errors_after": {
+    "T5": 89,
+    "T6": 25
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.116237,
+    "activity_semantic_similarity": 0.232473,
+    "activity_label_precision": 0.272727,
+    "activity_label_recall": 0.9,
+    "activity_label_f1": 0.418605,
+    "activity_matched": 9,
+    "activity_reference": 10,
+    "activity_generated": 33,
+    "alignment_coverage": 0.151515,
+    "connection_precision": 0.027397,
+    "connection_recall": 0.1,
+    "connection_f1": 0.043011,
+    "connection_tp": 2,
+    "connection_fp": 71,
+    "connection_fn": 18,
+    "workflow_order_similarity": 0.088384,
+    "order_consistency": 0.583333,
+    "order_coverage": 0.151515,
+    "order_tp": 35,
+    "order_fp": 0,
+    "order_fn": 25,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.2424,
+    "type_recall_diagnostic": 0.8889,
+    "type_f1_diagnostic": 0.381,
+    "counts": {
+     "gold_nodes": 18,
+     "generated_nodes": 66,
+     "gold_flows": 20,
+     "generated_flows": 73
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.112818,
+    "activity_semantic_similarity_strict": 0.232473,
+    "alignment_coverage_strict": 0.151515,
+    "connection_precision_strict": 0.027397,
+    "connection_recall_strict": 0.1,
+    "connection_f1_strict": 0.043011,
+    "workflow_order_similarity_strict": 0.088384,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 154,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 15,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 66,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-016": {
+     "failure_type": "T5",
+     "errors_before": 89,
+     "errors_after": 89,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "LRN-079",
+    "LRN-020"
+   ],
+   "before": {
+    "semantic_similarity": 0.116237,
+    "workflow_order_similarity": 0.088384,
+    "connection_f1": 0.043011,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.151515,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.112818,
+    "activity_semantic_similarity": 0.232473,
+    "activity_label_precision": 0.272727,
+    "activity_label_recall": 0.9,
+    "activity_label_f1": 0.418605
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 89,
+    "T6": 25
+   },
+   "after": {
+    "semantic_similarity": 0.25572,
+    "workflow_order_similarity": 0.262523,
+    "connection_f1": 0.264151,
+    "alignment_coverage": 0.419355
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.139483,
+    "workflow_order_similarity": 0.174139,
+    "connection_f1": 0.22114,
+    "alignment_coverage": 0.26784
+   },
+   "mean_change": 0.200651,
+   "kept_round": 2,
+   "errors_after": {
+    "T5": 39,
+    "T6": 9
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.25572,
+    "activity_semantic_similarity": 0.451271,
+    "activity_label_precision": 0.529412,
+    "activity_label_recall": 0.9,
+    "activity_label_f1": 0.666667,
+    "activity_matched": 9,
+    "activity_reference": 10,
+    "activity_generated": 17,
+    "alignment_coverage": 0.419355,
+    "connection_precision": 0.212121,
+    "connection_recall": 0.35,
+    "connection_f1": 0.264151,
+    "connection_tp": 7,
+    "connection_fp": 26,
+    "connection_fn": 13,
+    "workflow_order_similarity": 0.262523,
+    "order_consistency": 0.626016,
+    "order_coverage": 0.419355,
+    "order_tp": 77,
+    "order_fp": 9,
+    "order_fn": 37,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.5806,
+    "type_recall_diagnostic": 1.0,
+    "type_f1_diagnostic": 0.7347,
+    "counts": {
+     "gold_nodes": 18,
+     "generated_nodes": 31,
+     "gold_flows": 20,
+     "generated_flows": 33
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.239738,
+    "activity_semantic_similarity_strict": 0.451271,
+    "alignment_coverage_strict": 0.419355,
+    "connection_precision_strict": 0.212121,
+    "connection_recall_strict": 0.35,
+    "connection_f1_strict": 0.264151,
+    "workflow_order_similarity_strict": 0.262523,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 79,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 31,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-020": {
+     "failure_type": "T5",
+     "errors_before": 89,
+     "errors_after": 39,
+     "removed": 50
+    },
+    "LRN-079": {
+     "failure_type": "T5",
+     "errors_before": 89,
+     "errors_after": 39,
+     "removed": 50
+    }
+   },
+   "confirmed": true,
+   "promoted": [],
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [
+    "LRN-080",
+    "LRN-039"
+   ],
+   "before": {
+    "semantic_similarity": 0.25572,
+    "workflow_order_similarity": 0.262523,
+    "connection_f1": 0.264151,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.419355,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.239738,
+    "activity_semantic_similarity": 0.451271,
+    "activity_label_precision": 0.529412,
+    "activity_label_recall": 0.9,
+    "activity_label_f1": 0.666667
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 39,
+    "T6": 9
+   },
+   "reverted": {
+    "draft": 3,
+    "errors": {
+     "T5": 43,
+     "T6": 11
+    },
+    "errors_before": {
+     "T5": 39,
+     "T6": 9
+    },
+    "mean_change": -0.014051
+   },
+   "after": {
+    "semantic_similarity": 0.25572,
+    "workflow_order_similarity": 0.262523,
+    "connection_f1": 0.264151,
+    "alignment_coverage": 0.419355
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 2,
+   "errors_after": {
+    "T5": 39,
+    "T6": 9
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.25572,
+    "activity_semantic_similarity": 0.451271,
+    "activity_label_precision": 0.529412,
+    "activity_label_recall": 0.9,
+    "activity_label_f1": 0.666667,
+    "activity_matched": 9,
+    "activity_reference": 10,
+    "activity_generated": 17,
+    "alignment_coverage": 0.419355,
+    "connection_precision": 0.212121,
+    "connection_recall": 0.35,
+    "connection_f1": 0.264151,
+    "connection_tp": 7,
+    "connection_fp": 26,
+    "connection_fn": 13,
+    "workflow_order_similarity": 0.262523,
+    "order_consistency": 0.626016,
+    "order_coverage": 0.419355,
+    "order_tp": 77,
+    "order_fp": 9,
+    "order_fn": 37,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.5806,
+    "type_recall_diagnostic": 1.0,
+    "type_f1_diagnostic": 0.7347,
+    "counts": {
+     "gold_nodes": 18,
+     "generated_nodes": 31,
+     "gold_flows": 20,
+     "generated_flows": 33
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.239738,
+    "activity_semantic_similarity_strict": 0.451271,
+    "alignment_coverage_strict": 0.419355,
+    "connection_precision_strict": 0.212121,
+    "connection_recall_strict": 0.35,
+    "connection_f1_strict": 0.264151,
+    "workflow_order_similarity_strict": 0.262523,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 79,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 31,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-039": {
+     "failure_type": "T6",
+     "errors_before": 9,
+     "errors_after": 9,
+     "removed": 0
+    },
+    "LRN-080": {
+     "failure_type": "T5",
+     "errors_before": 39,
+     "errors_after": 39,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.25572,
+  "activity_semantic_similarity": 0.451271,
+  "activity_label_precision": 0.529412,
+  "activity_label_recall": 0.9,
+  "activity_label_f1": 0.666667,
+  "activity_matched": 9,
+  "activity_reference": 10,
+  "activity_generated": 17,
+  "alignment_coverage": 0.419355,
+  "connection_precision": 0.212121,
+  "connection_recall": 0.35,
+  "connection_f1": 0.264151,
+  "connection_tp": 7,
+  "connection_fp": 26,
+  "connection_fn": 13,
+  "workflow_order_similarity": 0.262523,
+  "order_consistency": 0.626016,
+  "order_coverage": 0.419355,
+  "order_tp": 77,
+  "order_fp": 9,
+  "order_fn": 37,
+  "collaboration_similarity": null,
+  "collaboration_applicable": false,
+  "collaboration_tp": 0,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 0.5806,
+  "type_recall_diagnostic": 1.0,
+  "type_f1_diagnostic": 0.7347,
+  "counts": {
+   "gold_nodes": 18,
+   "generated_nodes": 31,
+   "gold_flows": 20,
+   "generated_flows": 33
+  },
+  "collaboration_ignored": true,
+  "semantic_similarity_strict": 0.239738,
+  "activity_semantic_similarity_strict": 0.451271,
+  "alignment_coverage_strict": 0.419355,
+  "connection_precision_strict": 0.212121,
+  "connection_recall_strict": 0.35,
+  "connection_f1_strict": 0.264151,
+  "workflow_order_similarity_strict": 0.262523,
+  "collaboration_similarity_strict": 0.0,
+  "collaboration_applicable_strict": true
+ }
+}

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Subscription" targetNamespace="http://example.org/bpmn/subscription">
+  <bpmn:process id="Process_Subscription" name="Subscription Lifecycle" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Subscription">
+      <bpmn:lane id="Lane_Customer" name="Customer">
+        <bpmn:flowNodeRef>StartEvent_SignUp</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterInformation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitCancellation</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="System">
+        <bpmn:flowNodeRef>Task_GenerateAccount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AssignAccess</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RunBilling</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ActiveMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendNotification</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_CancelDecision</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Support" name="Support Team">
+        <bpmn:flowNodeRef>Task_ProcessCancellation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TermsDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ApplyRefund</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ApplyCharge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TermsMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DeactivateSubscription</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SettleBalance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_SubscriptionClosed</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_SignUp" name="Customer signs up for subscription">
+      <bpmn:outgoing>Flow_SignUpToEnterInfo</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="Task_EnterInformation" name="Enter personal and payment information">
+      <bpmn:incoming>Flow_SignUpToEnterInfo</bpmn:incoming>
+      <bpmn:outgoing>Flow_EnterInfoToGenerate</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="Task_GenerateAccount" name="Generate account">
+      <bpmn:incoming>Flow_EnterInfoToGenerate</bpmn:incoming>
+      <bpmn:outgoing>Flow_GenerateToAssign</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_AssignAccess" name="Assign access">
+      <bpmn:incoming>Flow_GenerateToAssign</bpmn:incoming>
+      <bpmn:outgoing>Flow_AssignToBilling</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_RunBilling" name="Trigger automated billing cycle">
+      <bpmn:incoming>Flow_AssignToBilling</bpmn:incoming>
+      <bpmn:outgoing>Flow_BillingToActiveMerge</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_ActiveMerge" name="Subscription active">
+      <bpmn:incoming>Flow_BillingToActiveMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_NotificationToActiveMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_ActiveMergeToCancelDecision</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:exclusiveGateway id="Gateway_CancelDecision" name="Customer decides to cancel?">
+      <bpmn:incoming>Flow_ActiveMergeToCancelDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_CancelDecisionNo</bpmn:outgoing>
+      <bpmn:outgoing>Flow_CancelDecisionYes</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sendTask id="Task_SendNotification" name="Send update, enhancement or renewal notification">
+      <bpmn:incoming>Flow_CancelDecisionNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotificationToActiveMerge</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:userTask id="Task_SubmitCancellation" name="Submit cancellation request">
+      <bpmn:incoming>Flow_CancelDecisionYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_SubmitToProcessCancellation</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:userTask id="Task_ProcessCancellation" name="Process cancellation request">
+      <bpmn:incoming>Flow_SubmitToProcessCancellation</bpmn:incoming>
+      <bpmn:outgoing>Flow_ProcessCancellationToTerms</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_TermsDecision" name="Depending on the terms">
+      <bpmn:incoming>Flow_ProcessCancellationToTerms</bpmn:incoming>
+      <bpmn:outgoing>Flow_TermsToRefund</bpmn:outgoing>
+      <bpmn:outgoing>Flow_TermsToCharge</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_ApplyRefund" name="Apply refund">
+      <bpmn:incoming>Flow_TermsToRefund</bpmn:incoming>
+      <bpmn:outgoing>Flow_RefundToTermsMerge</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ApplyCharge" name="Apply charge">
+      <bpmn:incoming>Flow_TermsToCharge</bpmn:incoming>
+      <bpmn:outgoing>Flow_ChargeToTermsMerge</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_TermsMerge" name="Refund or charge settled">
+      <bpmn:incoming>Flow_RefundToTermsMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_ChargeToTermsMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_TermsMergeToDeactivate</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="Task_DeactivateSubscription" name="Deactivate subscription">
+      <bpmn:incoming>Flow_TermsMergeToDeactivate</bpmn:incoming>
+      <bpmn:outgoing>Flow_DeactivateToSettle</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:task id="Task_SettleBalance" name="Settle final account balance">
+      <bpmn:incoming>Flow_DeactivateToSettle</bpmn:incoming>
+      <bpmn:outgoing>Flow_SettleToEnd</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="EndEvent_SubscriptionClosed" name="Subscription concluded">
+      <bpmn:incoming>Flow_SettleToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_SignUpToEnterInfo" sourceRef="StartEvent_SignUp" targetRef="Task_EnterInformation"/>
+    <bpmn:sequenceFlow id="Flow_EnterInfoToGenerate" sourceRef="Task_EnterInformation" targetRef="Task_GenerateAccount"/>
+    <bpmn:sequenceFlow id="Flow_GenerateToAssign" sourceRef="Task_GenerateAccount" targetRef="Task_AssignAccess"/>
+    <bpmn:sequenceFlow id="Flow_AssignToBilling" sourceRef="Task_AssignAccess" targetRef="Task_RunBilling"/>
+    <bpmn:sequenceFlow id="Flow_BillingToActiveMerge" sourceRef="Task_RunBilling" targetRef="Gateway_ActiveMerge"/>
+    <bpmn:sequenceFlow id="Flow_NotificationToActiveMerge" sourceRef="Task_SendNotification" targetRef="Gateway_ActiveMerge"/>
+    <bpmn:sequenceFlow id="Flow_ActiveMergeToCancelDecision" sourceRef="Gateway_ActiveMerge" targetRef="Gateway_CancelDecision"/>
+    <bpmn:sequenceFlow id="Flow_CancelDecisionNo" name="No" sourceRef="Gateway_CancelDecision" targetRef="Task_SendNotification"/>
+    <bpmn:sequenceFlow id="Flow_CancelDecisionYes" name="Yes" sourceRef="Gateway_CancelDecision" targetRef="Task_SubmitCancellation"/>
+    <bpmn:sequenceFlow id="Flow_SubmitToProcessCancellation" sourceRef="Task_SubmitCancellation" targetRef="Task_ProcessCancellation"/>
+    <bpmn:sequenceFlow id="Flow_ProcessCancellationToTerms" sourceRef="Task_ProcessCancellation" targetRef="Gateway_TermsDecision"/>
+    <bpmn:sequenceFlow id="Flow_TermsToRefund" name="Refund due" sourceRef="Gateway_TermsDecision" targetRef="Task_ApplyRefund"/>
+    <bpmn:sequenceFlow id="Flow_TermsToCharge" name="Charge due" sourceRef="Gateway_TermsDecision" targetRef="Task_ApplyCharge"/>
+    <bpmn:sequenceFlow id="Flow_RefundToTermsMerge" sourceRef="Task_ApplyRefund" targetRef="Gateway_TermsMerge"/>
+    <bpmn:sequenceFlow id="Flow_ChargeToTermsMerge" sourceRef="Task_ApplyCharge" targetRef="Gateway_TermsMerge"/>
+    <bpmn:sequenceFlow id="Flow_TermsMergeToDeactivate" sourceRef="Gateway_TermsMerge" targetRef="Task_DeactivateSubscription"/>
+    <bpmn:sequenceFlow id="Flow_DeactivateToSettle" sourceRef="Task_DeactivateSubscription" targetRef="Task_SettleBalance"/>
+    <bpmn:sequenceFlow id="Flow_SettleToEnd" sourceRef="Task_SettleBalance" targetRef="EndEvent_SubscriptionClosed"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,76 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_BudgetAllocation" targetNamespace="http://example.org/bpmn/budget-allocation">
+  <bpmn:process id="Process_BudgetAllocation" name="Departmental Budget Allocation" isExecutable="false">
+    <bpmn:startEvent id="Start_BudgetPlanningPeriod" name="Budget planning period begins">
+      <bpmn:outgoing>Flow_StartToObjectives</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_OutlineObjectives" name="Outline department objectives for upcoming period">
+      <bpmn:incoming>Flow_StartToObjectives</bpmn:incoming>
+      <bpmn:outgoing>Flow_ObjectivesToDraft</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_DraftPlan" name="Draft plan with cost estimates and budget justifications">
+      <bpmn:incoming>Flow_ObjectivesToDraft</bpmn:incoming>
+      <bpmn:outgoing>Flow_DraftToStrategic</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_StrategicAlignment" name="Review plan in strategic alignment meeting">
+      <bpmn:incoming>Flow_DraftToStrategic</bpmn:incoming>
+      <bpmn:outgoing>Flow_StrategicToFinance</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_FinanceReview" name="Perform detailed finance review of budget feasibility">
+      <bpmn:incoming>Flow_StrategicToFinance</bpmn:incoming>
+      <bpmn:incoming>Flow_NextReviewRound</bpmn:incoming>
+      <bpmn:outgoing>Flow_FinanceToFeedback</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_GiveFeedback" name="Give review feedback on plan">
+      <bpmn:incoming>Flow_FinanceToFeedback</bpmn:incoming>
+      <bpmn:outgoing>Flow_FeedbackToDecision</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_AdjustmentsNeeded" name="Adjustments needed?" default="Flow_NoAdjustment">
+      <bpmn:incoming>Flow_FeedbackToDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_NoAdjustment</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Adjust</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_AdjustPlan" name="Adjust plan based on review feedback">
+      <bpmn:incoming>Flow_Adjust</bpmn:incoming>
+      <bpmn:outgoing>Flow_AdjustToDocument</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_DocumentAdjustment" name="Document adjustment">
+      <bpmn:incoming>Flow_AdjustToDocument</bpmn:incoming>
+      <bpmn:outgoing>Flow_DocumentToApproval</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ApproveAdjustment" name="Obtain stakeholder approval of adjustment">
+      <bpmn:incoming>Flow_DocumentToApproval</bpmn:incoming>
+      <bpmn:outgoing>Flow_NextReviewRound</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ApproveFinal" name="Approve final version of budget">
+      <bpmn:incoming>Flow_NoAdjustment</bpmn:incoming>
+      <bpmn:outgoing>Flow_ApproveToAllocate</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_AllocateBudget" name="Allocate budget to department">
+      <bpmn:incoming>Flow_ApproveToAllocate</bpmn:incoming>
+      <bpmn:outgoing>Flow_AllocateToDistribute</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_DistributeBudget" name="Distribute budget to department">
+      <bpmn:incoming>Flow_AllocateToDistribute</bpmn:incoming>
+      <bpmn:outgoing>Flow_DistributeToEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_PlanImplementation" name="Department begins implementing plan">
+      <bpmn:incoming>Flow_DistributeToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_StartToObjectives" sourceRef="Start_BudgetPlanningPeriod" targetRef="Task_OutlineObjectives"/>
+    <bpmn:sequenceFlow id="Flow_ObjectivesToDraft" sourceRef="Task_OutlineObjectives" targetRef="Task_DraftPlan"/>
+    <bpmn:sequenceFlow id="Flow_DraftToStrategic" sourceRef="Task_DraftPlan" targetRef="Task_StrategicAlignment"/>
+    <bpmn:sequenceFlow id="Flow_StrategicToFinance" sourceRef="Task_StrategicAlignment" targetRef="Task_FinanceReview"/>
+    <bpmn:sequenceFlow id="Flow_FinanceToFeedback" sourceRef="Task_FinanceReview" targetRef="Task_GiveFeedback"/>
+    <bpmn:sequenceFlow id="Flow_FeedbackToDecision" sourceRef="Task_GiveFeedback" targetRef="Gateway_AdjustmentsNeeded"/>
+    <bpmn:sequenceFlow id="Flow_NoAdjustment" name="No adjustments" sourceRef="Gateway_AdjustmentsNeeded" targetRef="Task_ApproveFinal"/>
+    <bpmn:sequenceFlow id="Flow_Adjust" name="Adjustments required" sourceRef="Gateway_AdjustmentsNeeded" targetRef="Task_AdjustPlan">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${adjustmentsRequired}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_AdjustToDocument" sourceRef="Task_AdjustPlan" targetRef="Task_DocumentAdjustment"/>
+    <bpmn:sequenceFlow id="Flow_DocumentToApproval" sourceRef="Task_DocumentAdjustment" targetRef="Task_ApproveAdjustment"/>
+    <bpmn:sequenceFlow id="Flow_NextReviewRound" name="Next review round" sourceRef="Task_ApproveAdjustment" targetRef="Task_FinanceReview"/>
+    <bpmn:sequenceFlow id="Flow_ApproveToAllocate" sourceRef="Task_ApproveFinal" targetRef="Task_AllocateBudget"/>
+    <bpmn:sequenceFlow id="Flow_AllocateToDistribute" sourceRef="Task_AllocateBudget" targetRef="Task_DistributeBudget"/>
+    <bpmn:sequenceFlow id="Flow_DistributeToEnd" sourceRef="Task_DistributeBudget" targetRef="End_PlanImplementation"/>
+  </bpmn:process>
+</bpmn:definitions>

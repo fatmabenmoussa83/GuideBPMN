@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="https://example.com/bpmn/farming-bot">
+  <bpmn:message id="Message_Brag" name="Brag"/>
+  <bpmn:message id="Message_Materials" name="Materials"/>
+  <bpmn:signal id="Signal_NaturalDisaster" name="Natural disaster"/>
+
+  <bpmn:process id="Process_FarmingBot" name="Farming Bot" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_FarmingBot">
+      <bpmn:lane id="Lane_Player" name="Player">
+        <bpmn:flowNodeRef>StartEvent_CreateBot</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ChooseResources</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SetPriorities</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DefineDependencies</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SelectFriends</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_PostActions</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Brag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SelectMaterials</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendMaterials</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_PostActionsJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ProcessComplete</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Bot" name="Farming bot">
+        <bpmn:flowNodeRef>SubProcess_Farming</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_CreateBot" name="Start creating farming bot">
+      <bpmn:outgoing>Flow_Start_ChooseResources</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_ChooseResources" name="Choose resources to farm">
+      <bpmn:incoming>Flow_Start_ChooseResources</bpmn:incoming>
+      <bpmn:outgoing>Flow_ChooseResources_SetPriorities</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_SetPriorities" name="Set resource priorities">
+      <bpmn:incoming>Flow_ChooseResources_SetPriorities</bpmn:incoming>
+      <bpmn:outgoing>Flow_SetPriorities_DefineDependencies</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_DefineDependencies" name="Define custom resource and tool dependencies">
+      <bpmn:incoming>Flow_SetPriorities_DefineDependencies</bpmn:incoming>
+      <bpmn:outgoing>Flow_DefineDependencies_Farming</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:subProcess id="SubProcess_Farming" name="Farm resources">
+      <bpmn:incoming>Flow_DefineDependencies_Farming</bpmn:incoming>
+      <bpmn:outgoing>Flow_Farming_SelectFriends</bpmn:outgoing>
+
+      <bpmn:laneSet id="LaneSet_Farming">
+        <bpmn:lane id="Lane_FarmingBot" name="Farming bot">
+          <bpmn:flowNodeRef>StartEvent_Farming</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>Task_FarmResources</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>EndEvent_Farming</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>EventSubProcess_NaturalDisaster</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>EventSubProcess_Milestone</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>EventSubProcess_UpdateList</bpmn:flowNodeRef>
+        </bpmn:lane>
+      </bpmn:laneSet>
+
+      <bpmn:startEvent id="StartEvent_Farming" name="Start farming">
+        <bpmn:outgoing>Flow_FarmingStart_Farm</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="Task_FarmResources" name="Farm up to 10 resources in parallel according to priorities and dependencies">
+        <bpmn:incoming>Flow_FarmingStart_Farm</bpmn:incoming>
+        <bpmn:outgoing>Flow_Farm_FarmingEnd</bpmn:outgoing>
+        <bpmn:multiInstanceLoopCharacteristics isSequential="false">
+          <bpmn:loopCardinality xsi:type="bpmn:tFormalExpression">min(numberOfSelectedResources, 10)</bpmn:loopCardinality>
+        </bpmn:multiInstanceLoopCharacteristics>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_Farming" name="Farming finished">
+        <bpmn:incoming>Flow_Farm_FarmingEnd</bpmn:incoming>
+      </bpmn:endEvent>
+
+      <bpmn:subProcess id="EventSubProcess_NaturalDisaster" name="Handle natural disaster" triggeredByEvent="true">
+        <bpmn:laneSet id="LaneSet_NaturalDisaster">
+          <bpmn:lane id="Lane_DisasterBot" name="Farming bot">
+            <bpmn:flowNodeRef>StartEvent_NaturalDisaster</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>Task_SetBotBack</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>EndEvent_DisasterHandled</bpmn:flowNodeRef>
+          </bpmn:lane>
+        </bpmn:laneSet>
+        <bpmn:startEvent id="StartEvent_NaturalDisaster" name="Natural disaster strikes" isInterrupting="false">
+          <bpmn:outgoing>Flow_DisasterStart_SetBack</bpmn:outgoing>
+          <bpmn:signalEventDefinition id="SignalEventDefinition_NaturalDisaster" signalRef="Signal_NaturalDisaster"/>
+        </bpmn:startEvent>
+        <bpmn:serviceTask id="Task_SetBotBack" name="Apply disaster setback to bot">
+          <bpmn:incoming>Flow_DisasterStart_SetBack</bpmn:incoming>
+          <bpmn:outgoing>Flow_SetBack_DisasterEnd</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:endEvent id="EndEvent_DisasterHandled" name="Disaster setback applied">
+          <bpmn:incoming>Flow_SetBack_DisasterEnd</bpmn:incoming>
+        </bpmn:endEvent>
+        <bpmn:sequenceFlow id="Flow_DisasterStart_SetBack" sourceRef="StartEvent_NaturalDisaster" targetRef="Task_SetBotBack"/>
+        <bpmn:sequenceFlow id="Flow_SetBack_DisasterEnd" sourceRef="Task_SetBotBack" targetRef="EndEvent_DisasterHandled"/>
+      </bpmn:subProcess>
+
+      <bpmn:subProcess id="EventSubProcess_Milestone" name="Notify on milestone" triggeredByEvent="true">
+        <bpmn:laneSet id="LaneSet_Milestone">
+          <bpmn:lane id="Lane_MilestoneBot" name="Farming bot">
+            <bpmn:flowNodeRef>StartEvent_Milestone</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>Task_NotifyMilestone</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>EndEvent_MilestoneNotified</bpmn:flowNodeRef>
+          </bpmn:lane>
+        </bpmn:laneSet>
+        <bpmn:startEvent id="StartEvent_Milestone" name="Milestone reached" isInterrupting="false">
+          <bpmn:outgoing>Flow_MilestoneStart_Notify</bpmn:outgoing>
+          <bpmn:conditionalEventDefinition id="ConditionalEventDefinition_Milestone">
+            <bpmn:condition xsi:type="bpmn:tFormalExpression">milestoneReached</bpmn:condition>
+          </bpmn:conditionalEventDefinition>
+        </bpmn:startEvent>
+        <bpmn:serviceTask id="Task_NotifyMilestone" name="Notify player">
+          <bpmn:incoming>Flow_MilestoneStart_Notify</bpmn:incoming>
+          <bpmn:outgoing>Flow_Notify_MilestoneEnd</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:endEvent id="EndEvent_MilestoneNotified" name="Player notified">
+          <bpmn:incoming>Flow_Notify_MilestoneEnd</bpmn:incoming>
+        </bpmn:endEvent>
+        <bpmn:sequenceFlow id="Flow_MilestoneStart_Notify" sourceRef="StartEvent_Milestone" targetRef="Task_NotifyMilestone"/>
+        <bpmn:sequenceFlow id="Flow_Notify_MilestoneEnd" sourceRef="Task_NotifyMilestone" targetRef="EndEvent_MilestoneNotified"/>
+      </bpmn:subProcess>
+
+      <bpmn:subProcess id="EventSubProcess_UpdateList" name="Update farming list" triggeredByEvent="true">
+        <bpmn:laneSet id="LaneSet_UpdateList">
+          <bpmn:lane id="Lane_UpdatePlayer" name="Player">
+            <bpmn:flowNodeRef>StartEvent_UpdateList</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>Task_UpdateList</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>Task_ApplyUpdatedList</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>EndEvent_UpdateApplied</bpmn:flowNodeRef>
+          </bpmn:lane>
+        </bpmn:laneSet>
+        <bpmn:startEvent id="StartEvent_UpdateList" name="Farming list update requested" isInterrupting="false">
+          <bpmn:outgoing>Flow_UpdateStart_UpdateList</bpmn:outgoing>
+          <bpmn:conditionalEventDefinition id="ConditionalEventDefinition_UpdateList">
+            <bpmn:condition xsi:type="bpmn:tFormalExpression">farmingListUpdateRequested</bpmn:condition>
+          </bpmn:conditionalEventDefinition>
+        </bpmn:startEvent>
+        <bpmn:userTask id="Task_UpdateList" name="Update list of materials to farm">
+          <bpmn:incoming>Flow_UpdateStart_UpdateList</bpmn:incoming>
+          <bpmn:outgoing>Flow_UpdateList_Apply</bpmn:outgoing>
+        </bpmn:userTask>
+        <bpmn:serviceTask id="Task_ApplyUpdatedList" name="Apply updated farming list">
+          <bpmn:incoming>Flow_UpdateList_Apply</bpmn:incoming>
+          <bpmn:outgoing>Flow_ApplyList_UpdateEnd</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:endEvent id="EndEvent_UpdateApplied" name="Updated list applied">
+          <bpmn:incoming>Flow_ApplyList_UpdateEnd</bpmn:incoming>
+        </bpmn:endEvent>
+        <bpmn:sequenceFlow id="Flow_UpdateStart_UpdateList" sourceRef="StartEvent_UpdateList" targetRef="Task_UpdateList"/>
+        <bpmn:sequenceFlow id="Flow_UpdateList_Apply" sourceRef="Task_UpdateList" targetRef="Task_ApplyUpdatedList"/>
+        <bpmn:sequenceFlow id="Flow_ApplyList_UpdateEnd" sourceRef="Task_ApplyUpdatedList" targetRef="EndEvent_UpdateApplied"/>
+      </bpmn:subProcess>
+
+      <bpmn:sequenceFlow id="Flow_FarmingStart_Farm" sourceRef="StartEvent_Farming" targetRef="Task_FarmResources"/>
+      <bpmn:sequenceFlow id="Flow_Farm_FarmingEnd" sourceRef="Task_FarmResources" targetRef="EndEvent_Farming"/>
+    </bpmn:subProcess>
+
+    <bpmn:userTask id="Task_SelectFriends" name="Select friends">
+      <bpmn:incoming>Flow_Farming_SelectFriends</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelectFriends_PostActions</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:inclusiveGateway id="Gateway_PostActions" name="Choose post-farming actions" default="Flow_PostActions_None">
+      <bpmn:incoming>Flow_SelectFriends_PostActions</bpmn:incoming>
+      <bpmn:outgoing>Flow_PostActions_Brag</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PostActions_SendMaterials</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PostActions_None</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+    <bpmn:sendTask id="Task_Brag" name="Brag to selected friends" messageRef="Message_Brag">
+      <bpmn:incoming>Flow_PostActions_Brag</bpmn:incoming>
+      <bpmn:outgoing>Flow_Brag_PostActionsJoin</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="Task_SelectMaterials" name="Select materials to send">
+      <bpmn:incoming>Flow_PostActions_SendMaterials</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelectMaterials_Send</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_SendMaterials" name="Send materials to selected friends" messageRef="Message_Materials">
+      <bpmn:incoming>Flow_SelectMaterials_Send</bpmn:incoming>
+      <bpmn:outgoing>Flow_SendMaterials_PostActionsJoin</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:inclusiveGateway id="Gateway_PostActionsJoin" name="Post-farming actions complete">
+      <bpmn:incoming>Flow_Brag_PostActionsJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_SendMaterials_PostActionsJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_PostActions_None</bpmn:incoming>
+      <bpmn:outgoing>Flow_PostActionsJoin_End</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+    <bpmn:endEvent id="EndEvent_ProcessComplete" name="Process complete">
+      <bpmn:incoming>Flow_PostActionsJoin_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_ChooseResources" sourceRef="StartEvent_CreateBot" targetRef="Task_ChooseResources"/>
+    <bpmn:sequenceFlow id="Flow_ChooseResources_SetPriorities" sourceRef="Task_ChooseResources" targetRef="Task_SetPriorities"/>
+    <bpmn:sequenceFlow id="Flow_SetPriorities_DefineDependencies" sourceRef="Task_SetPriorities" targetRef="Task_DefineDependencies"/>
+    <bpmn:sequenceFlow id="Flow_DefineDependencies_Farming" sourceRef="Task_DefineDependencies" targetRef="SubProcess_Farming"/>
+    <bpmn:sequenceFlow id="Flow_Farming_SelectFriends" sourceRef="SubProcess_Farming" targetRef="Task_SelectFriends"/>
+    <bpmn:sequenceFlow id="Flow_SelectFriends_PostActions" sourceRef="Task_SelectFriends" targetRef="Gateway_PostActions"/>
+    <bpmn:sequenceFlow id="Flow_PostActions_Brag" sourceRef="Gateway_PostActions" targetRef="Task_Brag">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">bragSelected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_PostActions_SendMaterials" sourceRef="Gateway_PostActions" targetRef="Task_SelectMaterials">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">materialsSelected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_PostActions_None" sourceRef="Gateway_PostActions" targetRef="Gateway_PostActionsJoin"/>
+    <bpmn:sequenceFlow id="Flow_SelectMaterials_Send" sourceRef="Task_SelectMaterials" targetRef="Task_SendMaterials"/>
+    <bpmn:sequenceFlow id="Flow_Brag_PostActionsJoin" sourceRef="Task_Brag" targetRef="Gateway_PostActionsJoin"/>
+    <bpmn:sequenceFlow id="Flow_SendMaterials_PostActionsJoin" sourceRef="Task_SendMaterials" targetRef="Gateway_PostActionsJoin"/>
+    <bpmn:sequenceFlow id="Flow_PostActionsJoin_End" sourceRef="Gateway_PostActionsJoin" targetRef="EndEvent_ProcessComplete"/>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_FarmingBot">
+    <bpmn:participant id="Participant_FarmingBot" name="Farming Bot process" processRef="Process_FarmingBot"/>
+    <bpmn:participant id="Participant_Friends" name="Selected friends"/>
+    <bpmn:messageFlow id="MessageFlow_Brag" name="Brag" sourceRef="Task_Brag" targetRef="Participant_Friends" messageRef="Message_Brag"/>
+    <bpmn:messageFlow id="MessageFlow_Materials" name="Materials" sourceRef="Task_SendMaterials" targetRef="Participant_Friends" messageRef="Message_Materials"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

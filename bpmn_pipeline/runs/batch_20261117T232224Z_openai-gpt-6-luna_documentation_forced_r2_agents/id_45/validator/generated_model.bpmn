@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/online-shop">
+  <bpmn:message id="Message_PaymentData" name="Payment data"/>
+  <bpmn:message id="Message_PaymentConfirmation" name="Payment confirmation"/>
+
+  <bpmn:collaboration id="Collaboration_OnlineShop">
+    <bpmn:participant id="Participant_OnlineShop" name="Online Shop" processRef="Process_OnlineShop"/>
+    <bpmn:participant id="Participant_Bank" name="Bank"/>
+    <bpmn:messageFlow id="MessageFlow_PaymentData" name="Payment data" sourceRef="Task_SubmitPaymentData" targetRef="Participant_Bank" messageRef="Message_PaymentData"/>
+    <bpmn:messageFlow id="MessageFlow_PaymentConfirmation" name="Payment confirmation" sourceRef="Participant_Bank" targetRef="Task_WaitPaymentConfirmation" messageRef="Message_PaymentConfirmation"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_OnlineShop" name="Ordering in an Online Shop" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_OnlineShop">
+      <bpmn:lane id="Lane_Customer" name="Customer">
+        <bpmn:flowNodeRef>Start_Shopping</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Login</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_WaitLoginConfirmation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_LoginSuccessful</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_LoginUnsuccessful</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SelectProduct</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AddToCart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SaveProduct</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CheckAllProductsSelected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AllProductsSelected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterPaymentData</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitPaymentData</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_PaymentAddressSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_WaitPaymentConfirmation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterShippingAddress</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_BillingAddressDiffers</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterBillingAddress</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AddressMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_PaymentAddressJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_OrderComplete</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_ShopSystem" name="E-Shop system">
+        <bpmn:flowNodeRef>Task_CheckCredentials</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FinishOrderForPreparation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_PreparationSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PreparePayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PrepareShipment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_PreparationJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FinishOrder</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Shopping" name="Shopping begins"/>
+    <bpmn:userTask id="Task_Login" name="Log in to the E-Shop"/>
+    <bpmn:task id="Task_CheckCredentials" name="Check credentials"/>
+    <bpmn:task id="Task_WaitLoginConfirmation" name="Wait for login confirmation"/>
+    <bpmn:exclusiveGateway id="Gateway_LoginSuccessful" name="Was login successful?" default="Flow_LoginUnsuccessful"/>
+    <bpmn:endEvent id="End_LoginUnsuccessful" name="Shopping stops"/>
+
+    <bpmn:userTask id="Task_SelectProduct" name="Select a product"/>
+    <bpmn:userTask id="Task_AddToCart" name="Add product to shopping cart"/>
+    <bpmn:userTask id="Task_SaveProduct" name="Save product"/>
+    <bpmn:userTask id="Task_CheckAllProductsSelected" name="Check whether every product has been selected"/>
+    <bpmn:exclusiveGateway id="Gateway_AllProductsSelected" name="Have all products been selected?" default="Flow_MoreProducts"/>
+
+    <bpmn:task id="Task_FinishOrderForPreparation" name="Finish order"/>
+    <bpmn:parallelGateway id="Gateway_PreparationSplit" name="Prepare payment and shipment"/>
+    <bpmn:task id="Task_PreparePayment" name="Prepare payment"/>
+    <bpmn:task id="Task_PrepareShipment" name="Prepare shipment"/>
+    <bpmn:parallelGateway id="Gateway_PreparationJoin" name="Payment and shipment prepared"/>
+
+    <bpmn:userTask id="Task_EnterPaymentData" name="Enter payment data"/>
+    <bpmn:sendTask id="Task_SubmitPaymentData" name="Submit payment data to bank" messageRef="Message_PaymentData"/>
+    <bpmn:parallelGateway id="Gateway_PaymentAddressSplit" name="Wait for payment confirmation while entering address"/>
+    <bpmn:receiveTask id="Task_WaitPaymentConfirmation" name="Wait for bank payment confirmation" messageRef="Message_PaymentConfirmation"/>
+    <bpmn:userTask id="Task_EnterShippingAddress" name="Enter shipping address"/>
+    <bpmn:exclusiveGateway id="Gateway_BillingAddressDiffers" name="Does the shipping address differ from the billing address?" default="Flow_BillingAddressSame"/>
+    <bpmn:userTask id="Task_EnterBillingAddress" name="Enter billing address"/>
+    <bpmn:exclusiveGateway id="Gateway_AddressMerge" name="Continue after address entry"/>
+    <bpmn:parallelGateway id="Gateway_PaymentAddressJoin" name="Payment and address steps completed"/>
+    <bpmn:task id="Task_FinishOrder" name="Finish order"/>
+    <bpmn:endEvent id="End_OrderComplete" name="Order finished"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Login" sourceRef="Start_Shopping" targetRef="Task_Login"/>
+    <bpmn:sequenceFlow id="Flow_Login_CheckCredentials" sourceRef="Task_Login" targetRef="Task_CheckCredentials"/>
+    <bpmn:sequenceFlow id="Flow_CheckCredentials_WaitConfirmation" sourceRef="Task_CheckCredentials" targetRef="Task_WaitLoginConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_WaitConfirmation_LoginGateway" sourceRef="Task_WaitLoginConfirmation" targetRef="Gateway_LoginSuccessful"/>
+    <bpmn:sequenceFlow id="Flow_LoginSuccessful" name="Yes" sourceRef="Gateway_LoginSuccessful" targetRef="Task_SelectProduct">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${loginSuccessful}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_LoginUnsuccessful" name="No" sourceRef="Gateway_LoginSuccessful" targetRef="End_LoginUnsuccessful"/>
+
+    <bpmn:sequenceFlow id="Flow_Select_AddToCart" sourceRef="Task_SelectProduct" targetRef="Task_AddToCart"/>
+    <bpmn:sequenceFlow id="Flow_AddToCart_SaveProduct" sourceRef="Task_AddToCart" targetRef="Task_SaveProduct"/>
+    <bpmn:sequenceFlow id="Flow_SaveProduct_CheckSelection" sourceRef="Task_SaveProduct" targetRef="Task_CheckAllProductsSelected"/>
+    <bpmn:sequenceFlow id="Flow_CheckSelection_Gateway" sourceRef="Task_CheckAllProductsSelected" targetRef="Gateway_AllProductsSelected"/>
+    <bpmn:sequenceFlow id="Flow_MoreProducts" name="No" sourceRef="Gateway_AllProductsSelected" targetRef="Task_SelectProduct"/>
+    <bpmn:sequenceFlow id="Flow_AllProductsSelected" name="Yes" sourceRef="Gateway_AllProductsSelected" targetRef="Task_FinishOrderForPreparation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${allProductsSelected}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_FinishOrder_PreparationSplit" sourceRef="Task_FinishOrderForPreparation" targetRef="Gateway_PreparationSplit"/>
+    <bpmn:sequenceFlow id="Flow_PreparationSplit_Payment" sourceRef="Gateway_PreparationSplit" targetRef="Task_PreparePayment"/>
+    <bpmn:sequenceFlow id="Flow_PreparationSplit_Shipment" sourceRef="Gateway_PreparationSplit" targetRef="Task_PrepareShipment"/>
+    <bpmn:sequenceFlow id="Flow_PreparePayment_PreparationJoin" sourceRef="Task_PreparePayment" targetRef="Gateway_PreparationJoin"/>
+    <bpmn:sequenceFlow id="Flow_PrepareShipment_PreparationJoin" sourceRef="Task_PrepareShipment" targetRef="Gateway_PreparationJoin"/>
+    <bpmn:sequenceFlow id="Flow_PreparationJoin_EnterPayment" sourceRef="Gateway_PreparationJoin" targetRef="Task_EnterPaymentData"/>
+
+    <bpmn:sequenceFlow id="Flow_EnterPayment_SubmitPayment" sourceRef="Task_EnterPaymentData" targetRef="Task_SubmitPaymentData"/>
+    <bpmn:sequenceFlow id="Flow_SubmitPayment_PaymentAddressSplit" sourceRef="Task_SubmitPaymentData" targetRef="Gateway_PaymentAddressSplit"/>
+    <bpmn:sequenceFlow id="Flow_PaymentAddressSplit_WaitConfirmation" sourceRef="Gateway_PaymentAddressSplit" targetRef="Task_WaitPaymentConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_PaymentAddressSplit_EnterShipping" sourceRef="Gateway_PaymentAddressSplit" targetRef="Task_EnterShippingAddress"/>
+    <bpmn:sequenceFlow id="Flow_EnterShipping_CheckBilling" sourceRef="Task_EnterShippingAddress" targetRef="Gateway_BillingAddressDiffers"/>
+    <bpmn:sequenceFlow id="Flow_BillingAddressDifferent" name="Yes" sourceRef="Gateway_BillingAddressDiffers" targetRef="Task_EnterBillingAddress">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${shippingAddressDiffersFromBillingAddress}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_BillingAddressSame" name="No" sourceRef="Gateway_BillingAddressDiffers" targetRef="Gateway_AddressMerge"/>
+    <bpmn:sequenceFlow id="Flow_EnterBillingAddress_AddressMerge" sourceRef="Task_EnterBillingAddress" targetRef="Gateway_AddressMerge"/>
+    <bpmn:sequenceFlow id="Flow_AddressMerge_PaymentAddressJoin" sourceRef="Gateway_AddressMerge" targetRef="Gateway_PaymentAddressJoin"/>
+    <bpmn:sequenceFlow id="Flow_WaitConfirmation_PaymentAddressJoin" sourceRef="Task_WaitPaymentConfirmation" targetRef="Gateway_PaymentAddressJoin"/>
+    <bpmn:sequenceFlow id="Flow_PaymentAddressJoin_FinishOrder" sourceRef="Gateway_PaymentAddressJoin" targetRef="Task_FinishOrder"/>
+    <bpmn:sequenceFlow id="Flow_FinishOrder_End" sourceRef="Task_FinishOrder" targetRef="End_OrderComplete"/>
+  </bpmn:process>
+</bpmn:definitions>

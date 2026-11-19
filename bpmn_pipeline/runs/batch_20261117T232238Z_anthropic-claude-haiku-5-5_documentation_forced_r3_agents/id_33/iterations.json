@@ -1,0 +1,813 @@
+{
+ "id": "33",
+ "kept_round": 3,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 70.4,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 58,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.540026,
+    "workflow_order_similarity": 0.687898,
+    "connection_f1": 0.538462,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.72,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.428297,
+    "activity_semantic_similarity": 0.670043,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.769231,
+    "activity_label_f1": 0.869565
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Custom3DPrint\"\n                  targetNamespace=\"http://example.org/bpmn/custom-3d-print\">\n  <bpmn:message id=\"Message_Sketches\" name=\"Sketches sent\"/>\n  <bpmn:message id=\"Message_ArtistResult\" name=\"Artist result delivered\"/>\n  <bpmn:message id=\"Message_ChangeRequest\" name=\"Change request sent\"/>\n  <bpmn:message id=\"Message_UpdatedResult\" name=\"Updated result delivered\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Custom3DPrint\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\" processRef=\"Process_Customer\"/>\n    <bpmn:participant id=\"Participant_Artist\" name=\"Artist\"/>\n    <bpmn:messageFlow id=\"MessageFlow_SketchesToArtist\" name=\"Send sketches\" sourceRef=\"Task_SendSketches\" targetRef=\"Participant_Artist\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ChangesToArtist\" name=\"Tell changes\" sourceRef=\"Task_RequestChanges\" targetRef=\"Participant_Artist\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ResultFromArtist\" name=\"Deliver result\" sourceRef=\"Participant_Artist\" targetRef=\"Event_ResultReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_UpdatedFromArtist\" name=\"Deliver updated result\" sourceRef=\"Participant_Artist\" targetRef=\"Event_UpdatedResultReceived\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Customer\" name=\"Instruct artist to create a 3D model and print it\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Request\" name=\"Custom 3D model requested\"/>\n\n    <bpmn:sendTask id=\"Task_SendSketches\" name=\"Send sketches to artist\" messageRef=\"Message_Sketches\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_ResultReceived\" name=\"Artist result received\">\n      <bpmn:messageEventDefinition id=\"MED_ResultReceived\" messageRef=\"Message_ArtistResult\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:userTask id=\"Task_ReviewResult\" name=\"Review result\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Satisfied_Split\" name=\"Satisfied with result?\" default=\"Flow_NotSatisfied\"/>\n    <bpmn:sendTask id=\"Task_RequestChanges\" name=\"Tell artist what to change\" messageRef=\"Message_ChangeRequest\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_UpdatedResultReceived\" name=\"Updated result received\">\n      <bpmn:messageEventDefinition id=\"MED_UpdatedResultReceived\" messageRef=\"Message_UpdatedResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:userTask id=\"Task_ChooseColor\" name=\"Choose plastic color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_InStock_Split\" name=\"Color in stock at home?\" default=\"Flow_NotInStock\"/>\n    <bpmn:task id=\"Task_CheckRemaining\" name=\"Check remaining amount of color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Remaining_Split\" name=\"Less than 100 g left?\" default=\"Flow_NotUnder100\"/>\n    <bpmn:task id=\"Task_AddToShoppingList\" name=\"Add color to shopping list\"/>\n    <bpmn:task id=\"Task_OrderColor\" name=\"Order plastic color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Plastic_Merge\" name=\"Plastic available\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Prep_Split\" name=\"Start printer preparation\"/>\n    <bpmn:userTask id=\"Task_HeatPrinter\" name=\"Turn on printer and heat bed and extruder\">\n      <bpmn:documentation>The printer continuously sends its status back.</bpmn:documentation>\n    </bpmn:userTask>\n    <bpmn:task id=\"Task_GenerateGcode\" name=\"Generate G-code from STL file\"/>\n    <bpmn:parallelGateway id=\"Gateway_Prep_Join\" name=\"Printer and G-code ready\"/>\n    <bpmn:task id=\"Task_PrintModel\" name=\"Print model\"/>\n    <bpmn:endEvent id=\"EndEvent_Printed\" name=\"Model printed\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Sketches\" sourceRef=\"StartEvent_Request\" targetRef=\"Task_SendSketches\"/>\n    <bpmn:sequenceFlow id=\"Flow_Sketches_ResultWait\" sourceRef=\"Task_SendSketches\" targetRef=\"Event_ResultReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_ResultWait_Review\" sourceRef=\"Event_ResultReceived\" targetRef=\"Task_ReviewResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_Review_SatisfiedSplit\" sourceRef=\"Task_ReviewResult\" targetRef=\"Gateway_Satisfied_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Satisfied\" name=\"Yes\" sourceRef=\"Gateway_Satisfied_Split\" targetRef=\"Task_ChooseColor\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${satisfied}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotSatisfied\" name=\"No\" sourceRef=\"Gateway_Satisfied_Split\" targetRef=\"Task_RequestChanges\"/>\n    <bpmn:sequenceFlow id=\"Flow_Changes_UpdateWait\" sourceRef=\"Task_RequestChanges\" targetRef=\"Event_UpdatedResultReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_UpdateWait_Review\" sourceRef=\"Event_UpdatedResultReceived\" targetRef=\"Task_ReviewResult\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Color_InStockSplit\" sourceRef=\"Task_ChooseColor\" targetRef=\"Gateway_InStock_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_InStock\" name=\"Yes\" sourceRef=\"Gateway_InStock_Split\" targetRef=\"Task_CheckRemaining\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${inStock}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotInStock\" name=\"No\" sourceRef=\"Gateway_InStock_Split\" targetRef=\"Task_OrderColor\"/>\n    <bpmn:sequenceFlow id=\"Flow_Check_RemainingSplit\" sourceRef=\"Task_CheckRemaining\" targetRef=\"Gateway_Remaining_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Under100\" name=\"Yes\" sourceRef=\"Gateway_Remaining_Split\" targetRef=\"Task_AddToShoppingList\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${remainingUnder100}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotUnder100\" name=\"No\" sourceRef=\"Gateway_Remaining_Split\" targetRef=\"Gateway_Plastic_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ShoppingList_Merge\" sourceRef=\"Task_AddToShoppingList\" targetRef=\"Gateway_Plastic_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Order_Merge\" sourceRef=\"Task_OrderColor\" targetRef=\"Gateway_Plastic_Merge\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Merge_PrepSplit\" sourceRef=\"Gateway_Plastic_Merge\" targetRef=\"Gateway_Prep_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepSplit_Heat\" sourceRef=\"Gateway_Prep_Split\" targetRef=\"Task_HeatPrinter\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepSplit_Gcode\" sourceRef=\"Gateway_Prep_Split\" targetRef=\"Task_GenerateGcode\"/>\n    <bpmn:sequenceFlow id=\"Flow_Heat_PrepJoin\" sourceRef=\"Task_HeatPrinter\" targetRef=\"Gateway_Prep_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_Gcode_PrepJoin\" sourceRef=\"Task_GenerateGcode\" targetRef=\"Gateway_Prep_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepJoin_Print\" sourceRef=\"Gateway_Prep_Join\" targetRef=\"Task_PrintModel\"/>\n    <bpmn:sequenceFlow id=\"Flow_Print_End\" sourceRef=\"Task_PrintModel\" targetRef=\"EndEvent_Printed\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1210.7,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 67,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 22,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.496824,
+    "workflow_order_similarity": 0.729425,
+    "connection_f1": 0.545455,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.76,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.376382,
+    "activity_semantic_similarity": 0.670043,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.769231,
+    "activity_label_f1": 0.869565
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Custom3DPrint\"\n                  targetNamespace=\"http://example.org/bpmn/custom-3d-print\">\n  <bpmn:message id=\"Message_Sketches\" name=\"Sketches sent\"/>\n  <bpmn:message id=\"Message_ArtistResult\" name=\"Artist result delivered\"/>\n  <bpmn:message id=\"Message_ChangeRequest\" name=\"Change request sent\"/>\n  <bpmn:message id=\"Message_UpdatedResult\" name=\"Updated result delivered\"/>\n  <bpmn:message id=\"Message_PrinterStatus\" name=\"Printer status sent\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Custom3DPrint\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\" processRef=\"Process_Customer\"/>\n    <bpmn:participant id=\"Participant_Artist\" name=\"Artist\"/>\n    <bpmn:participant id=\"Participant_Printer\" name=\"3D printer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_SketchesToArtist\" name=\"Send sketches\" sourceRef=\"Task_SendSketches\" targetRef=\"Participant_Artist\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ResultFromArtist\" name=\"Deliver result\" sourceRef=\"Participant_Artist\" targetRef=\"Event_ResultReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ChangesToArtist\" name=\"Tell changes\" sourceRef=\"Task_RequestChanges\" targetRef=\"Participant_Artist\"/>\n    <bpmn:messageFlow id=\"MessageFlow_UpdatedFromArtist\" name=\"Deliver updated result\" sourceRef=\"Participant_Artist\" targetRef=\"Event_UpdatedResultReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_StatusFromPrinter\" name=\"Send status\" sourceRef=\"Participant_Printer\" targetRef=\"Event_StatusReceived\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Customer\" name=\"Instruct artist to create a 3D model and print it\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Request\" name=\"Custom 3D model requested\"/>\n\n    <bpmn:sendTask id=\"Task_SendSketches\" name=\"Send sketches to artist\" messageRef=\"Message_Sketches\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_ResultReceived\" name=\"Artist result received\">\n      <bpmn:messageEventDefinition id=\"MED_ResultReceived\" messageRef=\"Message_ArtistResult\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:userTask id=\"Task_ReviewResult\" name=\"Review result\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Satisfied_Split\" name=\"Satisfied with result?\" default=\"Flow_NotSatisfied\"/>\n    <bpmn:sendTask id=\"Task_RequestChanges\" name=\"Tell artist what to change\" messageRef=\"Message_ChangeRequest\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_UpdatedResultReceived\" name=\"Updated result received\">\n      <bpmn:messageEventDefinition id=\"MED_UpdatedResultReceived\" messageRef=\"Message_UpdatedResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:userTask id=\"Task_ChooseColor\" name=\"Choose plastic color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_InStock_Split\" name=\"Color in stock at home?\" default=\"Flow_NotInStock\"/>\n    <bpmn:task id=\"Task_CheckRemaining\" name=\"Check remaining amount of color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Remaining_Split\" name=\"Less than 100 g left?\" default=\"Flow_NotUnder100\"/>\n    <bpmn:task id=\"Task_AddToShoppingList\" name=\"Add color to shopping list\"/>\n    <bpmn:task id=\"Task_OrderColor\" name=\"Order plastic color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Plastic_Merge\" name=\"Plastic available\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Prep_Split\" name=\"Start printer preparation and G-code generation\"/>\n    <bpmn:userTask id=\"Task_HeatPrinter\" name=\"Turn on printer and heat bed and extruder\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_StatusReceived\" name=\"Printer status received\">\n      <bpmn:messageEventDefinition id=\"MED_StatusReceived\" messageRef=\"Message_PrinterStatus\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_PrinterReady_Split\" name=\"Printer ready?\" default=\"Flow_NotReady\"/>\n    <bpmn:task id=\"Task_GenerateGcode\" name=\"Generate G-code from STL file\"/>\n    <bpmn:parallelGateway id=\"Gateway_Prep_Join\" name=\"Printer and G-code ready\"/>\n    <bpmn:task id=\"Task_PrintModel\" name=\"Print model\"/>\n    <bpmn:endEvent id=\"EndEvent_Printed\" name=\"Model printed\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Sketches\" sourceRef=\"StartEvent_Request\" targetRef=\"Task_SendSketches\"/>\n    <bpmn:sequenceFlow id=\"Flow_Sketches_ResultWait\" sourceRef=\"Task_SendSketches\" targetRef=\"Event_ResultReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_ResultWait_Review\" sourceRef=\"Event_ResultReceived\" targetRef=\"Task_ReviewResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_Review_SatisfiedSplit\" sourceRef=\"Task_ReviewResult\" targetRef=\"Gateway_Satisfied_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Satisfied\" name=\"Yes\" sourceRef=\"Gateway_Satisfied_Split\" targetRef=\"Task_ChooseColor\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${satisfied}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotSatisfied\" name=\"No\" sourceRef=\"Gateway_Satisfied_Split\" targetRef=\"Task_RequestChanges\"/>\n    <bpmn:sequenceFlow id=\"Flow_Changes_UpdateWait\" sourceRef=\"Task_RequestChanges\" targetRef=\"Event_UpdatedResultReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_UpdateWait_Review\" sourceRef=\"Event_UpdatedResultReceived\" targetRef=\"Task_ReviewResult\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Color_InStockSplit\" sourceRef=\"Task_ChooseColor\" targetRef=\"Gateway_InStock_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_InStock\" name=\"Yes\" sourceRef=\"Gateway_InStock_Split\" targetRef=\"Task_CheckRemaining\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${inStock}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotInStock\" name=\"No\" sourceRef=\"Gateway_InStock_Split\" targetRef=\"Task_OrderColor\"/>\n    <bpmn:sequenceFlow id=\"Flow_Check_RemainingSplit\" sourceRef=\"Task_CheckRemaining\" targetRef=\"Gateway_Remaining_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Under100\" name=\"Yes\" sourceRef=\"Gateway_Remaining_Split\" targetRef=\"Task_AddToShoppingList\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${remainingUnder100}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotUnder100\" name=\"No\" sourceRef=\"Gateway_Remaining_Split\" targetRef=\"Gateway_Plastic_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ShoppingList_Merge\" sourceRef=\"Task_AddToShoppingList\" targetRef=\"Gateway_Plastic_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Order_Merge\" sourceRef=\"Task_OrderColor\" targetRef=\"Gateway_Plastic_Merge\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Merge_PrepSplit\" sourceRef=\"Gateway_Plastic_Merge\" targetRef=\"Gateway_Prep_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepSplit_Heat\" sourceRef=\"Gateway_Prep_Split\" targetRef=\"Task_HeatPrinter\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepSplit_Gcode\" sourceRef=\"Gateway_Prep_Split\" targetRef=\"Task_GenerateGcode\"/>\n    <bpmn:sequenceFlow id=\"Flow_Heat_StatusWait\" sourceRef=\"Task_HeatPrinter\" targetRef=\"Event_StatusReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Status_ReadyCheck\" sourceRef=\"Event_StatusReceived\" targetRef=\"Gateway_PrinterReady_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Ready\" name=\"Yes\" sourceRef=\"Gateway_PrinterReady_Split\" targetRef=\"Gateway_Prep_Join\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${printerReady}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotReady\" name=\"No\" sourceRef=\"Gateway_PrinterReady_Split\" targetRef=\"Event_StatusReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Gcode_PrepJoin\" sourceRef=\"Task_GenerateGcode\" targetRef=\"Gateway_Prep_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepJoin_Print\" sourceRef=\"Gateway_Prep_Join\" targetRef=\"Task_PrintModel\"/>\n    <bpmn:sequenceFlow id=\"Flow_Print_End\" sourceRef=\"Task_PrintModel\" targetRef=\"EndEvent_Printed\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 2695.4,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 71,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 9,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 24,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.459913,
+    "workflow_order_similarity": 0.701217,
+    "connection_f1": 0.526316,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.84,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.35479,
+    "activity_semantic_similarity": 0.670043,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.769231,
+    "activity_label_f1": 0.869565
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Custom3DPrint\"\n                  targetNamespace=\"http://example.org/bpmn/custom-3d-print\">\n  <bpmn:message id=\"Message_Sketches\" name=\"Sketches sent\"/>\n  <bpmn:message id=\"Message_ChangeRequest\" name=\"Change request sent\"/>\n  <bpmn:message id=\"Message_ArtistResult\" name=\"Artist result with STL delivered\"/>\n  <bpmn:message id=\"Message_UpdatedResult\" name=\"Updated result with STL delivered\"/>\n  <bpmn:message id=\"Message_PrinterStatus\" name=\"Printer status sent\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Custom3DPrint\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\" processRef=\"Process_Customer\"/>\n    <bpmn:participant id=\"Participant_Artist\" name=\"Artist\"/>\n    <bpmn:participant id=\"Participant_Printer\" name=\"3D printer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_SketchesToArtist\" name=\"Send sketches\" sourceRef=\"Task_SendSketches\" targetRef=\"Participant_Artist\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ChangesToArtist\" name=\"Tell changes\" sourceRef=\"Task_RequestChanges\" targetRef=\"Participant_Artist\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ResultFromArtist\" name=\"Deliver result\" sourceRef=\"Participant_Artist\" targetRef=\"Event_ResultReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_UpdatedFromArtist\" name=\"Deliver updated result\" sourceRef=\"Participant_Artist\" targetRef=\"Event_UpdatedResultReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_StatusFromPrinter\" name=\"Send status\" sourceRef=\"Participant_Printer\" targetRef=\"Event_StatusReceived\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Customer\" name=\"Instruct artist to create a 3D model and print it\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Request\" name=\"Custom 3D model desired\"/>\n\n    <bpmn:sendTask id=\"Task_SendSketches\" name=\"Send sketches to artist\" messageRef=\"Message_Sketches\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_ResultReceived\" name=\"Artist result received\">\n      <bpmn:messageEventDefinition id=\"MED_ResultReceived\" messageRef=\"Message_ArtistResult\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_Review_Merge\" name=\"Result to review\"/>\n    <bpmn:userTask id=\"Task_ReviewResult\" name=\"Review result\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Satisfied_Split\" name=\"Satisfied with result?\" default=\"Flow_NotSatisfied\"/>\n    <bpmn:sendTask id=\"Task_RequestChanges\" name=\"Tell artist what to change\" messageRef=\"Message_ChangeRequest\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_UpdatedResultReceived\" name=\"Updated result received\">\n      <bpmn:messageEventDefinition id=\"MED_UpdatedResultReceived\" messageRef=\"Message_UpdatedResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:userTask id=\"Task_ChooseColor\" name=\"Choose plastic color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_InStock_Split\" name=\"Color in stock at home?\" default=\"Flow_NotInStock\"/>\n    <bpmn:task id=\"Task_CheckRemaining\" name=\"Check remaining amount of color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Remaining_Split\" name=\"Less than 100 g left?\" default=\"Flow_NotUnder100\"/>\n    <bpmn:task id=\"Task_AddToShoppingList\" name=\"Add color to shopping list\"/>\n    <bpmn:task id=\"Task_OrderColor\" name=\"Order plastic color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Plastic_Merge\" name=\"Plastic available\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Prep_Split\" name=\"Start printer preparation and G-code generation\"/>\n    <bpmn:userTask id=\"Task_TurnOnPrinter\" name=\"Turn on printer and heat bed and extruder\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StatusMerge\" name=\"Status to check\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_StatusReceived\" name=\"Printer status received\">\n      <bpmn:messageEventDefinition id=\"MED_StatusReceived\" messageRef=\"Message_PrinterStatus\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_StatusReady_Split\" name=\"Printer ready?\" default=\"Flow_StatusNotReady\"/>\n    <bpmn:task id=\"Task_GenerateGcode\" name=\"Generate G-code from STL file\"/>\n    <bpmn:parallelGateway id=\"Gateway_Prep_Join\" name=\"Printer and G-code ready\"/>\n    <bpmn:task id=\"Task_PrintModel\" name=\"Print model\"/>\n    <bpmn:endEvent id=\"EndEvent_Printed\" name=\"Model printed\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Sketches\" sourceRef=\"StartEvent_Request\" targetRef=\"Task_SendSketches\"/>\n    <bpmn:sequenceFlow id=\"Flow_Sketches_ResultWait\" sourceRef=\"Task_SendSketches\" targetRef=\"Event_ResultReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_ResultWait_ReviewMerge\" sourceRef=\"Event_ResultReceived\" targetRef=\"Gateway_Review_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_UpdateWait_ReviewMerge\" sourceRef=\"Event_UpdatedResultReceived\" targetRef=\"Gateway_Review_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReviewMerge_Review\" sourceRef=\"Gateway_Review_Merge\" targetRef=\"Task_ReviewResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_Review_SatisfiedSplit\" sourceRef=\"Task_ReviewResult\" targetRef=\"Gateway_Satisfied_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Satisfied\" name=\"Yes\" sourceRef=\"Gateway_Satisfied_Split\" targetRef=\"Task_ChooseColor\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${satisfied}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotSatisfied\" name=\"No\" sourceRef=\"Gateway_Satisfied_Split\" targetRef=\"Task_RequestChanges\"/>\n    <bpmn:sequenceFlow id=\"Flow_Changes_UpdateWait\" sourceRef=\"Task_RequestChanges\" targetRef=\"Event_UpdatedResultReceived\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Color_InStockSplit\" sourceRef=\"Task_ChooseColor\" targetRef=\"Gateway_InStock_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_InStock\" name=\"Yes\" sourceRef=\"Gateway_InStock_Split\" targetRef=\"Task_CheckRemaining\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${inStock}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotInStock\" name=\"No\" sourceRef=\"Gateway_InStock_Split\" targetRef=\"Task_OrderColor\"/>\n    <bpmn:sequenceFlow id=\"Flow_Check_RemainingSplit\" sourceRef=\"Task_CheckRemaining\" targetRef=\"Gateway_Remaining_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Under100\" name=\"Yes\" sourceRef=\"Gateway_Remaining_Split\" targetRef=\"Task_AddToShoppingList\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${remainingUnder100}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotUnder100\" name=\"No\" sourceRef=\"Gateway_Remaining_Split\" targetRef=\"Gateway_Plastic_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ShoppingList_Merge\" sourceRef=\"Task_AddToShoppingList\" targetRef=\"Gateway_Plastic_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Order_Merge\" sourceRef=\"Task_OrderColor\" targetRef=\"Gateway_Plastic_Merge\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Merge_PrepSplit\" sourceRef=\"Gateway_Plastic_Merge\" targetRef=\"Gateway_Prep_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepSplit_TurnOn\" sourceRef=\"Gateway_Prep_Split\" targetRef=\"Task_TurnOnPrinter\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepSplit_Gcode\" sourceRef=\"Gateway_Prep_Split\" targetRef=\"Task_GenerateGcode\"/>\n    <bpmn:sequenceFlow id=\"Flow_TurnOn_StatusMerge\" sourceRef=\"Task_TurnOnPrinter\" targetRef=\"Gateway_StatusMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_StatusMerge_StatusWait\" sourceRef=\"Gateway_StatusMerge\" targetRef=\"Event_StatusReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_StatusWait_ReadyCheck\" sourceRef=\"Event_StatusReceived\" targetRef=\"Gateway_StatusReady_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_StatusReady\" name=\"Yes\" sourceRef=\"Gateway_StatusReady_Split\" targetRef=\"Gateway_Prep_Join\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${printerReady}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_StatusNotReady\" name=\"No\" sourceRef=\"Gateway_StatusReady_Split\" targetRef=\"Gateway_StatusMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Gcode_PrepJoin\" sourceRef=\"Task_GenerateGcode\" targetRef=\"Gateway_Prep_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepJoin_Print\" sourceRef=\"Gateway_Prep_Join\" targetRef=\"Task_PrintModel\"/>\n    <bpmn:sequenceFlow id=\"Flow_Print_End\" sourceRef=\"Task_PrintModel\" targetRef=\"EndEvent_Printed\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 3466.1,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 70,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 9,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 24,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.460022,
+    "workflow_order_similarity": 0.742063,
+    "connection_f1": 0.586207,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.84,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.376382,
+    "activity_semantic_similarity": 0.670043,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.769231,
+    "activity_label_f1": 0.869565
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Custom3DPrint\"\n                  targetNamespace=\"http://example.org/bpmn/custom-3d-print\">\n  <bpmn:message id=\"Message_Sketches\" name=\"Sketches sent\"/>\n  <bpmn:message id=\"Message_ArtistResult\" name=\"Artist result delivered\"/>\n  <bpmn:message id=\"Message_ChangeRequest\" name=\"Change request sent\"/>\n  <bpmn:message id=\"Message_UpdatedResult\" name=\"Updated result delivered\"/>\n  <bpmn:message id=\"Message_PrinterStatus\" name=\"Printer status sent\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Custom3DPrint\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\" processRef=\"Process_Customer\"/>\n    <bpmn:participant id=\"Participant_Artist\" name=\"Artist\"/>\n    <bpmn:messageFlow id=\"MessageFlow_SketchesToArtist\" name=\"Send sketches\" sourceRef=\"Task_SendSketches\" targetRef=\"Participant_Artist\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ResultFromArtist\" name=\"Deliver result\" sourceRef=\"Participant_Artist\" targetRef=\"Event_ResultReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ChangesToArtist\" name=\"Tell changes\" sourceRef=\"Task_RequestChanges\" targetRef=\"Participant_Artist\"/>\n    <bpmn:messageFlow id=\"MessageFlow_UpdatedFromArtist\" name=\"Deliver updated result\" sourceRef=\"Participant_Artist\" targetRef=\"Event_UpdatedResultReceived\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Customer\" name=\"Instruct artist to create a 3D model and print it\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Request\" name=\"Custom 3D model requested\"/>\n\n    <bpmn:sendTask id=\"Task_SendSketches\" name=\"Send sketches to artist\" messageRef=\"Message_Sketches\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_ResultReceived\" name=\"Artist result received\">\n      <bpmn:messageEventDefinition id=\"MED_ResultReceived\" messageRef=\"Message_ArtistResult\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_ReviewMerge\" name=\"Result available\"/>\n    <bpmn:userTask id=\"Task_ReviewResult\" name=\"Review result\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Satisfied_Split\" name=\"Satisfied with result?\" default=\"Flow_NotSatisfied\"/>\n    <bpmn:sendTask id=\"Task_RequestChanges\" name=\"Tell artist what to change\" messageRef=\"Message_ChangeRequest\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_UpdatedResultReceived\" name=\"Updated result received\">\n      <bpmn:messageEventDefinition id=\"MED_UpdatedResultReceived\" messageRef=\"Message_UpdatedResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:userTask id=\"Task_ChooseColor\" name=\"Choose plastic color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_InStock_Split\" name=\"Color in stock at home?\" default=\"Flow_NotInStock\"/>\n    <bpmn:task id=\"Task_CheckRemaining\" name=\"Check remaining amount of color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Remaining_Split\" name=\"Less than 100 g left?\" default=\"Flow_NotUnder100\"/>\n    <bpmn:task id=\"Task_AddToShoppingList\" name=\"Add color to shopping list\"/>\n    <bpmn:task id=\"Task_OrderColor\" name=\"Order plastic color\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Plastic_Merge\" name=\"Plastic available\"/>\n\n    <bpmn:parallelGateway id=\"Gateway_Prep_Split\" name=\"Start printer preparation\"/>\n    <bpmn:userTask id=\"Task_HeatPrinter\" name=\"Turn on printer and heat bed and extruder\"/>\n    <bpmn:task id=\"Task_GenerateGcode\" name=\"Generate G-code from STL file\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StatusMerge\" name=\"Await printer status\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_PrinterStatus\" name=\"Printer status received\">\n      <bpmn:messageEventDefinition id=\"MED_PrinterStatus\" messageRef=\"Message_PrinterStatus\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_PrinterReady_Split\" name=\"Printer heated and ready?\" default=\"Flow_NotReady\"/>\n    <bpmn:parallelGateway id=\"Gateway_Prep_Join\" name=\"Printer ready and G-code generated\"/>\n    <bpmn:task id=\"Task_PrintModel\" name=\"Print model\"/>\n    <bpmn:endEvent id=\"EndEvent_Printed\" name=\"Model printed\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Sketches\" sourceRef=\"StartEvent_Request\" targetRef=\"Task_SendSketches\"/>\n    <bpmn:sequenceFlow id=\"Flow_Sketches_ResultWait\" sourceRef=\"Task_SendSketches\" targetRef=\"Event_ResultReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_ResultWait_ReviewMerge\" sourceRef=\"Event_ResultReceived\" targetRef=\"Gateway_ReviewMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_UpdateWait_ReviewMerge\" sourceRef=\"Event_UpdatedResultReceived\" targetRef=\"Gateway_ReviewMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReviewMerge_Review\" sourceRef=\"Gateway_ReviewMerge\" targetRef=\"Task_ReviewResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_Review_SatisfiedSplit\" sourceRef=\"Task_ReviewResult\" targetRef=\"Gateway_Satisfied_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Satisfied\" name=\"Yes\" sourceRef=\"Gateway_Satisfied_Split\" targetRef=\"Task_ChooseColor\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${satisfied}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotSatisfied\" name=\"No\" sourceRef=\"Gateway_Satisfied_Split\" targetRef=\"Task_RequestChanges\"/>\n    <bpmn:sequenceFlow id=\"Flow_Changes_UpdateWait\" sourceRef=\"Task_RequestChanges\" targetRef=\"Event_UpdatedResultReceived\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Color_InStockSplit\" sourceRef=\"Task_ChooseColor\" targetRef=\"Gateway_InStock_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_InStock\" name=\"Yes\" sourceRef=\"Gateway_InStock_Split\" targetRef=\"Task_CheckRemaining\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${inStock}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotInStock\" name=\"No\" sourceRef=\"Gateway_InStock_Split\" targetRef=\"Task_OrderColor\"/>\n    <bpmn:sequenceFlow id=\"Flow_Check_RemainingSplit\" sourceRef=\"Task_CheckRemaining\" targetRef=\"Gateway_Remaining_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Under100\" name=\"Yes\" sourceRef=\"Gateway_Remaining_Split\" targetRef=\"Task_AddToShoppingList\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${remainingUnder100}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotUnder100\" name=\"No\" sourceRef=\"Gateway_Remaining_Split\" targetRef=\"Gateway_Plastic_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ShoppingList_Merge\" sourceRef=\"Task_AddToShoppingList\" targetRef=\"Gateway_Plastic_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Order_Merge\" sourceRef=\"Task_OrderColor\" targetRef=\"Gateway_Plastic_Merge\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Merge_PrepSplit\" sourceRef=\"Gateway_Plastic_Merge\" targetRef=\"Gateway_Prep_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepSplit_Heat\" sourceRef=\"Gateway_Prep_Split\" targetRef=\"Task_HeatPrinter\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepSplit_Gcode\" sourceRef=\"Gateway_Prep_Split\" targetRef=\"Task_GenerateGcode\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepSplit_StatusMerge\" sourceRef=\"Gateway_Prep_Split\" targetRef=\"Gateway_StatusMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_StatusMerge_StatusWait\" sourceRef=\"Gateway_StatusMerge\" targetRef=\"Event_PrinterStatus\"/>\n    <bpmn:sequenceFlow id=\"Flow_StatusWait_ReadyCheck\" sourceRef=\"Event_PrinterStatus\" targetRef=\"Gateway_PrinterReady_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Ready\" name=\"Yes\" sourceRef=\"Gateway_PrinterReady_Split\" targetRef=\"Gateway_Prep_Join\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${printerReady}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotReady\" name=\"No\" sourceRef=\"Gateway_PrinterReady_Split\" targetRef=\"Gateway_StatusMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Heat_PrepJoin\" sourceRef=\"Task_HeatPrinter\" targetRef=\"Gateway_Prep_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_Gcode_PrepJoin\" sourceRef=\"Task_GenerateGcode\" targetRef=\"Gateway_Prep_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_PrepJoin_Print\" sourceRef=\"Gateway_Prep_Join\" targetRef=\"Task_PrintModel\"/>\n    <bpmn:sequenceFlow id=\"Flow_Print_End\" sourceRef=\"Task_PrintModel\" targetRef=\"EndEvent_Printed\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": true,
+  "failed_levels": [],
+  "metrics": {
+   "semantic_similarity": 0.540026,
+   "activity_semantic_similarity": 0.670043,
+   "activity_label_precision": 1.0,
+   "activity_label_recall": 0.769231,
+   "activity_label_f1": 0.869565,
+   "activity_matched": 10,
+   "activity_reference": 13,
+   "activity_generated": 10,
+   "alignment_coverage": 0.72,
+   "connection_precision": 0.608696,
+   "connection_recall": 0.482759,
+   "connection_f1": 0.538462,
+   "connection_tp": 14,
+   "connection_fp": 9,
+   "connection_fn": 15,
+   "workflow_order_similarity": 0.687898,
+   "order_consistency": 0.955414,
+   "order_coverage": 0.72,
+   "order_tp": 150,
+   "order_fp": 2,
+   "order_fn": 5,
+   "collaboration_similarity": null,
+   "collaboration_applicable": false,
+   "collaboration_tp": 0,
+   "collaboration_fp": 0,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 0.9,
+   "type_recall_diagnostic": 0.72,
+   "type_f1_diagnostic": 0.8,
+   "counts": {
+    "gold_nodes": 25,
+    "generated_nodes": 20,
+    "gold_flows": 29,
+    "generated_flows": 23
+   },
+   "collaboration_ignored": true,
+   "semantic_similarity_strict": 0.428297,
+   "activity_semantic_similarity_strict": 0.670043,
+   "alignment_coverage_strict": 0.72,
+   "connection_precision_strict": 0.608696,
+   "connection_recall_strict": 0.482759,
+   "connection_f1_strict": 0.538462,
+   "workflow_order_similarity_strict": 0.687898,
+   "collaboration_similarity_strict": 0.0,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T5",
+   "T6"
+  ],
+  "error_counts": {
+   "T5": 24,
+   "T6": 3
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-090",
+    "instruction": "When the description says an external device keeps sending its status while a preparation activity runs in parallel with other work, and a later step may only start once the status shows the device is ready: Model the preparation as a task that runs in parallel with the other work. Model each arriving status as a message intermediate catch event that waits for the message, followed by an exclusive gateway that checks readiness. Give the not-ready branch a sequence flow back to the status wait, and give the ready branch a sequence flow to the synchronization point of the parallel work. Do not place the status check after the parallel join, and do not model the repeated status as a single one-time wait.",
+    "situation": "the description says an external device keeps sending its status while a preparation activity runs in parallel with other work, and a later step may only start once the status shows the device is ready",
+    "source": "learned guideline (new)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-091",
+    "instruction": "When the description states a yes/no check on a condition (for example, whether a supply or a state is already in place) and the activities that follow that check are then started together, so the check decides whether the concurrent start is reached: Model an exclusive gateway directly after the activity that establishes the condition, with one labeled flow for each answer. Route the branch that needs a preparatory step through that step and into a separate exclusive merge placed before the parallel gateway that starts the concurrent activities. Do not connect the check straight to the parallel gateway, and do not leave the decision implicit before the concurrent start.",
+    "situation": "the description states a yes/no check on a condition (for example, whether a supply or a state is already in place) and the activities that follow that check are then started together, so the check decides whether the concurrent start is reached",
+    "source": "learned guideline (refines GW-02)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "GW-03",
+    "instruction": "Use an exclusive merge for alternative paths; it does not wait for inactive alternatives.",
+    "situation": "the description gives two alternative branches (if ... otherwise ...) that both lead to the same next activity, and one branch may include an extra optional step before reaching that activity",
+    "source": "documentation rule not applied",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-092",
+    "instruction": "When the description says that alternative paths, chosen by a condition and one of which contains an extra action, come together again so that one following step is performed after either path: Place an exclusive gateway as a merge where the alternative paths meet, before the shared following step. Route each alternative path into that merge gateway, then connect the merge gateway to the shared step. Do not route several alternative paths directly into the shared step without a merge gateway.",
+    "situation": "the description says that alternative paths, chosen by a condition and one of which contains an extra action, come together again so that one following step is performed after either path",
+    "source": "learned guideline (refines GW-03)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-093",
+    "instruction": "When the description states a yes/no condition on the state of something and then gives the opposite case as its own separate sentence (for example 'If X, do A' followed by 'If not X, do B'), with the condition possibly followed by a further check on a different criterion: Model the condition as an exclusive gateway split with one labeled outgoing branch for each stated case, including the opposite case described in the separate sentence, and make the branch for the opposite case perform its stated action. If a further check on a different criterion follows one of the cases, place a second exclusive gateway on that branch. Rejoin alternative branches that reach a common later element with an exclusive merge placed just before it.",
+    "situation": "the description states a yes/no condition on the state of something and then gives the opposite case as its own separate sentence (for example 'If X, do A' followed by 'If not X, do B'), with the condition possibly followed by a further check on a different criterion",
+    "source": "learned guideline (refines GW-02)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-014",
+    "instruction": "When the description states that an activity may optionally be carried out (for example 'may also conduct' an activity), with no condition beyond the team's own choice, and the process continues with a shared step afterwards: Model the optional activity as one branch of an exclusive gateway split, with a labeled bypass flow that skips it. Connect the end of the optional activity and the bypass flow into a separate exclusive gateway merge placed before the shared step. Do not link the optional activity directly to the following step, and do not omit the split or the merge.",
+    "situation": "the description states a conditional check (for example 'if you have it in stock, check how much is left; if it is under a stated amount, add it to the list') where the conditioned step is performed only when the condition holds, and the process continues afterwards regardless of the outcome",
+    "source": "learned guideline (refines GW-03)",
+    "failure_type": "T6"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-090",
+    "LRN-091"
+   ],
+   "before": {
+    "semantic_similarity": 0.540026,
+    "workflow_order_similarity": 0.687898,
+    "connection_f1": 0.538462,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.72,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.428297,
+    "activity_semantic_similarity": 0.670043,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.769231,
+    "activity_label_f1": 0.869565
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 24,
+    "T6": 3
+   },
+   "reverted": {
+    "draft": 1,
+    "errors": {
+     "T5": 25,
+     "T6": 3
+    },
+    "errors_before": {
+     "T5": 24,
+     "T6": 3
+    },
+    "mean_change": 0.01133
+   },
+   "after": {
+    "semantic_similarity": 0.540026,
+    "workflow_order_similarity": 0.687898,
+    "connection_f1": 0.538462,
+    "alignment_coverage": 0.72
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 0,
+   "errors_after": {
+    "T5": 24,
+    "T6": 3
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.540026,
+    "activity_semantic_similarity": 0.670043,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.769231,
+    "activity_label_f1": 0.869565,
+    "activity_matched": 10,
+    "activity_reference": 13,
+    "activity_generated": 10,
+    "alignment_coverage": 0.72,
+    "connection_precision": 0.608696,
+    "connection_recall": 0.482759,
+    "connection_f1": 0.538462,
+    "connection_tp": 14,
+    "connection_fp": 9,
+    "connection_fn": 15,
+    "workflow_order_similarity": 0.687898,
+    "order_consistency": 0.955414,
+    "order_coverage": 0.72,
+    "order_tp": 150,
+    "order_fp": 2,
+    "order_fn": 5,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.9,
+    "type_recall_diagnostic": 0.72,
+    "type_f1_diagnostic": 0.8,
+    "counts": {
+     "gold_nodes": 25,
+     "generated_nodes": 20,
+     "gold_flows": 29,
+     "generated_flows": 23
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.428297,
+    "activity_semantic_similarity_strict": 0.670043,
+    "alignment_coverage_strict": 0.72,
+    "connection_precision_strict": 0.608696,
+    "connection_recall_strict": 0.482759,
+    "connection_f1_strict": 0.538462,
+    "workflow_order_similarity_strict": 0.687898,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 58,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-090": {
+     "failure_type": "T5",
+     "errors_before": 24,
+     "errors_after": 24,
+     "removed": 0
+    },
+    "LRN-091": {
+     "failure_type": "T6",
+     "errors_before": 3,
+     "errors_after": 3,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "GW-03",
+    "LRN-092"
+   ],
+   "before": {
+    "semantic_similarity": 0.540026,
+    "workflow_order_similarity": 0.687898,
+    "connection_f1": 0.538462,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.72,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.428297,
+    "activity_semantic_similarity": 0.670043,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.769231,
+    "activity_label_f1": 0.869565
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 24,
+    "T6": 3
+   },
+   "reverted": {
+    "draft": 2,
+    "errors": {
+     "T5": 27,
+     "T6": 3
+    },
+    "errors_before": {
+     "T5": 24,
+     "T6": 3
+    },
+    "mean_change": 0.010265
+   },
+   "after": {
+    "semantic_similarity": 0.540026,
+    "workflow_order_similarity": 0.687898,
+    "connection_f1": 0.538462,
+    "alignment_coverage": 0.72
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 0,
+   "errors_after": {
+    "T5": 24,
+    "T6": 3
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.540026,
+    "activity_semantic_similarity": 0.670043,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.769231,
+    "activity_label_f1": 0.869565,
+    "activity_matched": 10,
+    "activity_reference": 13,
+    "activity_generated": 10,
+    "alignment_coverage": 0.72,
+    "connection_precision": 0.608696,
+    "connection_recall": 0.482759,
+    "connection_f1": 0.538462,
+    "connection_tp": 14,
+    "connection_fp": 9,
+    "connection_fn": 15,
+    "workflow_order_similarity": 0.687898,
+    "order_consistency": 0.955414,
+    "order_coverage": 0.72,
+    "order_tp": 150,
+    "order_fp": 2,
+    "order_fn": 5,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.9,
+    "type_recall_diagnostic": 0.72,
+    "type_f1_diagnostic": 0.8,
+    "counts": {
+     "gold_nodes": 25,
+     "generated_nodes": 20,
+     "gold_flows": 29,
+     "generated_flows": 23
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.428297,
+    "activity_semantic_similarity_strict": 0.670043,
+    "alignment_coverage_strict": 0.72,
+    "connection_precision_strict": 0.608696,
+    "connection_recall_strict": 0.482759,
+    "connection_f1_strict": 0.538462,
+    "workflow_order_similarity_strict": 0.687898,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 58,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 6,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-092": {
+     "failure_type": "T6",
+     "errors_before": 3,
+     "errors_after": 3,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [
+    "LRN-093",
+    "LRN-014"
+   ],
+   "before": {
+    "semantic_similarity": 0.540026,
+    "workflow_order_similarity": 0.687898,
+    "connection_f1": 0.538462,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.72,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.428297,
+    "activity_semantic_similarity": 0.670043,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.769231,
+    "activity_label_f1": 0.869565
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 24,
+    "T6": 3
+   },
+   "after": {
+    "semantic_similarity": 0.460022,
+    "workflow_order_similarity": 0.742063,
+    "connection_f1": 0.586207,
+    "alignment_coverage": 0.84
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": -0.080004,
+    "workflow_order_similarity": 0.054165,
+    "connection_f1": 0.047745,
+    "alignment_coverage": 0.12
+   },
+   "mean_change": 0.035476,
+   "kept_round": 3,
+   "errors_after": {
+    "T5": 24,
+    "T6": 3
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.460022,
+    "activity_semantic_similarity": 0.670043,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.769231,
+    "activity_label_f1": 0.869565,
+    "activity_matched": 10,
+    "activity_reference": 13,
+    "activity_generated": 10,
+    "alignment_coverage": 0.84,
+    "connection_precision": 0.586207,
+    "connection_recall": 0.586207,
+    "connection_f1": 0.586207,
+    "connection_tp": 17,
+    "connection_fp": 12,
+    "connection_fn": 12,
+    "workflow_order_similarity": 0.742063,
+    "order_consistency": 0.883408,
+    "order_coverage": 0.84,
+    "order_tp": 197,
+    "order_fp": 12,
+    "order_fn": 14,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.875,
+    "type_recall_diagnostic": 0.84,
+    "type_f1_diagnostic": 0.8571,
+    "counts": {
+     "gold_nodes": 25,
+     "generated_nodes": 24,
+     "gold_flows": 29,
+     "generated_flows": 29
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.376382,
+    "activity_semantic_similarity_strict": 0.670043,
+    "alignment_coverage_strict": 0.84,
+    "connection_precision_strict": 0.586207,
+    "connection_recall_strict": 0.586207,
+    "connection_f1_strict": 0.586207,
+    "workflow_order_similarity_strict": 0.742063,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 70,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 9,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 24,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-014": {
+     "failure_type": "T5",
+     "errors_before": 24,
+     "errors_after": 24,
+     "removed": 0
+    },
+    "LRN-093": {
+     "failure_type": "T5",
+     "errors_before": 24,
+     "errors_after": 24,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.460022,
+  "activity_semantic_similarity": 0.670043,
+  "activity_label_precision": 1.0,
+  "activity_label_recall": 0.769231,
+  "activity_label_f1": 0.869565,
+  "activity_matched": 10,
+  "activity_reference": 13,
+  "activity_generated": 10,
+  "alignment_coverage": 0.84,
+  "connection_precision": 0.586207,
+  "connection_recall": 0.586207,
+  "connection_f1": 0.586207,
+  "connection_tp": 17,
+  "connection_fp": 12,
+  "connection_fn": 12,
+  "workflow_order_similarity": 0.742063,
+  "order_consistency": 0.883408,
+  "order_coverage": 0.84,
+  "order_tp": 197,
+  "order_fp": 12,
+  "order_fn": 14,
+  "collaboration_similarity": null,
+  "collaboration_applicable": false,
+  "collaboration_tp": 0,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 0.875,
+  "type_recall_diagnostic": 0.84,
+  "type_f1_diagnostic": 0.8571,
+  "counts": {
+   "gold_nodes": 25,
+   "generated_nodes": 24,
+   "gold_flows": 29,
+   "generated_flows": 29
+  },
+  "collaboration_ignored": true,
+  "semantic_similarity_strict": 0.376382,
+  "activity_semantic_similarity_strict": 0.670043,
+  "alignment_coverage_strict": 0.84,
+  "connection_precision_strict": 0.586207,
+  "connection_recall_strict": 0.586207,
+  "connection_f1_strict": 0.586207,
+  "workflow_order_similarity_strict": 0.742063,
+  "collaboration_similarity_strict": 0.0,
+  "collaboration_applicable_strict": true
+ }
+}

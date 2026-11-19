@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_LegoMachine" targetNamespace="http://example.org/bpmn/lego-machine">
+  <bpmn:process id="Process_LegoMachine" name="Building a custom machine out of Lego bricks" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_1" name="Machine build started">
+      <bpmn:outgoing>Flow_StartToDesign</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_DevelopDesign" name="Develop basic design">
+      <bpmn:incoming>Flow_StartToDesign</bpmn:incoming>
+      <bpmn:outgoing>Flow_DesignToOrder</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_OrderSets" name="Order Lego brick sets">
+      <bpmn:incoming>Flow_DesignToOrder</bpmn:incoming>
+      <bpmn:outgoing>Flow_OrderToHandOver</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:manualTask id="Task_HandOverSets" name="Hand over Lego sets to children">
+      <bpmn:incoming>Flow_OrderToHandOver</bpmn:incoming>
+      <bpmn:outgoing>Flow_HandOverToSort</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:manualTask id="Task_SortParts" name="Sort parts into containers">
+      <bpmn:incoming>Flow_HandOverToSort</bpmn:incoming>
+      <bpmn:outgoing>Flow_SortToEntry</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gateway_BuildEntry" name="Subcomponent build entry">
+      <bpmn:incoming>Flow_SortToEntry</bpmn:incoming>
+      <bpmn:incoming>Flow_ReorderToEntry</bpmn:incoming>
+      <bpmn:incoming>Flow_RedesignToEntry</bpmn:incoming>
+      <bpmn:incoming>Flow_MoreToBuild</bpmn:incoming>
+      <bpmn:outgoing>Flow_EntryToPartsCheck</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_PartsCheck" name="Container has parts?" default="Flow_HasParts">
+      <bpmn:incoming>Flow_EntryToPartsCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_HasParts</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoParts</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ReorderParts" name="Reorder individual parts">
+      <bpmn:incoming>Flow_NoParts</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReorderToEntry</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_BuildSubcomponent" name="Build subcomponent">
+      <bpmn:incoming>Flow_HasParts</bpmn:incoming>
+      <bpmn:outgoing>Flow_BuildToTest</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_TestSubcomponent" name="Test subcomponent individually">
+      <bpmn:incoming>Flow_BuildToTest</bpmn:incoming>
+      <bpmn:outgoing>Flow_TestToResult</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_TestResult" name="Test successful?" default="Flow_TestFailed">
+      <bpmn:incoming>Flow_TestToResult</bpmn:incoming>
+      <bpmn:outgoing>Flow_TestPassed</bpmn:outgoing>
+      <bpmn:outgoing>Flow_TestFailed</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_RedesignSubcomponent" name="Redesign and rebuild subcomponent">
+      <bpmn:incoming>Flow_TestFailed</bpmn:incoming>
+      <bpmn:outgoing>Flow_RedesignToEntry</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_AllTested" name="All subcomponents built and tested successfully?" default="Flow_MoreToBuild">
+      <bpmn:incoming>Flow_TestPassed</bpmn:incoming>
+      <bpmn:outgoing>Flow_AllDone</bpmn:outgoing>
+      <bpmn:outgoing>Flow_MoreToBuild</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_AssembleMachine" name="Assemble subcomponents into machine">
+      <bpmn:incoming>Flow_AllDone</bpmn:incoming>
+      <bpmn:outgoing>Flow_AssembleToEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_MachineComplete" name="Machine completed">
+      <bpmn:incoming>Flow_AssembleToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_StartToDesign" sourceRef="StartEvent_1" targetRef="Task_DevelopDesign" />
+    <bpmn:sequenceFlow id="Flow_DesignToOrder" sourceRef="Task_DevelopDesign" targetRef="Task_OrderSets" />
+    <bpmn:sequenceFlow id="Flow_OrderToHandOver" sourceRef="Task_OrderSets" targetRef="Task_HandOverSets" />
+    <bpmn:sequenceFlow id="Flow_HandOverToSort" sourceRef="Task_HandOverSets" targetRef="Task_SortParts" />
+    <bpmn:sequenceFlow id="Flow_SortToEntry" sourceRef="Task_SortParts" targetRef="Gateway_BuildEntry" />
+    <bpmn:sequenceFlow id="Flow_EntryToPartsCheck" sourceRef="Gateway_BuildEntry" targetRef="Gateway_PartsCheck" />
+    <bpmn:sequenceFlow id="Flow_HasParts" name="Yes, parts available" sourceRef="Gateway_PartsCheck" targetRef="Task_BuildSubcomponent" />
+    <bpmn:sequenceFlow id="Flow_NoParts" name="No, container empty" sourceRef="Gateway_PartsCheck" targetRef="Task_ReorderParts" />
+    <bpmn:sequenceFlow id="Flow_ReorderToEntry" sourceRef="Task_ReorderParts" targetRef="Gateway_BuildEntry" />
+    <bpmn:sequenceFlow id="Flow_BuildToTest" sourceRef="Task_BuildSubcomponent" targetRef="Task_TestSubcomponent" />
+    <bpmn:sequenceFlow id="Flow_TestToResult" sourceRef="Task_TestSubcomponent" targetRef="Gateway_TestResult" />
+    <bpmn:sequenceFlow id="Flow_TestPassed" name="Yes" sourceRef="Gateway_TestResult" targetRef="Gateway_AllTested" />
+    <bpmn:sequenceFlow id="Flow_TestFailed" name="No" sourceRef="Gateway_TestResult" targetRef="Task_RedesignSubcomponent" />
+    <bpmn:sequenceFlow id="Flow_RedesignToEntry" sourceRef="Task_RedesignSubcomponent" targetRef="Gateway_BuildEntry" />
+    <bpmn:sequenceFlow id="Flow_AllDone" name="Yes" sourceRef="Gateway_AllTested" targetRef="Task_AssembleMachine" />
+    <bpmn:sequenceFlow id="Flow_MoreToBuild" name="No, more subcomponents" sourceRef="Gateway_AllTested" targetRef="Gateway_BuildEntry" />
+    <bpmn:sequenceFlow id="Flow_AssembleToEnd" sourceRef="Task_AssembleMachine" targetRef="EndEvent_MachineComplete" />
+  </bpmn:process>
+</bpmn:definitions>

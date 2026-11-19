@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="description" content="GuideBPMN generates BPMN from text and learns reusable modeling guidelines from the OMG documentation and from its own verified mistakes.">
+<title>Overview | GuideBPMN</title>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link href="assets/vendor/fontawesome/css/all.min.css?v=202611182000" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Nunito:400,600,700,800,900&display=swap" rel="stylesheet">
+<link href="assets/css/sb-admin-2.min.css?v=202611182000" rel="stylesheet">
+<link href="assets/css/guidebpmn.css?v=202611182000" rel="stylesheet">
+</head>
+<body id="page-top" data-page="home" data-title="Overview">
+<div id="wrapper">
+<div id="sidebar-slot"></div>
+<div id="content-wrapper" class="d-flex flex-column">
+<div id="content">
+<div id="topbar-slot"></div>
+<main class="container-fluid">
+<div class="mb-3"><div class="kicker">Overview</div><h1 class="h3 mb-0 text-gray-800 font-weight-bold">GuideBPMN &mdash; BPMN generation that learns modeling guidelines</h1></div>
+<p class="mb-4" style="max-width:62rem"><strong>GuideBPMN</strong> turns a textual process description into a BPMN&nbsp;2.0 model and
+  <strong>learns modeling guidelines from the mistakes it verifies</strong>. An <strong>orchestrator agent</strong> (LLM + LangGraph)
+  calls the components as tools. The generator starts from the <strong>documentation guidelines</strong>, paraphrased from the
+  official OMG BPMN&nbsp;2.0.2 specification; what the pipeline learns is given back to it in next iterations and reused on unseen descriptions. This site
+  lets you run the study on a 55-example dataset and see every result.</p>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Architecture of GuideBPMN</h6></div>
+  <div class="card-body">
+    <a class="figure-frame d-block" href="assets/img/guidebpmn_pipeline.png?v=vf5" target="_blank" rel="noopener" title="Open full size">
+      <img src="assets/img/guidebpmn_pipeline.png?v=vf5" alt="Architecture of GuideBPMN: an orchestrator agent coordinates the generator, the structural validator, the similarity evaluator, the failure detector, the guideline agents (Retriever and Expert, each with its tools) and the guideline catalogue" loading="lazy" style="width:100%"></a>
+    <p class="figcap">The orchestrator coordinates executions, decisions and iterations: it <em>feeds</em> the generator, has the model <em>checked</em> by the structural validator and the similarity evaluator,
+      feeds the failure types to the guideline agents (the Retriever and the Expert, each with its own tools and an LLM that decides), which <em>update</em> the guideline catalogue. Source: bpmn_pipeline/figures/pipeline-vf5.pdf. Click to enlarge.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">The seven steps</h6></div>
+  <div class="card-body">
+    <ol class="mb-3">
+      <li><strong>Inputs.</strong> The task prompt, the process description, and the 82 documentation guidelines.</li>
+      <li><strong>Generator.</strong> An LLM model writes the BPMN&nbsp;2.0 XML.</li>
+      <li><strong>Structural validator.</strong> Four deterministic checks: L1 syntax &amp; schema, L2 gateways, L3 sequence flows, L4 collaboration (pools, lanes and message flows).</li>
+      <li><strong>Similarity evaluator.</strong> The BPMN XML is checked against the gold BPMN: flow order, participants, connections, label meaning and element coverage. It is the only step that reads the gold model.</li>
+      <li><strong>Failure detector.</strong> A rule-based tool turns the results of steps 3 and 4 into failure types:
+        T1&ndash;T4 types of validator errors, T5&ndash;T7 types of similarity errors.</li>
+      <li><strong>Guideline agents.</strong> Two tool-using LLM agents, each in a ReAct loop. The <strong>Retriever agent</strong> selects the evidence and explains the error with
+        <code>list_evidence(kind)</code>, <code>search_evidence(words)</code> and <code>find_counterparts(record_id)</code>. The <strong>Expert agent</strong> reviews the evidence and proposes a guideline
+        of the form &ldquo;when the description states &hellip;, model &hellip;&rdquo;, or abstains, with <code>read_description()</code>, <code>find_closest_documented_guidelines(text)</code>,
+        <code>find_closest_learned_guidelines(text)</code> and <code>check_wording(text)</code>. Details: <a href="guideline_learning.html">Guideline learning</a>.</li>
+      <li><strong>Guideline catalogue.</strong> Documentation guidelines (read-only), generic error-driven guidelines, and example-specific error-driven guidelines.
+        The Expert decides whether its proposal restates a documentation guideline, refines one, is new, contradicts one, or is the same as an error-driven guideline already learned.</li>
+    </ol>
+    <p class="mb-0"><strong>Next iteration.</strong> The guidelines learned for a description are sent back to the generator for that
+      same description, and the new model is validated and compared again. In the study the iterations are forced: 3 next iterations for every description while a failure is left.
+      A guideline is marked <em>confirmed</em> when the errors of its own type (T1&ndash;T7) decrease after it was sent back.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">The three settings of the study</h6></div>
+  <div class="card-body">
+    <div class="table-responsive"><table class="table table-sm mb-2">
+      <thead><tr><th>Setting</th><th>What it does</th><th>What the generator receives, besides the description and the documentation guidelines</th></tr></thead>
+      <tbody>
+        <tr><td><strong>First</strong></td><td>First pass only, no learning; 3 separate runs</td><td>Nothing</td></tr>
+        <tr><td><strong>Revised</strong></td><td>Learns from an empty catalogue, 3 forced next iterations on every description; 3 separate runs. Reported after iteration 1, 2 and 3 (Learned)</td>
+            <td>In each next iteration, the guidelines learned for this description</td></tr>
+        <tr><td><strong>Reuse</strong></td><td>Stratified 5-fold cross-validation: learns on 44 descriptions (as Revised), then a first pass on the 11 unseen ones; 1 run</td>
+            <td>The confirmed generic guidelines learned in the training of the round</td></tr>
+      </tbody>
+    </table></div>
+    <p class="figcap mb-0">Each setting is compared with First: mean over the runs, with the sample SD between the runs in parentheses, and a paired Wilcoxon signed-rank test (p &lt; 0.05) on the per-description means.</p>
+  </div>
+</div>
+
+<h2 class="section-title">How the comparison is kept fair</h2>
+<div class="row">
+  <div class="col-md-6 col-xl-3 mb-4"><div class="card shadow h-100"><div class="card-body">
+    <div class="icon-circle-lg mb-3"><i class="fas fa-eye-slash"></i></div><h6 class="font-weight-bold">The reference stays behind step 4</h6>
+    <p class="small mb-0">The generator never receives the reference model. The orchestrator never sees the reference or a similarity score;
+      after the comparison it only sees how many errors remain, per type.
+      The guideline agents work on the evaluator's results, never on the reference file.</p>
+  </div></div></div>
+  <div class="col-md-6 col-xl-3 mb-4"><div class="card shadow h-100"><div class="card-body">
+    <div class="icon-circle-lg mb-3"><i class="fas fa-user-slash"></i></div><h6 class="font-weight-bold">No example helps itself</h6>
+    <p class="small mb-0">In Reuse, the test descriptions of a round are never in its training set: a guideline is never reused on a description it was learned from.</p>
+  </div></div></div>
+  <div class="col-md-6 col-xl-3 mb-4"><div class="card shadow h-100"><div class="card-body">
+    <div class="icon-circle-lg mb-3"><i class="fas fa-quote-right"></i></div><h6 class="font-weight-bold">Evidence before use</h6>
+    <p class="small mb-0">A guideline is reused only once it is confirmed: the errors of its own type decreased when it was sent back.</p>
+  </div></div></div>
+  <div class="col-md-6 col-xl-3 mb-4"><div class="card shadow h-100"><div class="card-body">
+    <div class="icon-circle-lg mb-3"><i class="fas fa-layer-group"></i></div><h6 class="font-weight-bold">Scores kept separate</h6>
+    <p class="small mb-0">The measurements are reported one by one, on the first pass, and are never merged into a single
+      weighted score. The next iteration is reported apart, because it uses the example's own reference.</p>
+  </div></div></div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Where things are</h6></div>
+  <div class="card-body">
+    <ul class="mb-0">
+      <li><a href="run.html">Run GuideBPMN</a>: test one description from zero and download everything the tool did for it; launch First, Revised or Reuse runs, follow them description by description, reopen past runs.</li>
+      <li><a href="guidelines.html">Guidelines</a>: the documentation guidelines and the catalogues of error-driven guidelines.</li>
+      <li><a href="guideline_learning.html">Guideline learning</a>: the Retriever and Expert agents, their tools, the code guards and a real trace.</li>
+      <li><a href="orchestrator.html">Orchestrator &amp; budgets</a>: the actions, the budgets of one example, the stop rules, the failure types, the bonuses and penalties.</li>
+      <li><a href="validator.html">Structural validator L1&ndash;L4</a>: what each level checks and how its results are measured.</li>
+      <li><a href="similarity.html">Similarity evaluator</a>: every score with its equation.</li>
+      <li><a href="documentation.html">Documentation</a>: installation, command line and output files.</li>
+    </ul>
+  </div>
+</div>
+</main>
+</div>
+<div id="footer-slot"></div>
+</div>
+</div>
+<a class="scroll-to-top rounded" href="#page-top" aria-label="Back to top"><i class="fas fa-angle-up"></i></a>
+<script src="assets/vendor/jquery/jquery.min.js?v=202611182000"></script>
+<script src="assets/vendor/bootstrap/bootstrap.bundle.min.js?v=202611182000"></script>
+<script src="assets/vendor/jquery-easing/jquery.easing.min.js?v=202611182000"></script>
+<script src="assets/js/layout.js?v=202611182000"></script>
+<script src="assets/js/sb-admin-2.min.js?v=202611182000"></script>
+
+</body>
+</html>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_BecomingAParent" targetNamespace="http://example.com/bpmn/becoming-a-parent">
+  <bpmn:collaboration id="Collaboration_BecomingAParent">
+    <bpmn:participant id="Participant_Parent" name="Parent" processRef="Process_Parent"/>
+    <bpmn:participant id="Participant_SocialSecurity" name="Social Security"/>
+    <bpmn:participant id="Participant_Company" name="Company"/>
+    <bpmn:messageFlow id="MessageFlow_NotifySocialSecurity" sourceRef="Task_NotifySocialSecurity" targetRef="Participant_SocialSecurity" messageRef="Msg_NotifySocialSecurity"/>
+    <bpmn:messageFlow id="MessageFlow_NotifyCompany" sourceRef="Task_NotifyCompany" targetRef="Participant_Company" messageRef="Msg_NotifyCompany"/>
+    <bpmn:messageFlow id="MessageFlow_RequestCompanyInfo" sourceRef="Task_RequestCompanyInfo" targetRef="Participant_Company" messageRef="Msg_RequestCompanyInfo"/>
+    <bpmn:messageFlow id="MessageFlow_CompanyInfo" sourceRef="Participant_Company" targetRef="Task_ReceiveCompanyInfo" messageRef="Msg_CompanyInfo"/>
+  </bpmn:collaboration>
+
+  <bpmn:message id="Msg_NotifySocialSecurity" name="Leave notification to Social Security"/>
+  <bpmn:message id="Msg_NotifyCompany" name="Leave notification to Company"/>
+  <bpmn:message id="Msg_RequestCompanyInfo" name="Request for company information"/>
+  <bpmn:message id="Msg_CompanyInfo" name="Company information"/>
+
+  <bpmn:process id="Process_Parent" name="Becoming A Parent" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Parent">
+      <bpmn:lane id="Lane_Parent" name="Parent">
+        <bpmn:flowNodeRef>Event_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FetchModels</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SelectModel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CollectInfo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Notify_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NotifySocialSecurity</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NotifyCompany</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RequestCompanyInfo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReceiveCompanyInfo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Notify_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_LeavePeriodEnd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DecideExtension</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Extension</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_End</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Event_Start" name="Start maternity leave planning"/>
+
+    <bpmn:task id="Task_FetchModels" name="Fetch leave models (duration, split between parents)"/>
+    <bpmn:manualTask id="Task_SelectModel" name="Select leave model"/>
+    <bpmn:task id="Task_CollectInfo" name="Collect relevant information"/>
+
+    <bpmn:parallelGateway id="Gateway_Notify_Split" name="Split notifications and company information"/>
+    <bpmn:sendTask id="Task_NotifySocialSecurity" name="Notify Social Security" messageRef="Msg_NotifySocialSecurity"/>
+    <bpmn:sendTask id="Task_NotifyCompany" name="Notify company" messageRef="Msg_NotifyCompany"/>
+    <bpmn:sendTask id="Task_RequestCompanyInfo" name="Request information from company" messageRef="Msg_RequestCompanyInfo"/>
+    <bpmn:receiveTask id="Task_ReceiveCompanyInfo" name="Receive company information" messageRef="Msg_CompanyInfo"/>
+    <bpmn:parallelGateway id="Gateway_Notify_Join" name="Notifications and company information completed"/>
+
+    <bpmn:intermediateCatchEvent id="Event_LeavePeriodEnd" name="End of leave period reached"/>
+    <bpmn:manualTask id="Task_DecideExtension" name="Decide on leave extension"/>
+    <bpmn:exclusiveGateway id="Gateway_Extension" name="Extension requested?" default="Flow_NoExtension"/>
+    <bpmn:endEvent id="Event_End" name="Leave completed"/>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Event_Start" targetRef="Task_FetchModels"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_FetchModels" targetRef="Task_SelectModel"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_SelectModel" targetRef="Task_CollectInfo"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_CollectInfo" targetRef="Gateway_Notify_Split"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_Notify_Split" targetRef="Task_NotifySocialSecurity"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Gateway_Notify_Split" targetRef="Task_NotifyCompany"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Gateway_Notify_Split" targetRef="Task_RequestCompanyInfo"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_RequestCompanyInfo" targetRef="Task_ReceiveCompanyInfo"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_NotifySocialSecurity" targetRef="Gateway_Notify_Join"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_NotifyCompany" targetRef="Gateway_Notify_Join"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_ReceiveCompanyInfo" targetRef="Gateway_Notify_Join"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Gateway_Notify_Join" targetRef="Event_LeavePeriodEnd"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Event_LeavePeriodEnd" targetRef="Task_DecideExtension"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_DecideExtension" targetRef="Gateway_Extension"/>
+    <bpmn:sequenceFlow id="Flow_Extend" name="Extend leave" sourceRef="Gateway_Extension" targetRef="Task_SelectModel">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${extensionRequested == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoExtension" name="No extension" sourceRef="Gateway_Extension" targetRef="Event_End"/>
+  </bpmn:process>
+
+  <bpmn:message id="Msg_LeavePeriodEnd" name="End of leave period"/>
+</bpmn:definitions>

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_LANParty" targetNamespace="http://example.org/bpmn/lan-party">
+  <bpmn:process id="Process_LANParty" name="LAN Party" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_PlanningStarted" name="LAN party planning started">
+      <bpmn:outgoing>Flow_StartToInvitations</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_SendInvitations" name="Send invitations to 10 friends">
+      <bpmn:incoming>Flow_StartToInvitations</bpmn:incoming>
+      <bpmn:outgoing>Flow_InvitationsToGames</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CollectGames" name="Find out which games friends want to play">
+      <bpmn:incoming>Flow_InvitationsToGames</bpmn:incoming>
+      <bpmn:outgoing>Flow_GamesToWaitList</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="Event_WaitGamesList" name="Wait until list of games is received from friends">
+      <bpmn:incoming>Flow_GamesToWaitList</bpmn:incoming>
+      <bpmn:outgoing>Flow_WaitListToSplit</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDef_GamesList"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:parallelGateway id="Gateway_Parallel_Split" name="Plan date and games in parallel">
+      <bpmn:incoming>Flow_WaitListToSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_SplitToDateMerge</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SplitToCheckGames</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- Branch A: date planning -->
+    <bpmn:exclusiveGateway id="Gateway_DateMerge" name="Date planning">
+      <bpmn:incoming>Flow_SplitToDateMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_DateNotConfirmed</bpmn:incoming>
+      <bpmn:outgoing>Flow_DateMergeToAppointDate</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_AppointDate" name="Appoint a date">
+      <bpmn:incoming>Flow_DateMergeToAppointDate</bpmn:incoming>
+      <bpmn:outgoing>Flow_AppointDateToWait</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="Event_WaitFriendReplies" name="Wait until friends have replied on availability">
+      <bpmn:incoming>Flow_AppointDateToWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_WaitToDateCheck</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDef_FriendReplies"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_DateCheck" name="8 or more people agree on date?">
+      <bpmn:incoming>Flow_WaitToDateCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_DateConfirmed</bpmn:outgoing>
+      <bpmn:outgoing>Flow_DateNotConfirmed</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Branch B: games check -->
+    <bpmn:task id="Task_CheckGames" name="Check which games are already owned">
+      <bpmn:incoming>Flow_SplitToCheckGames</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckGamesToCheck</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_GamesCheck" name="Games missing?">
+      <bpmn:incoming>Flow_CheckGamesToCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_GamesMissing</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GamesComplete</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="UserTask_DownloadGames" name="Download missing games">
+      <bpmn:incoming>Flow_GamesMissing</bpmn:incoming>
+      <bpmn:outgoing>Flow_DownloadToGamesMerge</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_GamesMerge" name="Games ready">
+      <bpmn:incoming>Flow_DownloadToGamesMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_GamesComplete</bpmn:incoming>
+      <bpmn:outgoing>Flow_GamesMergeToJoin</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Synchronization of both branches -->
+    <bpmn:parallelGateway id="Gateway_Parallel_Join" name="Date and games settled">
+      <bpmn:incoming>Flow_DateConfirmed</bpmn:incoming>
+      <bpmn:incoming>Flow_GamesMergeToJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_JoinToEstimateBeer</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- Beer planning -->
+    <bpmn:task id="Task_EstimateBeer" name="Find out how much beer is required">
+      <bpmn:incoming>Flow_JoinToEstimateBeer</bpmn:incoming>
+      <bpmn:outgoing>Flow_EstimateToBeerCheck</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_BeerCheck" name="Enough beer?">
+      <bpmn:incoming>Flow_EstimateToBeerCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_BeerMissing</bpmn:outgoing>
+      <bpmn:outgoing>Flow_BeerEnough</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="UserTask_BuyBeer" name="Buy missing beer">
+      <bpmn:incoming>Flow_BeerMissing</bpmn:incoming>
+      <bpmn:outgoing>Flow_BuyToBeerMerge</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_BeerMerge" name="Beer ready">
+      <bpmn:incoming>Flow_BuyToBeerMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_BeerEnough</bpmn:incoming>
+      <bpmn:outgoing>Flow_BeerMergeToEnjoy</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Enjoyment and end -->
+    <bpmn:task id="Task_EnjoyLANParty" name="Enjoy the LAN party">
+      <bpmn:incoming>Flow_BeerMergeToEnjoy</bpmn:incoming>
+      <bpmn:outgoing>Flow_EnjoyToEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_LANPartyEnjoyed" name="LAN party enjoyed">
+      <bpmn:incoming>Flow_EnjoyToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence flows -->
+    <bpmn:sequenceFlow id="Flow_StartToInvitations" sourceRef="StartEvent_PlanningStarted" targetRef="Task_SendInvitations"/>
+    <bpmn:sequenceFlow id="Flow_InvitationsToGames" sourceRef="Task_SendInvitations" targetRef="Task_CollectGames"/>
+    <bpmn:sequenceFlow id="Flow_GamesToWaitList" sourceRef="Task_CollectGames" targetRef="Event_WaitGamesList"/>
+    <bpmn:sequenceFlow id="Flow_WaitListToSplit" sourceRef="Event_WaitGamesList" targetRef="Gateway_Parallel_Split"/>
+    <bpmn:sequenceFlow id="Flow_SplitToDateMerge" sourceRef="Gateway_Parallel_Split" targetRef="Gateway_DateMerge"/>
+    <bpmn:sequenceFlow id="Flow_SplitToCheckGames" sourceRef="Gateway_Parallel_Split" targetRef="Task_CheckGames"/>
+    <bpmn:sequenceFlow id="Flow_DateMergeToAppointDate" sourceRef="Gateway_DateMerge" targetRef="Task_AppointDate"/>
+    <bpmn:sequenceFlow id="Flow_AppointDateToWait" sourceRef="Task_AppointDate" targetRef="Event_WaitFriendReplies"/>
+    <bpmn:sequenceFlow id="Flow_WaitToDateCheck" sourceRef="Event_WaitFriendReplies" targetRef="Gateway_DateCheck"/>
+    <bpmn:sequenceFlow id="Flow_DateConfirmed" name="Yes: 8 or more agree" sourceRef="Gateway_DateCheck" targetRef="Gateway_Parallel_Join"/>
+    <bpmn:sequenceFlow id="Flow_DateNotConfirmed" name="No: appoint another date" sourceRef="Gateway_DateCheck" targetRef="Gateway_DateMerge"/>
+    <bpmn:sequenceFlow id="Flow_CheckGamesToCheck" sourceRef="Task_CheckGames" targetRef="Gateway_GamesCheck"/>
+    <bpmn:sequenceFlow id="Flow_GamesMissing" name="Yes: some missing" sourceRef="Gateway_GamesCheck" targetRef="UserTask_DownloadGames"/>
+    <bpmn:sequenceFlow id="Flow_GamesComplete" name="No: all available" sourceRef="Gateway_GamesCheck" targetRef="Gateway_GamesMerge"/>
+    <bpmn:sequenceFlow id="Flow_DownloadToGamesMerge" sourceRef="UserTask_DownloadGames" targetRef="Gateway_GamesMerge"/>
+    <bpmn:sequenceFlow id="Flow_GamesMergeToJoin" sourceRef="Gateway_GamesMerge" targetRef="Gateway_Parallel_Join"/>
+    <bpmn:sequenceFlow id="Flow_JoinToEstimateBeer" sourceRef="Gateway_Parallel_Join" targetRef="Task_EstimateBeer"/>
+    <bpmn:sequenceFlow id="Flow_EstimateToBeerCheck" sourceRef="Task_EstimateBeer" targetRef="Gateway_BeerCheck"/>
+    <bpmn:sequenceFlow id="Flow_BeerMissing" name="Not enough" sourceRef="Gateway_BeerCheck" targetRef="UserTask_BuyBeer"/>
+    <bpmn:sequenceFlow id="Flow_BeerEnough" name="Enough" sourceRef="Gateway_BeerCheck" targetRef="Gateway_BeerMerge"/>
+    <bpmn:sequenceFlow id="Flow_BuyToBeerMerge" sourceRef="UserTask_BuyBeer" targetRef="Gateway_BeerMerge"/>
+    <bpmn:sequenceFlow id="Flow_BeerMergeToEnjoy" sourceRef="Gateway_BeerMerge" targetRef="Task_EnjoyLANParty"/>
+    <bpmn:sequenceFlow id="Flow_EnjoyToEnd" sourceRef="Task_EnjoyLANParty" targetRef="EndEvent_LANPartyEnjoyed"/>
+  </bpmn:process>
+</bpmn:definitions>

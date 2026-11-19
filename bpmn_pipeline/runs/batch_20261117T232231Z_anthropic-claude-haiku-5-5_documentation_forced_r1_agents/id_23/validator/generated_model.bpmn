@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_CreditScoring"
+                  targetNamespace="http://example.com/bpmn/credit-scoring">
+  <bpmn:message id="Msg_ScoringRequest" name="Scoring request"/>
+  <bpmn:message id="Msg_Level1Result" name="Level 1 scoring result"/>
+  <bpmn:message id="Msg_DelayNotification" name="Scoring delayed notification"/>
+  <bpmn:message id="Msg_FinalResult" name="Final scoring result"/>
+
+  <bpmn:collaboration id="Collab_CreditScoring">
+    <bpmn:participant id="Participant_Bank" name="Banking System" processRef="Process_Banking"/>
+    <bpmn:participant id="Participant_Agency" name="Credit Scoring Agency"/>
+
+    <bpmn:messageFlow id="MF_ScoringRequest" name="Scoring request" messageRef="Msg_ScoringRequest"
+                      sourceRef="Task_SendScoringRequest" targetRef="Participant_Agency"/>
+    <bpmn:messageFlow id="MF_Level1Result" name="Level 1 result" messageRef="Msg_Level1Result"
+                      sourceRef="Participant_Agency" targetRef="Catch_Level1Result"/>
+    <bpmn:messageFlow id="MF_DelayNotification" name="Delay notification" messageRef="Msg_DelayNotification"
+                      sourceRef="Participant_Agency" targetRef="Catch_DelayNotification"/>
+    <bpmn:messageFlow id="MF_FinalResult" name="Final result" messageRef="Msg_FinalResult"
+                      sourceRef="Participant_Agency" targetRef="Catch_FinalResult"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Banking" name="Banking System Credit Scoring" isExecutable="false">
+    <bpmn:startEvent id="Start_ScoringRequested" name="Clerk requests credit scoring">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:sendTask id="Task_SendScoringRequest" name="Send scoring request to agency" messageRef="Msg_ScoringRequest">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:eventBasedGateway id="Gateway_ScoringResponse_Split" name="Agency response">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+
+    <!-- Immediate level 1 result path -->
+    <bpmn:intermediateCatchEvent id="Catch_Level1Result" name="Level 1 result received">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Level1Result" messageRef="Msg_Level1Result"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:task id="Task_PresentResult_Immediate" name="Present result to clerk">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="End_ResultPresented" name="Result presented">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Delayed scoring path -->
+    <bpmn:intermediateCatchEvent id="Catch_DelayNotification" name="Delay notification received">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_DelayNotification" messageRef="Msg_DelayNotification"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:task id="Task_DisplayDelayMessage" name="Display message to clerk: check again later">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:intermediateCatchEvent id="Catch_FinalResult" name="Final result received">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_FinalResult" messageRef="Msg_FinalResult"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:task id="Task_PresentResult_Delayed" name="Present result to clerk">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="End_ResultPresentedAfterDelay" name="Result presented after delay">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_ScoringRequested" targetRef="Task_SendScoringRequest"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_SendScoringRequest" targetRef="Gateway_ScoringResponse_Split"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Gateway_ScoringResponse_Split" targetRef="Catch_Level1Result"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Gateway_ScoringResponse_Split" targetRef="Catch_DelayNotification"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Catch_Level1Result" targetRef="Task_PresentResult_Immediate"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_PresentResult_Immediate" targetRef="End_ResultPresented"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Catch_DelayNotification" targetRef="Task_DisplayDelayMessage"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_DisplayDelayMessage" targetRef="Catch_FinalResult"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Catch_FinalResult" targetRef="Task_PresentResult_Delayed"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_PresentResult_Delayed" targetRef="End_ResultPresentedAfterDelay"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,112 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_FarmingBot" targetNamespace="http://example.org/bpmn/farming-bot">
+  <bpmn:message id="Message_UpdateMaterials" name="Materials list update requested"/>
+  <bpmn:signal id="Signal_NaturalDisaster" name="Natural disaster strikes"/>
+  <bpmn:signal id="Signal_MilestoneReached" name="Milestone reached"/>
+
+  <bpmn:process id="Process_FarmingBot" name="Farming Bot" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_FarmingBot">
+      <bpmn:lane id="Lane_Player" name="Player">
+        <bpmn:flowNodeRef>Start_CreateBot</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SelectResources</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ConfirmPreferences</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ChooseSharing</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_SharingSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_BragToFriends</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendMaterials</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_SharingJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_BotFinished</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_FarmingBot" name="Farming bot">
+        <bpmn:flowNodeRef>Task_CreateTools</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SubProcess_FarmResources</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_CreateBot" name="Player starts bot creation"/>
+
+    <bpmn:userTask id="Task_SelectResources" name="Select resources and urgency (max. 10 in parallel)"/>
+
+    <bpmn:userTask id="Task_ConfirmPreferences" name="Confirm preferences"/>
+
+    <bpmn:serviceTask id="Task_CreateTools" name="Create tools required for dependent resources"/>
+
+    <bpmn:subProcess id="SubProcess_FarmResources" name="Farm resources">
+      <bpmn:startEvent id="Start_Farming" name="Bot starts farming"/>
+
+      <bpmn:exclusiveGateway id="Gateway_GatheringMerge" name="Gathering loop merge"/>
+
+      <bpmn:serviceTask id="Task_GatherResources" name="Gather selected resources"/>
+
+      <bpmn:boundaryEvent id="BoundaryEvent_Disaster" name="Natural disaster strikes" attachedToRef="Task_GatherResources" cancelActivity="true">
+        <bpmn:signalEventDefinition id="SignalDef_Disaster" signalRef="Signal_NaturalDisaster"/>
+      </bpmn:boundaryEvent>
+
+      <bpmn:serviceTask id="Task_RecoverFromDisaster" name="Recover bot after disaster"/>
+
+      <bpmn:serviceTask id="Task_ContinueFarming" name="Continue farming resources"/>
+
+      <bpmn:exclusiveGateway id="Gateway_AllGathered" name="All materials gathered?" default="Flow_NotDoneToMerge"/>
+
+      <bpmn:endEvent id="End_FarmingDone" name="Farming completed"/>
+
+      <bpmn:subProcess id="EventSubProcess_Milestone" name="Notify on milestone" triggeredByEvent="true">
+        <bpmn:startEvent id="Start_Milestone" name="Milestone reached" isInterrupting="false">
+          <bpmn:signalEventDefinition id="SignalDef_Milestone" signalRef="Signal_MilestoneReached"/>
+        </bpmn:startEvent>
+        <bpmn:serviceTask id="Task_NotifyMilestone" name="Notify player of milestone"/>
+        <bpmn:endEvent id="End_Milestone" name="Milestone notified"/>
+        <bpmn:sequenceFlow id="Flow_MilestoneStartToNotify" sourceRef="Start_Milestone" targetRef="Task_NotifyMilestone"/>
+        <bpmn:sequenceFlow id="Flow_NotifyToMilestoneEnd" sourceRef="Task_NotifyMilestone" targetRef="End_Milestone"/>
+      </bpmn:subProcess>
+
+      <bpmn:subProcess id="EventSubProcess_UpdateList" name="Update materials list" triggeredByEvent="true">
+        <bpmn:startEvent id="Start_UpdateList" name="Materials list update requested" isInterrupting="false">
+          <bpmn:messageEventDefinition id="MessageDef_Update" messageRef="Message_UpdateMaterials"/>
+        </bpmn:startEvent>
+        <bpmn:userTask id="Task_UpdateMaterialsList" name="Update list of materials to farm"/>
+        <bpmn:endEvent id="End_UpdateList" name="Materials list updated"/>
+        <bpmn:sequenceFlow id="Flow_UpdateStartToTask" sourceRef="Start_UpdateList" targetRef="Task_UpdateMaterialsList"/>
+        <bpmn:sequenceFlow id="Flow_UpdateTaskToEnd" sourceRef="Task_UpdateMaterialsList" targetRef="End_UpdateList"/>
+      </bpmn:subProcess>
+
+      <bpmn:sequenceFlow id="Flow_FarmStartToMerge" sourceRef="Start_Farming" targetRef="Gateway_GatheringMerge"/>
+      <bpmn:sequenceFlow id="Flow_MergeToGather" sourceRef="Gateway_GatheringMerge" targetRef="Task_GatherResources"/>
+      <bpmn:sequenceFlow id="Flow_GatherToCheck" sourceRef="Task_GatherResources" targetRef="Gateway_AllGathered"/>
+      <bpmn:sequenceFlow id="Flow_DisasterToRecover" sourceRef="BoundaryEvent_Disaster" targetRef="Task_RecoverFromDisaster"/>
+      <bpmn:sequenceFlow id="Flow_RecoverToContinue" sourceRef="Task_RecoverFromDisaster" targetRef="Task_ContinueFarming"/>
+      <bpmn:sequenceFlow id="Flow_ContinueToMerge" sourceRef="Task_ContinueFarming" targetRef="Gateway_GatheringMerge"/>
+      <bpmn:sequenceFlow id="Flow_DoneToEnd" name="Yes" sourceRef="Gateway_AllGathered" targetRef="End_FarmingDone">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${allGathered}</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_NotDoneToMerge" name="No" sourceRef="Gateway_AllGathered" targetRef="Gateway_GatheringMerge"/>
+    </bpmn:subProcess>
+
+    <bpmn:userTask id="Task_ChooseSharing" name="Choose sharing options"/>
+
+    <bpmn:inclusiveGateway id="Gateway_SharingSplit" name="Brag and/or send materials"/>
+
+    <bpmn:userTask id="Task_BragToFriends" name="Brag to selected friends"/>
+
+    <bpmn:userTask id="Task_SendMaterials" name="Send materials to selected friends"/>
+
+    <bpmn:inclusiveGateway id="Gateway_SharingJoin" name="Sharing done"/>
+
+    <bpmn:endEvent id="End_BotFinished" name="Bot process finished"/>
+
+    <bpmn:sequenceFlow id="Flow_StartToSelect" sourceRef="Start_CreateBot" targetRef="Task_SelectResources"/>
+    <bpmn:sequenceFlow id="Flow_SelectToConfirm" sourceRef="Task_SelectResources" targetRef="Task_ConfirmPreferences"/>
+    <bpmn:sequenceFlow id="Flow_ConfirmToTools" sourceRef="Task_ConfirmPreferences" targetRef="Task_CreateTools"/>
+    <bpmn:sequenceFlow id="Flow_ToolsToFarm" sourceRef="Task_CreateTools" targetRef="SubProcess_FarmResources"/>
+    <bpmn:sequenceFlow id="Flow_FarmToSharing" sourceRef="SubProcess_FarmResources" targetRef="Task_ChooseSharing"/>
+    <bpmn:sequenceFlow id="Flow_ChooseToSplit" sourceRef="Task_ChooseSharing" targetRef="Gateway_SharingSplit"/>
+    <bpmn:sequenceFlow id="Flow_SplitToBrag" name="Brag" sourceRef="Gateway_SharingSplit" targetRef="Task_BragToFriends">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${bragSelected}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SplitToSend" name="Send materials" sourceRef="Gateway_SharingSplit" targetRef="Task_SendMaterials">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${materialsSelected}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_BragToJoin" sourceRef="Task_BragToFriends" targetRef="Gateway_SharingJoin"/>
+    <bpmn:sequenceFlow id="Flow_SendToJoin" sourceRef="Task_SendMaterials" targetRef="Gateway_SharingJoin"/>
+    <bpmn:sequenceFlow id="Flow_JoinToEnd" sourceRef="Gateway_SharingJoin" targetRef="End_BotFinished"/>
+  </bpmn:process>
+</bpmn:definitions>

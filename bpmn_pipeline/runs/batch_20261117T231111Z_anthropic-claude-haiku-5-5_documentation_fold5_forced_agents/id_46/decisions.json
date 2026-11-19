@@ -1,0 +1,305 @@
+{
+ "id": "46",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 14,
+  "T6": 2
+ },
+ "first_pass_error_counts": {
+  "T5": 19,
+  "T6": 3
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines FLOW-07 (The generated model routes the registration of the arrived item back to the stock check (G7), while the description continues in sequence to the order-readiness check (F6, S6). The restart belongs only to the not-in-stock branch (S9). The generator also inserted extra merge gateways and dropped the stock-check task (M1, F2, F8, X2, G3). FLOW-07 says loops are only represented when repetition is st)",
+   "guideline_id": "LRN-102",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-002 (M1 shows the reference has a task that performs the stock check before the 'in stock?' gateway, while the generated model has no such task. Instead it has an extra merge gateway (X2) and no check activity. S2 states that the check happens before the branch. The documented guidelines do not cover this, and the closest learned guideline (LRN-002) states the same ordering only for if-then gating, so )",
+   "guideline_id": "LRN-002",
+   "ref": "LRN-002",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-094 (The generated model omits the wait between the reorder step and the 'waited more than 10 days' gateway, so the flows from the reorder task and into the decision are absent (M1, F1, F2). The description states that the process waits for the item and then tests whether the wait exceeded 10 days (S4, S5). The reference models that wait as a service task, and the generator omitted it entirely. Modelin)",
+   "guideline_id": "LRN-094",
+   "ref": "LRN-094",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "abstained",
+   "detail": "M1 is the only structural difference. The reference models the wait for the arrival as a serviceTask, which the description does not support and which BPMN 2.0.2 does not allow for a wait on an external event. A guideline based on that choice would be wrong, and the correct treatment (an intermediate catch event before the penalty decision) is already learned in LRN-094 and the previous guideline. M2 is a naming difference: the reference labels the start event with the process title, and the description gives no start trigger beyond the title, so it does not support a new modeling rule. P1 and",
+   "guideline_id": null,
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-094 (The reference has a wait between the reorder step and the 10-day decision (M1, F1, F2), and the description states that waiting for the product's arrival drives the penalty (S5). The generated model has no counterpart for that wait, so the gap is a missing wait element, not a different element type. LRN-094 already covers this pattern, so the guideline is a restatement of it, worded without this p)",
+   "guideline_id": "LRN-094",
+   "ref": "LRN-094",
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: arrival, penalty, reordered",
+   "guideline_id": "EXS-100",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-102",
+   "instruction": "When the description states that an earlier check is restarted only for one stated outcome (for example, when a required item is not available and the next item is taken), and it also describes a step that completes an awaited delivery or event and is followed by a different named step in sequence: Model the restart flow back to the earlier check only on the branch carrying that stated outcome. The step that completes the awaited event gets a single outgoing flow to the next step the description names, with no flow back to any earlier check. Give the check task its own incoming flow from the preceding step, and insert a merge gateway before it only where the description has a real join of alternative paths.",
+   "situation": "the description states that an earlier check is restarted only for one stated outcome (for example, when a required item is not available and the next item is taken), and it also describes a step that completes an awaited delivery or event and is followed by a different named step in sequence",
+   "source": "learned guideline (refines FLOW-07)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-002",
+   "instruction": "When the description states that a later step is performed only if a stated condition holds, using an 'if ... then' phrasing that gates that step on a decision made earlier in the process: Model an exclusive gateway immediately before the gated step, with one outgoing branch that leads to the gated step under the stated condition and another branch that skips it or leads to the process's alternative path. Keep the gateway after the activity that establishes the condition, so the decision is evaluated in the order the description gives.",
+   "situation": "the description says that an item is first checked or looked up (for example, whether it is available) and that a later decision branches on the result of that check",
+   "source": "learned guideline (refines ACT-07)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-094",
+   "instruction": "When the description says that after a prior step, the process must wait for an external party to respond or arrive at a time not fixed in advance, and a later step or decision depends on that response or arrival: Model an intermediate catch event that represents the wait between the prior step and the dependent step or gateway. Do not fold the waiting into the prior task, do not model the wait as a separate task, and do not connect the two steps with a plain sequence flow that hides the wait.",
+   "situation": "the description says that after a request is placed with an outside party for an item, the process must wait until that item is received, and a later decision tests whether that wait exceeded a stated time limit",
+   "source": "learned guideline (refines EVT-03)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "EXS-100",
+   "instruction": "When the description says the flow must wait for an outside delivery or arrival (for example, a reordered item) before it continues to a later step: Model the wait as an intermediate catch event placed between the ordering task and the next step that depends on the arrival. Do not omit the wait, and do not model it as a task. If the description attaches a timed consequence to the wait (such as a penalty when the wait exceeds a stated duration), place the decision on the wait's outcome after the catch event.",
+   "situation": "the description says the flow must wait for an outside delivery or arrival (for example, a reordered item) before it continues to a later step",
+   "source": "example-specific guideline",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

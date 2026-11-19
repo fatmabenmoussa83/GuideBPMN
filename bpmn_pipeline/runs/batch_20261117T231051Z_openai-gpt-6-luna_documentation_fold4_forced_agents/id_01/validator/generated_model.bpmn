@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_ProductOrder"
+                  targetNamespace="http://example.com/bpmn/product-order">
+  <bpmn:message id="Message_Inquiry" name="Product or service inquiry"/>
+  <bpmn:message id="Message_Quote" name="Quote"/>
+  <bpmn:message id="Message_Approval" name="Customer approval"/>
+  <bpmn:message id="Message_OrderConfirmation" name="Order confirmation"/>
+
+  <bpmn:collaboration id="Collaboration_ProductOrder">
+    <bpmn:participant id="Participant_Sales" name="Product or service order process" processRef="Process_Sales"/>
+    <bpmn:participant id="Participant_Customer" name="Potential customer"/>
+    <bpmn:messageFlow id="MessageFlow_Inquiry" name="Product or service inquiry" sourceRef="Participant_Customer" targetRef="Start_Inquiry" messageRef="Message_Inquiry"/>
+    <bpmn:messageFlow id="MessageFlow_Quote" name="Quote" sourceRef="Task_ProvideQuote" targetRef="Participant_Customer" messageRef="Message_Quote"/>
+    <bpmn:messageFlow id="MessageFlow_Approval" name="Customer approval" sourceRef="Participant_Customer" targetRef="Task_ReceiveApproval" messageRef="Message_Approval"/>
+    <bpmn:messageFlow id="MessageFlow_Confirmation" name="Order confirmation" sourceRef="Task_SendConfirmation" targetRef="Participant_Customer" messageRef="Message_OrderConfirmation"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Sales" name="Product or service order" isExecutable="false">
+    <bpmn:startEvent id="Start_Inquiry" name="Customer inquires">
+      <bpmn:outgoing>Flow_Start_Collect</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Inquiry" messageRef="Message_Inquiry"/>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_CollectInformation" name="Collect relevant information">
+      <bpmn:incoming>Flow_Start_Collect</bpmn:incoming>
+      <bpmn:outgoing>Flow_Collect_Address</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_AddressConcerns" name="Address concerns and questions">
+      <bpmn:incoming>Flow_Collect_Address</bpmn:incoming>
+      <bpmn:outgoing>Flow_Address_Interest</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_Interest" name="Customer interested?" default="Flow_Interest_No">
+      <bpmn:incoming>Flow_Address_Interest</bpmn:incoming>
+      <bpmn:outgoing>Flow_Interest_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Interest_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_GuideSelection" name="Guide product or service selection">
+      <bpmn:incoming>Flow_Interest_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Guide_Quote</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:sendTask id="Task_ProvideQuote" name="Provide quote" messageRef="Message_Quote">
+      <bpmn:incoming>Flow_Guide_Quote</bpmn:incoming>
+      <bpmn:outgoing>Flow_Quote_Approval</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:receiveTask id="Task_ReceiveApproval" name="Receive customer approval" messageRef="Message_Approval">
+      <bpmn:incoming>Flow_Quote_Approval</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approval_PlaceOrder</bpmn:outgoing>
+    </bpmn:receiveTask>
+
+    <bpmn:task id="Task_PlaceOrder" name="Place order">
+      <bpmn:incoming>Flow_Approval_PlaceOrder</bpmn:incoming>
+      <bpmn:outgoing>Flow_Place_Record</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_RecordOrder" name="Record order in system">
+      <bpmn:incoming>Flow_Place_Record</bpmn:incoming>
+      <bpmn:outgoing>Flow_Record_Confirmation</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:sendTask id="Task_SendConfirmation" name="Send order confirmation" messageRef="Message_OrderConfirmation">
+      <bpmn:incoming>Flow_Record_Confirmation</bpmn:incoming>
+      <bpmn:outgoing>Flow_Confirmation_End</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:endEvent id="End_OrderConfirmed" name="Order placed and confirmed">
+      <bpmn:incoming>Flow_Confirmation_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="End_UnspecifiedPath" name="No further steps specified">
+      <bpmn:incoming>Flow_Interest_No</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_Collect" sourceRef="Start_Inquiry" targetRef="Task_CollectInformation"/>
+    <bpmn:sequenceFlow id="Flow_Collect_Address" sourceRef="Task_CollectInformation" targetRef="Task_AddressConcerns"/>
+    <bpmn:sequenceFlow id="Flow_Address_Interest" sourceRef="Task_AddressConcerns" targetRef="Gateway_Interest"/>
+    <bpmn:sequenceFlow id="Flow_Interest_Yes" name="Yes" sourceRef="Gateway_Interest" targetRef="Task_GuideSelection">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${customerInterested}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Interest_No" name="No" sourceRef="Gateway_Interest" targetRef="End_UnspecifiedPath"/>
+    <bpmn:sequenceFlow id="Flow_Guide_Quote" sourceRef="Task_GuideSelection" targetRef="Task_ProvideQuote"/>
+    <bpmn:sequenceFlow id="Flow_Quote_Approval" sourceRef="Task_ProvideQuote" targetRef="Task_ReceiveApproval"/>
+    <bpmn:sequenceFlow id="Flow_Approval_PlaceOrder" sourceRef="Task_ReceiveApproval" targetRef="Task_PlaceOrder"/>
+    <bpmn:sequenceFlow id="Flow_Place_Record" sourceRef="Task_PlaceOrder" targetRef="Task_RecordOrder"/>
+    <bpmn:sequenceFlow id="Flow_Record_Confirmation" sourceRef="Task_RecordOrder" targetRef="Task_SendConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_Confirmation_End" sourceRef="Task_SendConfirmation" targetRef="End_OrderConfirmed"/>
+  </bpmn:process>
+</bpmn:definitions>

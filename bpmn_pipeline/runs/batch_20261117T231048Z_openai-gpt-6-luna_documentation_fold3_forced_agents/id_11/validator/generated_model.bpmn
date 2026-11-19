@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Subscription"
+                  targetNamespace="http://example.com/bpmn/subscription">
+  <bpmn:message id="Message_Signup" name="Subscription signup information"/>
+  <bpmn:message id="Message_Updates" name="Subscription updates"/>
+  <bpmn:message id="Message_Cancellation" name="Cancellation request"/>
+
+  <bpmn:collaboration id="Collaboration_Subscription">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_Service" name="Subscription service" processRef="Process_Service"/>
+    <bpmn:messageFlow id="MessageFlow_Signup" name="Signup information"
+                      sourceRef="Task_SendSignup" targetRef="Start_Signup"
+                      messageRef="Message_Signup"/>
+    <bpmn:messageFlow id="MessageFlow_Updates" name="Subscription updates"
+                      sourceRef="Task_SendUpdates" targetRef="Task_ReceiveUpdates"
+                      messageRef="Message_Updates"/>
+    <bpmn:messageFlow id="MessageFlow_Cancellation" name="Cancellation request"
+                      sourceRef="Task_SendCancellation" targetRef="Task_ReceiveCancellation"
+                      messageRef="Message_Cancellation"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Customer" name="Customer subscription interaction" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Customer">
+      <bpmn:lane id="Lane_Customer" name="Customer">
+        <bpmn:flowNodeRef>Start_CustomerSignup</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterInformation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendSignup</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReceiveUpdates</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_DecideCancellation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendCancellation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_CancellationSubmitted</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_NoCancellation</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_CustomerSignup" name="Customer signs up"/>
+    <bpmn:userTask id="Task_EnterInformation" name="Enter personal and payment information"/>
+    <bpmn:sendTask id="Task_SendSignup" name="Submit signup information" messageRef="Message_Signup"/>
+    <bpmn:receiveTask id="Task_ReceiveUpdates" name="Receive regular updates, enhancements, or renewal notifications" messageRef="Message_Updates"/>
+    <bpmn:exclusiveGateway id="Gateway_DecideCancellation" name="Decide whether to cancel"/>
+    <bpmn:sendTask id="Task_SendCancellation" name="Submit cancellation request" messageRef="Message_Cancellation"/>
+    <bpmn:endEvent id="End_CancellationSubmitted" name="Cancellation request submitted"/>
+    <bpmn:endEvent id="End_NoCancellation" name="No cancellation submitted at this time"/>
+
+    <bpmn:sequenceFlow id="Flow_Customer_1" sourceRef="Start_CustomerSignup" targetRef="Task_EnterInformation"/>
+    <bpmn:sequenceFlow id="Flow_Customer_2" sourceRef="Task_EnterInformation" targetRef="Task_SendSignup"/>
+    <bpmn:sequenceFlow id="Flow_Customer_3" sourceRef="Task_SendSignup" targetRef="Task_ReceiveUpdates"/>
+    <bpmn:sequenceFlow id="Flow_Customer_4" sourceRef="Task_ReceiveUpdates" targetRef="Gateway_DecideCancellation"/>
+    <bpmn:sequenceFlow id="Flow_Customer_5" name="Cancel" sourceRef="Gateway_DecideCancellation" targetRef="Task_SendCancellation"/>
+    <bpmn:sequenceFlow id="Flow_Customer_6" name="Do not cancel" sourceRef="Gateway_DecideCancellation" targetRef="End_NoCancellation"/>
+    <bpmn:sequenceFlow id="Flow_Customer_7" sourceRef="Task_SendCancellation" targetRef="End_CancellationSubmitted"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Service" name="Subscription service operations" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Service">
+      <bpmn:lane id="Lane_System" name="System">
+        <bpmn:flowNodeRef>Start_Signup</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GenerateAccount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AssignAccess</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TriggerBilling</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendUpdates</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Support" name="Support team">
+        <bpmn:flowNodeRef>Task_ReceiveCancellation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ProcessCancellation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TermsOutcome</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ApplyRefund</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ApplyCharge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TermsMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DeactivateSubscription</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SettleBalance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_SubscriptionConcluded</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Signup" name="Signup information received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Signup" messageRef="Message_Signup"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_GenerateAccount" name="Generate account"/>
+    <bpmn:task id="Task_AssignAccess" name="Assign access"/>
+    <bpmn:task id="Task_TriggerBilling" name="Trigger automated billing cycles"/>
+    <bpmn:sendTask id="Task_SendUpdates" name="Send regular updates, product enhancements, or renewal notifications" messageRef="Message_Updates"/>
+    <bpmn:receiveTask id="Task_ReceiveCancellation" name="Receive cancellation request" messageRef="Message_Cancellation"/>
+    <bpmn:userTask id="Task_ProcessCancellation" name="Process cancellation request"/>
+    <bpmn:exclusiveGateway id="Gateway_TermsOutcome" name="Determine outcome under the terms"/>
+    <bpmn:task id="Task_ApplyRefund" name="Apply refund"/>
+    <bpmn:task id="Task_ApplyCharge" name="Apply charge"/>
+    <bpmn:exclusiveGateway id="Gateway_TermsMerge" name="Merge refund or charge outcome"/>
+    <bpmn:userTask id="Task_DeactivateSubscription" name="Deactivate subscription"/>
+    <bpmn:task id="Task_SettleBalance" name="Settle final account balance"/>
+    <bpmn:endEvent id="End_SubscriptionConcluded" name="Subscription deactivated and balance settled"/>
+
+    <bpmn:sequenceFlow id="Flow_Service_1" sourceRef="Start_Signup" targetRef="Task_GenerateAccount"/>
+    <bpmn:sequenceFlow id="Flow_Service_2" sourceRef="Task_GenerateAccount" targetRef="Task_AssignAccess"/>
+    <bpmn:sequenceFlow id="Flow_Service_3" sourceRef="Task_AssignAccess" targetRef="Task_TriggerBilling"/>
+    <bpmn:sequenceFlow id="Flow_Service_4" sourceRef="Task_TriggerBilling" targetRef="Task_SendUpdates"/>
+    <bpmn:sequenceFlow id="Flow_Service_5" sourceRef="Task_SendUpdates" targetRef="Task_ReceiveCancellation"/>
+    <bpmn:sequenceFlow id="Flow_Service_6" sourceRef="Task_ReceiveCancellation" targetRef="Task_ProcessCancellation"/>
+    <bpmn:sequenceFlow id="Flow_Service_7" sourceRef="Task_ProcessCancellation" targetRef="Gateway_TermsOutcome"/>
+    <bpmn:sequenceFlow id="Flow_Service_8" name="Refund applies under the terms" sourceRef="Gateway_TermsOutcome" targetRef="Task_ApplyRefund">
+      <bpmn:conditionExpression>Refund applies under the subscription terms</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Service_9" name="Charge applies under the terms" sourceRef="Gateway_TermsOutcome" targetRef="Task_ApplyCharge">
+      <bpmn:conditionExpression>Charge applies under the subscription terms</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Service_10" sourceRef="Task_ApplyRefund" targetRef="Gateway_TermsMerge"/>
+    <bpmn:sequenceFlow id="Flow_Service_11" sourceRef="Task_ApplyCharge" targetRef="Gateway_TermsMerge"/>
+    <bpmn:sequenceFlow id="Flow_Service_12" sourceRef="Gateway_TermsMerge" targetRef="Task_DeactivateSubscription"/>
+    <bpmn:sequenceFlow id="Flow_Service_13" sourceRef="Task_DeactivateSubscription" targetRef="Task_SettleBalance"/>
+    <bpmn:sequenceFlow id="Flow_Service_14" sourceRef="Task_SettleBalance" targetRef="End_SubscriptionConcluded"/>
+  </bpmn:process>
+</bpmn:definitions>

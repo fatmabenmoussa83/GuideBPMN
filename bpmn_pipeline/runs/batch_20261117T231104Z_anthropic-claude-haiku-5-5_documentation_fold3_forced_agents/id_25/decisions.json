@@ -1,0 +1,322 @@
+{
+ "id": "25",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 68,
+  "T6": 14
+ },
+ "first_pass_error_counts": {
+  "T1": 1,
+  "T5": 66,
+  "T6": 15
+ },
+ "guidelines": [
+  {
+   "failure_type": "T1",
+   "status": "existing_documentation_rule",
+   "detail": "documentation rule XML-06 not applied (The L1 validator rejects a sequenceFlow at line 47 because it sits inside another element whose allowed children are resourceRole, performer and similar. The description's ordered steps (S5, S6, S8) are where the chain of flows is needed, so the trigger is grounded there. XML-06 already forbids nesting a sequenceFlow inside a task, gateway or event, so this guideline restates that documented rule )",
+   "guideline_id": null,
+   "ref": "XML-06",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-043 (cosine 0.88)",
+   "guideline_id": "LRN-043",
+   "ref": "LRN-043",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "new guideline",
+   "guideline_id": "LRN-056",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline",
+   "guideline_id": "LRN-057",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-056 (The reference has the Report task on the branch after the 'Company rated C or less?' gateway, where the obligation still applies. The generated model has two extra 'Report companies applied to' tasks instead, so the activity is misplaced relative to the lifting condition and the label differs from the description's activity. The description (S8) states that the obligation is lifted only when the c)",
+   "guideline_id": "LRN-056",
+   "ref": "LRN-056",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline",
+   "guideline_id": "LRN-058",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-056 (The reference has one 'Report' task after the C-or-less gateway and before the waiting event. The generated model instead has two 'Report companies applied to' tasks that do not match that placement, and its gateway question ('Company rated C or less?') is paired with the reference's 'Report Required?' gateway. The description states that reporting is required until a permanent job with a C-or-les)",
+   "guideline_id": "LRN-056",
+   "ref": "LRN-056",
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "XML-06",
+   "instruction": "Follow the BPMN XML schema: never put a documentation element directly inside bpmn:definitions, and never nest a sequenceFlow inside a task, gateway or event. If you add an ioSpecification, it must contain its dataInput and dataOutput elements first, then at least one inputSet and one outputSet, even if empty: <bpmn:inputSet/><bpmn:outputSet/>.",
+   "situation": "the description orders several actions one after another within a single process, so the model needs a chain of flow nodes linked by execution-order connections",
+   "source": "documentation rule not applied",
+   "failure_type": "T1"
+  },
+  {
+   "rule_id": "LRN-043",
+   "instruction": "When the description says that, while several parallel activities run for the same case, one actor also performs a separate action that is not part of those activities, and the later step must wait for this action as well.: Model that separate action as its own task on a dedicated parallel branch that starts at the same parallel gateway as the other parallel activities. Rejoin all branches at one parallel gateway before the later step that depends on them. Do not fold the action into another task or into the task that precedes the split, and do not omit it.",
+   "situation": "the description states that after a common step, two different parties must each perform their own separate action (for example, one party confirms and rates while the other party also rates or acts), with no choice between them and both required before the next step",
+   "source": "learned guideline (refines FID-02)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-056",
+   "instruction": "When the description states that a recurring obligation to perform an activity holds until a later decision outcome is reached, and that another outcome lifts the obligation while the process keeps running: Model the recurring activity as a task on the outgoing flow of an exclusive gateway whose question names the condition that lifts the obligation. Place the task on the branch where the obligation still applies, before the process returns to waiting for further outcomes. Do not place the task before the decision or on the branch where the description says the obligation is lifted, and do not drop it from the branch where it still applies. Keep the task label to the activity the description names.",
+   "situation": "the description states that a recurring obligation to perform an activity holds until a later decision outcome is reached, and that another outcome lifts the obligation while the process keeps running",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-057",
+   "instruction": "When the description states that one outcome ends the process, but a further rating or condition, checked after that outcome, lets the process continue, and a recurring activity still applies on the continuing path: After the activity that produces the outcome, place an exclusive gateway for that outcome. On the branch where the process ends, connect to an end event. On the branch where the outcome does not end the process, place a second exclusive gateway whose question names the further rating or condition. Put the recurring activity only on the branch where that condition holds, and loop that branch back to the waiting point. Do not connect the outcome gateway directly to the recurring activity, and do not place the recurring activity on the branch where the process ends.",
+   "situation": "the description states that one outcome ends the process, but a further rating or condition, checked after that outcome, lets the process continue, and a recurring activity still applies on the continuing path",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-058",
+   "instruction": "When the description states that, after a shared period of work, each of two parties may or must give an evaluation of the other, phrased as an action that each party performs (for example, one party can evaluate the other and the other can evaluate it back): Model each party's evaluation as its own user task performed by the party giving it, with one task per evaluation. Place these tasks in parallel after the shared period and join them with a parallel gateway before the process continues. Do not model the evaluation expected from the other party as an intermediate catch event, except where the description explicitly says the process waits for an incoming message or event.",
+   "situation": "the description states that, after a shared period of work, each of two parties may or must give an evaluation of the other, phrased as an action that each party performs (for example, one party can evaluate the other and the other can evaluate it back)",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T1",
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

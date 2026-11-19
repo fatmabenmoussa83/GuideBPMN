@@ -1,0 +1,322 @@
+{
+ "id": "45",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 36,
+  "T6": 8
+ },
+ "first_pass_error_counts": {
+  "T3": 1,
+  "T5": 39,
+  "T6": 9
+ },
+ "guidelines": [
+  {
+   "failure_type": "T3",
+   "status": "promoted",
+   "detail": "refines PROC-04 (The validator reports StartEvent_OrderReceived as a separate start-to-end chain, detached from the main flow. S5 and S8 describe the order being finished only after the preceding steps (payment, shipment and address) are executed, so that step has no external trigger and needs no start event. PROC-04 already allows multiple start events for distinct triggers, but it does not say when a start event)",
+   "guideline_id": "LRN-123",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines FID-01 (M2 shows the reference has a manual task for the participant's check after saving a product and before the decision gateway. F4 shows the generated model lacks the flow from the save task into that check, so the generator went straight to the decision. S3 states the check as its own step after saving and before the repeat decision. FID-01 already requires modeling every distinct stated activity, b)",
+   "guideline_id": "LRN-124",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: repeat",
+   "guideline_id": "EXS-121",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline (The reference has a wait step on the payment branch of the parallel split, and the generated model omits that wait and its flow into the join that precedes 'Finish order' (M1, F1, F9). The description says the customer must wait for the bank's confirmation while the address branch runs in parallel, and the order is finished only after both branches are done (S6, S7, S8). The documented gateway gui)",
+   "guideline_id": "LRN-126",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-126 (cosine 0.91)",
+   "guideline_id": "LRN-126",
+   "ref": "LRN-126",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-126 (The reference models the bank confirmation as a task named for the customer's wait. That breaks BPMN semantics, since a wait for an external confirmation is a catch event, so I do not carry the task into the guideline. The real divergence is that the generated model omits the confirmation step on the payment branch, which the description places in a parallel split (S6 and S7) before the join (S8).)",
+   "guideline_id": "LRN-126",
+   "ref": "LRN-126",
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-116 (The description states that the customer must wait until the bank confirms the payment, and the generated model has no element for this wait (M1). The wait is a confirmation from an outside party, which BPMN models as an intermediate catch event, not as a task. LRN-116 already prescribes a catch event for an outside party's delivery or arrival, so this guideline restates it, with a trigger that do)",
+   "guideline_id": "LRN-116",
+   "ref": "LRN-116",
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-123",
+   "instruction": "When the description states that an activity is performed only after one or more earlier steps have been executed, and it names no separate external or initial trigger for that activity: Do not give that activity its own start event. Connect it to the main flow from the end of the preceding step. If several preceding branches must all be completed first, join their ends with a parallel gateway whose single outgoing sequence flow leads to the activity. Use a start event only for an initial trigger that the description states.",
+   "situation": "the description states that an activity is performed only after one or more earlier steps have been executed, and it names no separate external or initial trigger for that activity",
+   "source": "learned guideline (refines PROC-04)",
+   "failure_type": "T3"
+  },
+  {
+   "rule_id": "LRN-124",
+   "instruction": "When The description states that after an activity is completed, a participant performs a separate check (for example, verifying whether something has already happened) as its own action, and a later decision depends on the result of that check.: Model the check as a separate manual task performed by that participant. Place it on the sequence flow after the preceding activity and before the decision gateway, with sequence flows on both sides. Do not merge the check into the gateway's condition or omit it, because the check is a distinct action the description states.",
+   "situation": "The description states that after an activity is completed, a participant performs a separate check (for example, verifying whether something has already happened) as its own action, and a later decision depends on the result of that check.",
+   "source": "learned guideline (refines FID-01)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "EXS-121",
+   "instruction": "When the description says an actor performs a check as a step (for example, checking whether an item was already handled) and a decision on whether to repeat or continue then depends on that check: Model the actor's check as its own task (use a manual task when the check is done by a person without system support, otherwise a user task) placed before the decision gateway. Label it with the actor and the check the description states. Let the decision gateway test the outcome of that task, and do not fold the check into the gateway question alone.",
+   "situation": "the description says an actor performs a check as a step (for example, checking whether an item was already handled) and a decision on whether to repeat or continue then depends on that check",
+   "source": "example-specific guideline",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-126",
+   "instruction": "When the description states that, within one branch of a parallel split, a participant must wait until an external party confirms something (for example, a bank confirming a payment) before the branch can continue to the parallel join that precedes the next step: Model the wait as an intermediate catch event on that branch, placed after the activity that starts the wait and before the branch's sequence flow into the parallel join. Do not drop the wait or leave that branch without a sequence flow into the join. Do not replace the wait with an exclusive gateway or move it outside the parallel split.",
+   "situation": "the description states that, within one branch of a parallel split, a participant must wait until an external party confirms something (for example, a bank confirming a payment) before the branch can continue to the parallel join that precedes the next step",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-116",
+   "instruction": "When the description says an action requests something from an outside party or source, and a later step can only proceed once that party's arrival or delivery happens at an unspecified or uncertain time: Model the request as its own task. Model the arrival or delivery as a distinct intermediate catch event placed after the request task and before the step that depends on it. Do not merge the request and the arrival into one element, do not represent the wait as a task or as internal work of another activity, and do not omit the request task. If the request is made on a parallel branch, keep the catch event on the path that leads to the dependent step.",
+   "situation": "the description says a participant has to wait until an outside party confirms that something has happened, and the wait is not a request the participant makes itself",
+   "source": "learned guideline (refines ACT-05)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T3",
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

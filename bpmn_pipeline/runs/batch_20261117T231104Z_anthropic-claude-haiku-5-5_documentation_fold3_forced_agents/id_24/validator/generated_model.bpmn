@@ -1,0 +1,203 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Restaurant" targetNamespace="http://example.com/bpmn/restaurant-meal-ordering">
+
+  <bpmn:message id="Msg_OrderPlaced" name="Order placed"/>
+  <bpmn:message id="Msg_Payment" name="Payment"/>
+  <bpmn:message id="Msg_BuzzerInfo" name="Buzzer with information: &quot;When the buzzer rings, your dinner is ready&quot;"/>
+  <bpmn:message id="Msg_NewOrder" name="New meal order"/>
+  <bpmn:message id="Msg_MealReady" name="Meal placed in service hatch"/>
+  <bpmn:message id="Msg_BuzzerRing" name="Buzzer rings"/>
+  <bpmn:message id="Msg_Call" name="Employee calls guest"/>
+  <bpmn:message id="Msg_GuestAtHatch" name="Guest at service hatch"/>
+  <bpmn:message id="Msg_MealHandover" name="Meal handed over"/>
+
+  <bpmn:collaboration id="Collaboration_Restaurant">
+    <bpmn:participant id="Participant_Guest" name="Guest" processRef="Process_Guest"/>
+    <bpmn:participant id="Participant_Employee" name="Employee" processRef="Process_Employee"/>
+    <bpmn:participant id="Participant_Chef" name="Chef" processRef="Process_Chef"/>
+    <bpmn:messageFlow id="MF_OrderPlaced" name="Order placed" sourceRef="SendTask_PlaceOrder" targetRef="Start_Order" messageRef="Msg_OrderPlaced"/>
+    <bpmn:messageFlow id="MF_Payment" name="Payment" sourceRef="SendTask_Pay" targetRef="ReceiveTask_Payment" messageRef="Msg_Payment"/>
+    <bpmn:messageFlow id="MF_BuzzerInfo" name="Buzzer with information" sourceRef="SendTask_HandBuzzer" targetRef="ReceiveTask_BuzzerInfo" messageRef="Msg_BuzzerInfo"/>
+    <bpmn:messageFlow id="MF_NewOrder" name="New meal order" sourceRef="SendTask_InformChef" targetRef="Start_NewOrder" messageRef="Msg_NewOrder"/>
+    <bpmn:messageFlow id="MF_MealReady" name="Meal placed in hatch" sourceRef="SendTask_InformEmployee" targetRef="ICE_MealReady" messageRef="Msg_MealReady"/>
+    <bpmn:messageFlow id="MF_BuzzerRing" name="Buzzer rings" sourceRef="SendTask_SetOffBuzzer" targetRef="ICE_BuzzerRing" messageRef="Msg_BuzzerRing"/>
+    <bpmn:messageFlow id="MF_Call" name="Employee calls guest" sourceRef="SendTask_Call" targetRef="ICE_Called" messageRef="Msg_Call"/>
+    <bpmn:messageFlow id="MF_GuestAtHatch" name="Guest at service hatch" sourceRef="SendTask_GoHatch" targetRef="ICE_GuestAtHatch" messageRef="Msg_GuestAtHatch"/>
+    <bpmn:messageFlow id="MF_MealHandover" name="Meal handed over" sourceRef="SendTask_HandOver" targetRef="ReceiveTask_Meal" messageRef="Msg_MealHandover"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Guest" name="Guest" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Hungry" name="Guest feels hungry">
+      <bpmn:outgoing>Flow_G1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_ChooseDish" name="Choose dish from meal range">
+      <bpmn:incoming>Flow_G1</bpmn:incoming>
+      <bpmn:outgoing>Flow_G2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="ICE_TurnReached" name="It is his turn">
+      <bpmn:incoming>Flow_G2</bpmn:incoming>
+      <bpmn:outgoing>Flow_G3</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="SendTask_PlaceOrder" name="Place order with employee" messageRef="Msg_OrderPlaced">
+      <bpmn:incoming>Flow_G3</bpmn:incoming>
+      <bpmn:outgoing>Flow_G4</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="SendTask_Pay" name="Pay for meal" messageRef="Msg_Payment">
+      <bpmn:incoming>Flow_G4</bpmn:incoming>
+      <bpmn:outgoing>Flow_G5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="ReceiveTask_BuzzerInfo" name="Receive buzzer with information" messageRef="Msg_BuzzerInfo">
+      <bpmn:incoming>Flow_G5</bpmn:incoming>
+      <bpmn:outgoing>Flow_G6</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:eventBasedGateway id="Gateway_GuestWait" name="Buzzer or call">
+      <bpmn:incoming>Flow_G6</bpmn:incoming>
+      <bpmn:outgoing>Flow_G7</bpmn:outgoing>
+      <bpmn:outgoing>Flow_G8</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="ICE_BuzzerRing" name="Buzzer rings">
+      <bpmn:incoming>Flow_G7</bpmn:incoming>
+      <bpmn:outgoing>Flow_G9</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_BuzzerRing" messageRef="Msg_BuzzerRing"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="ICE_Called" name="Called by employee">
+      <bpmn:incoming>Flow_G8</bpmn:incoming>
+      <bpmn:outgoing>Flow_G10</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Called" messageRef="Msg_Call"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="SendTask_GoHatch" name="Go to service hatch" messageRef="Msg_GuestAtHatch">
+      <bpmn:incoming>Flow_G9</bpmn:incoming>
+      <bpmn:incoming>Flow_G10</bpmn:incoming>
+      <bpmn:outgoing>Flow_G11</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="ReceiveTask_Meal" name="Receive meal" messageRef="Msg_MealHandover">
+      <bpmn:incoming>Flow_G11</bpmn:incoming>
+      <bpmn:outgoing>Flow_G12</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:task id="Task_Eat" name="Eat meal">
+      <bpmn:incoming>Flow_G12</bpmn:incoming>
+      <bpmn:outgoing>Flow_G13</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_GuestDone" name="Meal eaten">
+      <bpmn:incoming>Flow_G13</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_G1" sourceRef="StartEvent_Hungry" targetRef="Task_ChooseDish"/>
+    <bpmn:sequenceFlow id="Flow_G2" sourceRef="Task_ChooseDish" targetRef="ICE_TurnReached"/>
+    <bpmn:sequenceFlow id="Flow_G3" sourceRef="ICE_TurnReached" targetRef="SendTask_PlaceOrder"/>
+    <bpmn:sequenceFlow id="Flow_G4" sourceRef="SendTask_PlaceOrder" targetRef="SendTask_Pay"/>
+    <bpmn:sequenceFlow id="Flow_G5" sourceRef="SendTask_Pay" targetRef="ReceiveTask_BuzzerInfo"/>
+    <bpmn:sequenceFlow id="Flow_G6" sourceRef="ReceiveTask_BuzzerInfo" targetRef="Gateway_GuestWait"/>
+    <bpmn:sequenceFlow id="Flow_G7" sourceRef="Gateway_GuestWait" targetRef="ICE_BuzzerRing"/>
+    <bpmn:sequenceFlow id="Flow_G8" sourceRef="Gateway_GuestWait" targetRef="ICE_Called"/>
+    <bpmn:sequenceFlow id="Flow_G9" sourceRef="ICE_BuzzerRing" targetRef="SendTask_GoHatch"/>
+    <bpmn:sequenceFlow id="Flow_G10" sourceRef="ICE_Called" targetRef="SendTask_GoHatch"/>
+    <bpmn:sequenceFlow id="Flow_G11" sourceRef="SendTask_GoHatch" targetRef="ReceiveTask_Meal"/>
+    <bpmn:sequenceFlow id="Flow_G12" sourceRef="ReceiveTask_Meal" targetRef="Task_Eat"/>
+    <bpmn:sequenceFlow id="Flow_G13" sourceRef="Task_Eat" targetRef="End_GuestDone"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Employee" name="Employee" isExecutable="false">
+    <bpmn:startEvent id="Start_Order" name="Guest places order">
+      <bpmn:outgoing>Flow_E1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_OrderPlaced" messageRef="Msg_OrderPlaced"/>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_EnterPOS" name="Enter order into POS system">
+      <bpmn:incoming>Flow_E1</bpmn:incoming>
+      <bpmn:outgoing>Flow_E2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:receiveTask id="ReceiveTask_Payment" name="Collect money from guest" messageRef="Msg_Payment">
+      <bpmn:incoming>Flow_E2</bpmn:incoming>
+      <bpmn:outgoing>Flow_E3</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:manualTask id="Task_SetupBuzzer" name="Set up buzzer">
+      <bpmn:incoming>Flow_E3</bpmn:incoming>
+      <bpmn:outgoing>Flow_E4</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:sendTask id="SendTask_HandBuzzer" name="Hand over buzzer with information" messageRef="Msg_BuzzerInfo">
+      <bpmn:incoming>Flow_E4</bpmn:incoming>
+      <bpmn:outgoing>Flow_E5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="SendTask_InformChef" name="Inform chef of new meal order" messageRef="Msg_NewOrder">
+      <bpmn:incoming>Flow_E5</bpmn:incoming>
+      <bpmn:outgoing>Flow_E6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="ICE_MealReady" name="Meal is ready in hatch">
+      <bpmn:incoming>Flow_E6</bpmn:incoming>
+      <bpmn:outgoing>Flow_E7</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_MealReady" messageRef="Msg_MealReady"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="SendTask_SetOffBuzzer" name="Set off guest's buzzer" messageRef="Msg_BuzzerRing">
+      <bpmn:incoming>Flow_E7</bpmn:incoming>
+      <bpmn:outgoing>Flow_E8</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:eventBasedGateway id="Gateway_HatchWait" name="Guest at hatch or timeout">
+      <bpmn:incoming>Flow_E8</bpmn:incoming>
+      <bpmn:incoming>Flow_E12</bpmn:incoming>
+      <bpmn:outgoing>Flow_E9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_E10</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="ICE_GuestAtHatch" name="Guest appears at service hatch">
+      <bpmn:incoming>Flow_E9</bpmn:incoming>
+      <bpmn:outgoing>Flow_E13</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_GuestAtHatch" messageRef="Msg_GuestAtHatch"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="ICE_Timer5Min" name="No reaction to buzzer for 5 minutes">
+      <bpmn:incoming>Flow_E10</bpmn:incoming>
+      <bpmn:outgoing>Flow_E11</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TED_5Min">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="SendTask_Call" name="Call guest" messageRef="Msg_Call">
+      <bpmn:incoming>Flow_E11</bpmn:incoming>
+      <bpmn:outgoing>Flow_E12</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="SendTask_HandOver" name="Hand over meal" messageRef="Msg_MealHandover">
+      <bpmn:incoming>Flow_E13</bpmn:incoming>
+      <bpmn:outgoing>Flow_E14</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Restaurant" name="Meal handed over">
+      <bpmn:incoming>Flow_E14</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1" sourceRef="Start_Order" targetRef="Task_EnterPOS"/>
+    <bpmn:sequenceFlow id="Flow_E2" sourceRef="Task_EnterPOS" targetRef="ReceiveTask_Payment"/>
+    <bpmn:sequenceFlow id="Flow_E3" sourceRef="ReceiveTask_Payment" targetRef="Task_SetupBuzzer"/>
+    <bpmn:sequenceFlow id="Flow_E4" sourceRef="Task_SetupBuzzer" targetRef="SendTask_HandBuzzer"/>
+    <bpmn:sequenceFlow id="Flow_E5" sourceRef="SendTask_HandBuzzer" targetRef="SendTask_InformChef"/>
+    <bpmn:sequenceFlow id="Flow_E6" sourceRef="SendTask_InformChef" targetRef="ICE_MealReady"/>
+    <bpmn:sequenceFlow id="Flow_E7" sourceRef="ICE_MealReady" targetRef="SendTask_SetOffBuzzer"/>
+    <bpmn:sequenceFlow id="Flow_E8" sourceRef="SendTask_SetOffBuzzer" targetRef="Gateway_HatchWait"/>
+    <bpmn:sequenceFlow id="Flow_E9" sourceRef="Gateway_HatchWait" targetRef="ICE_GuestAtHatch"/>
+    <bpmn:sequenceFlow id="Flow_E10" sourceRef="Gateway_HatchWait" targetRef="ICE_Timer5Min"/>
+    <bpmn:sequenceFlow id="Flow_E11" sourceRef="ICE_Timer5Min" targetRef="SendTask_Call"/>
+    <bpmn:sequenceFlow id="Flow_E12" sourceRef="SendTask_Call" targetRef="Gateway_HatchWait"/>
+    <bpmn:sequenceFlow id="Flow_E13" sourceRef="ICE_GuestAtHatch" targetRef="SendTask_HandOver"/>
+    <bpmn:sequenceFlow id="Flow_E14" sourceRef="SendTask_HandOver" targetRef="End_Restaurant"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Chef" name="Chef" isExecutable="false">
+    <bpmn:startEvent id="Start_NewOrder" name="New meal order received">
+      <bpmn:outgoing>Flow_C1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_NewOrder" messageRef="Msg_NewOrder"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_PrepareMeal" name="Prepare meal">
+      <bpmn:incoming>Flow_C1</bpmn:incoming>
+      <bpmn:outgoing>Flow_C2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:manualTask id="Task_PlaceInHatch" name="Place meal in service hatch">
+      <bpmn:incoming>Flow_C2</bpmn:incoming>
+      <bpmn:outgoing>Flow_C3</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:sendTask id="SendTask_InformEmployee" name="Inform employee that meal is in hatch" messageRef="Msg_MealReady">
+      <bpmn:incoming>Flow_C3</bpmn:incoming>
+      <bpmn:outgoing>Flow_C4</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Chef" name="Meal placed in hatch">
+      <bpmn:incoming>Flow_C4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_C1" sourceRef="Start_NewOrder" targetRef="Task_PrepareMeal"/>
+    <bpmn:sequenceFlow id="Flow_C2" sourceRef="Task_PrepareMeal" targetRef="Task_PlaceInHatch"/>
+    <bpmn:sequenceFlow id="Flow_C3" sourceRef="Task_PlaceInHatch" targetRef="SendTask_InformEmployee"/>
+    <bpmn:sequenceFlow id="Flow_C4" sourceRef="SendTask_InformEmployee" targetRef="End_Chef"/>
+  </bpmn:process>
+
+</bpmn:definitions>

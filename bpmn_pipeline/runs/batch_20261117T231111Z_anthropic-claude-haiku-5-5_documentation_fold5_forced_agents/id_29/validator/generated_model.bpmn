@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_WorkLiveAustria" targetNamespace="http://example.org/bpmn/work-live-austria">
+  <bpmn:message id="Msg_VisaApplication" name="Visa application submitted"/>
+  <bpmn:message id="Msg_AdditionalDocuments" name="Additional documents provided"/>
+  <bpmn:message id="Msg_VisaResponse" name="Visa decision"/>
+  <bpmn:collaboration id="Collaboration_WorkLiveAustria">
+    <bpmn:participant id="Participant_Applicant" name="Applicant" processRef="Process_Applicant"/>
+    <bpmn:participant id="Participant_Representation" name="Austrian representation office (BMEIA)"/>
+    <bpmn:messageFlow id="MF_SubmitApplication" sourceRef="SendTask_SubmitApplication" targetRef="Participant_Representation" messageRef="Msg_VisaApplication"/>
+    <bpmn:messageFlow id="MF_AdditionalDocuments" sourceRef="SendTask_ProvideAdditional" targetRef="Participant_Representation" messageRef="Msg_AdditionalDocuments"/>
+    <bpmn:messageFlow id="MF_VisaResponse" sourceRef="Participant_Representation" targetRef="CatchEvent_VisaResponse" messageRef="Msg_VisaResponse"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Applicant" name="Work and Live in Austria" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Begin" name="Decision to work and live in Austria"/>
+    <bpmn:task id="Task_CheckRequirements" name="Check requirements for working and living in Austria"/>
+    <bpmn:parallelGateway id="Gateway_Prep_Split" name="Prepare accommodation and bank account" gatewayDirection="Diverging"/>
+    <bpmn:task id="Task_Accommodation" name="Organize accommodation (negotiation)"/>
+    <bpmn:task id="Task_BankAccount" name="Organize bank account (negotiation)"/>
+    <bpmn:parallelGateway id="Gateway_Prep_Join" name="Accommodation and bank account arranged" gatewayDirection="Converging"/>
+    <bpmn:userTask id="Task_VisaForm" name="Complete visa application form"/>
+    <bpmn:userTask id="Task_TravelDocument" name="Obtain travel document valid in Austria (validity exceeds stay by at least three months, at least two empty pages, issued within last ten years)"/>
+    <bpmn:userTask id="Task_PassportPhoto" name="Obtain passport photo (portrait format, 35 x 45 mm, compliant with photo criteria)"/>
+    <bpmn:userTask id="Task_HealthInsurance" name="Obtain fully comprehensive travel health insurance (EUR 30,000 cover, valid in entire Schengen area, for planned stay)"/>
+    <bpmn:userTask id="Task_MeansOfSubsistence" name="Provide proof of sufficient means of subsistence for stay and return journey"/>
+    <bpmn:userTask id="Task_OtherEvidence" name="Gather other evidence requested by authorities (e.g. accommodation, invitations, bookings, return ticket, proof of employment)"/>
+    <bpmn:exclusiveGateway id="Gateway_Req_Merge" name="Requirements check" gatewayDirection="Converging"/>
+    <bpmn:userTask id="Task_VerifyRequirements" name="Verify that all visa requirements are fulfilled"/>
+    <bpmn:exclusiveGateway id="Gateway_Req_Check" name="All requirements fulfilled?" gatewayDirection="Diverging"/>
+    <bpmn:userTask id="Task_ObtainMissing" name="Obtain or renew missing requirement (contact representation for additional documents)"/>
+    <bpmn:exclusiveGateway id="Gateway_VisaType_Split" name="Visa type?" gatewayDirection="Diverging"/>
+    <bpmn:task id="Task_SchengenCompetence" name="Determine competent representation by main travel destination or first entry"/>
+    <bpmn:task id="Task_TypeDCompetence" name="Determine competent Austrian representation by place of residence (Section 8 FPG)"/>
+    <bpmn:exclusiveGateway id="Gateway_Competence_Join" name="Representation office determined" gatewayDirection="Converging"/>
+    <bpmn:sendTask id="SendTask_SubmitApplication" name="Submit visa application to representation office" messageRef="Msg_VisaApplication">
+      <bpmn:documentation>The representation office checks the absence of other grounds for refusal (residence prohibition, alert issued by a Schengen country).</bpmn:documentation>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="CatchEvent_VisaResponse" name="Visa decision received">
+      <bpmn:messageEventDefinition id="MED_VisaResponse" messageRef="Msg_VisaResponse"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_Response" name="Outcome of application?" gatewayDirection="Diverging"/>
+    <bpmn:endEvent id="EndEvent_Granted" name="Visa granted">
+      <bpmn:documentation>Visa must be renewed every x months (interval not specified in the description).</bpmn:documentation>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_Refused" name="Visa refused"/>
+    <bpmn:sendTask id="SendTask_ProvideAdditional" name="Provide additional documents requested by authorities" messageRef="Msg_AdditionalDocuments"/>
+    <bpmn:sequenceFlow id="SF_01" sourceRef="StartEvent_Begin" targetRef="Task_CheckRequirements"/>
+    <bpmn:sequenceFlow id="SF_02" sourceRef="Task_CheckRequirements" targetRef="Gateway_Prep_Split"/>
+    <bpmn:sequenceFlow id="SF_03" sourceRef="Gateway_Prep_Split" targetRef="Task_Accommodation"/>
+    <bpmn:sequenceFlow id="SF_04" sourceRef="Gateway_Prep_Split" targetRef="Task_BankAccount"/>
+    <bpmn:sequenceFlow id="SF_05" sourceRef="Task_Accommodation" targetRef="Gateway_Prep_Join"/>
+    <bpmn:sequenceFlow id="SF_06" sourceRef="Task_BankAccount" targetRef="Gateway_Prep_Join"/>
+    <bpmn:sequenceFlow id="SF_07" sourceRef="Gateway_Prep_Join" targetRef="Task_VisaForm"/>
+    <bpmn:sequenceFlow id="SF_08" sourceRef="Task_VisaForm" targetRef="Task_TravelDocument"/>
+    <bpmn:sequenceFlow id="SF_09" sourceRef="Task_TravelDocument" targetRef="Task_PassportPhoto"/>
+    <bpmn:sequenceFlow id="SF_10" sourceRef="Task_PassportPhoto" targetRef="Task_HealthInsurance"/>
+    <bpmn:sequenceFlow id="SF_11" sourceRef="Task_HealthInsurance" targetRef="Task_MeansOfSubsistence"/>
+    <bpmn:sequenceFlow id="SF_12" sourceRef="Task_MeansOfSubsistence" targetRef="Task_OtherEvidence"/>
+    <bpmn:sequenceFlow id="SF_13" sourceRef="Task_OtherEvidence" targetRef="Gateway_Req_Merge"/>
+    <bpmn:sequenceFlow id="SF_14" sourceRef="Gateway_Req_Merge" targetRef="Task_VerifyRequirements"/>
+    <bpmn:sequenceFlow id="SF_15" sourceRef="Task_VerifyRequirements" targetRef="Gateway_Req_Check"/>
+    <bpmn:sequenceFlow id="SF_16" name="Requirements fulfilled" sourceRef="Gateway_Req_Check" targetRef="Gateway_VisaType_Split"/>
+    <bpmn:sequenceFlow id="SF_17" name="Requirements not fulfilled" sourceRef="Gateway_Req_Check" targetRef="Task_ObtainMissing"/>
+    <bpmn:sequenceFlow id="SF_18" sourceRef="Task_ObtainMissing" targetRef="Gateway_Req_Merge"/>
+    <bpmn:sequenceFlow id="SF_19" name="Schengen visa (category A or C)" sourceRef="Gateway_VisaType_Split" targetRef="Task_SchengenCompetence"/>
+    <bpmn:sequenceFlow id="SF_20" name="Type D visa" sourceRef="Gateway_VisaType_Split" targetRef="Task_TypeDCompetence"/>
+    <bpmn:sequenceFlow id="SF_21" sourceRef="Task_SchengenCompetence" targetRef="Gateway_Competence_Join"/>
+    <bpmn:sequenceFlow id="SF_22" sourceRef="Task_TypeDCompetence" targetRef="Gateway_Competence_Join"/>
+    <bpmn:sequenceFlow id="SF_23" sourceRef="Gateway_Competence_Join" targetRef="SendTask_SubmitApplication"/>
+    <bpmn:sequenceFlow id="SF_24" sourceRef="SendTask_SubmitApplication" targetRef="CatchEvent_VisaResponse"/>
+    <bpmn:sequenceFlow id="SF_25" sourceRef="CatchEvent_VisaResponse" targetRef="Gateway_Response"/>
+    <bpmn:sequenceFlow id="SF_26" name="Visa granted" sourceRef="Gateway_Response" targetRef="EndEvent_Granted"/>
+    <bpmn:sequenceFlow id="SF_27" name="Visa refused" sourceRef="Gateway_Response" targetRef="EndEvent_Refused"/>
+    <bpmn:sequenceFlow id="SF_28" name="Additional documents requested" sourceRef="Gateway_Response" targetRef="SendTask_ProvideAdditional"/>
+    <bpmn:sequenceFlow id="SF_29" sourceRef="SendTask_ProvideAdditional" targetRef="CatchEvent_VisaResponse"/>
+  </bpmn:process>
+</bpmn:definitions>

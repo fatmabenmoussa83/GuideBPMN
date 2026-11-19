@@ -1,0 +1,117 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_WorkAccident" targetNamespace="https://example.org/bpmn/work-accident">
+  <bpmn:message id="Message_EmployeeReport" name="Employee accident or safety report"/>
+  <bpmn:message id="Message_EmployerInsuranceReport" name="Work accident report to accident insurance provider"/>
+  <bpmn:message id="Message_EmployerInspectorateReport" name="Serious or fatal work accident report"/>
+  <bpmn:message id="Message_SelfEmployedInsuranceReport" name="Self-employed person's work accident report"/>
+  <bpmn:message id="Message_StudentReport" name="Student or schoolchild accident report"/>
+  <bpmn:message id="Message_SchoolInsuranceReport" name="School or education-provider accident report"/>
+  <bpmn:message id="Message_PrivateImmediateReport" name="Private insurance accident report"/>
+  <bpmn:message id="Message_PrivateFatalityReport" name="Private insurance fatality report"/>
+
+  <bpmn:process id="Process_Employee" name="Employee accident and safety reporting" isExecutable="false">
+    <bpmn:startEvent id="Start_EmployeeIncident" name="Accident, near accident, serious risk, or protection-system defect discovered"/>
+    <bpmn:task id="Task_GatherEmployeeInformation" name="Gather information about the incident">
+      <bpmn:documentation>Capture the circumstances relevant to the accident and its possible coverage. Examples for insured gainful employment include an accident connected by location, time and cause to the employment; working from home; direct routes between residence, work, lunch, home, training or a doctor (where the doctor's visit was notified to the employer in advance); protected carpools; professional training; taking a supervised child to or from childcare, daycare, external care or school; and use of advocacy groups or professional associations. In agricultural or forestry establishments, potentially covered work can also include qualifying household work, guest accommodation, secondary sales of farm products, building work serving the establishment, and neighbourhood assistance. Accidents outside professional activity may also qualify in situations such as use of employment-service activities, assisting at an accident, donating blood, or specified activities with listed aid organisations. Record the applicable circumstances without assuming that coverage is established.</bpmn:documentation>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_InformEmployer" name="Inform the employer immediately"/>
+    <bpmn:endEvent id="End_EmployeeReported" name="Employer informed"/>
+    <bpmn:sequenceFlow id="Flow_Emp_1" sourceRef="Start_EmployeeIncident" targetRef="Task_GatherEmployeeInformation"/>
+    <bpmn:sequenceFlow id="Flow_Emp_2" sourceRef="Task_GatherEmployeeInformation" targetRef="Task_InformEmployer"/>
+    <bpmn:sequenceFlow id="Flow_Emp_3" sourceRef="Task_InformEmployer" targetRef="End_EmployeeReported"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Employer" name="Employer accident reporting" isExecutable="false">
+    <bpmn:startEvent id="Start_EmployerReport" name="Employee report received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_EmployeeReport" messageRef="Message_EmployeeReport"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_GatherEmployerInformation" name="Gather information about the work accident"/>
+    <bpmn:inclusiveGateway id="Gateway_EmployerReportingDuties" name="Determine applicable reporting duties"/>
+    <bpmn:sendTask id="Task_ReportInspectorate" name="Report fatal or serious accident to the Labour Inspectorate immediately, if not reported to emergency services"/>
+    <bpmn:sendTask id="Task_ReportAccidentInsurer" name="Report qualifying work accident to the accident insurance provider within five days"/>
+    <bpmn:endEvent id="End_EmployerInspectorateReported" name="Labour Inspectorate reporting completed"/>
+    <bpmn:endEvent id="End_EmployerInsurerReported" name="Accident insurance provider reporting completed"/>
+    <bpmn:endEvent id="End_EmployerNoExternalReport" name="No stated external reporting duty applies"/>
+    <bpmn:sequenceFlow id="Flow_Employer_1" sourceRef="Start_EmployerReport" targetRef="Task_GatherEmployerInformation"/>
+    <bpmn:sequenceFlow id="Flow_Employer_2" sourceRef="Task_GatherEmployerInformation" targetRef="Gateway_EmployerReportingDuties"/>
+    <bpmn:sequenceFlow id="Flow_Employer_3" sourceRef="Gateway_EmployerReportingDuties" targetRef="Task_ReportInspectorate">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">fatality or seriousInjury = true, and emergencyServicesHaveNotReported = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Employer_4" sourceRef="Gateway_EmployerReportingDuties" targetRef="Task_ReportAccidentInsurer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">insuredPersonKilled or unableToWorkForAtLeastThreeDays = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Employer_5" sourceRef="Gateway_EmployerReportingDuties" targetRef="End_EmployerNoExternalReport" name="Neither reporting condition applies"/>
+    <bpmn:sequenceFlow id="Flow_Employer_6" sourceRef="Task_ReportInspectorate" targetRef="End_EmployerInspectorateReported"/>
+    <bpmn:sequenceFlow id="Flow_Employer_7" sourceRef="Task_ReportAccidentInsurer" targetRef="End_EmployerInsurerReported"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_SelfEmployed" name="Self-employed person's accident reporting" isExecutable="false">
+    <bpmn:startEvent id="Start_SelfEmployedAccident" name="Work accident involving the self-employed person or an employed person"/>
+    <bpmn:task id="Task_GatherSelfEmployedInformation" name="Gather information about the work accident"/>
+    <bpmn:sendTask id="Task_SelfEmployedReport" name="Report the accident to the accident insurance provider in good time"/>
+    <bpmn:endEvent id="End_SelfEmployedReported" name="Accident insurance provider informed"/>
+    <bpmn:sequenceFlow id="Flow_Self_1" sourceRef="Start_SelfEmployedAccident" targetRef="Task_GatherSelfEmployedInformation"/>
+    <bpmn:sequenceFlow id="Flow_Self_2" sourceRef="Task_GatherSelfEmployedInformation" targetRef="Task_SelfEmployedReport"/>
+    <bpmn:sequenceFlow id="Flow_Self_3" sourceRef="Task_SelfEmployedReport" targetRef="End_SelfEmployedReported"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Student" name="Student or schoolchild accident reporting" isExecutable="false">
+    <bpmn:startEvent id="Start_StudentAccident" name="Accident involving a student or schoolchild"/>
+    <bpmn:task id="Task_GatherStudentInformation" name="Gather information about the accident">
+      <bpmn:documentation>Relevant circumstances can include a connection by location, time and cause to school, university or compulsory kindergarten education; a school or school-related event; the direct route between residence or permanent accommodation and kindergarten or school; a prescribed practical task; or certain professional training orientations.</bpmn:documentation>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_StudentReport" name="Report the accident to the competent directorate"/>
+    <bpmn:endEvent id="End_StudentReported" name="Competent directorate informed"/>
+    <bpmn:sequenceFlow id="Flow_Student_1" sourceRef="Start_StudentAccident" targetRef="Task_GatherStudentInformation"/>
+    <bpmn:sequenceFlow id="Flow_Student_2" sourceRef="Task_GatherStudentInformation" targetRef="Task_StudentReport"/>
+    <bpmn:sequenceFlow id="Flow_Student_3" sourceRef="Task_StudentReport" targetRef="End_StudentReported"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_EducationalInstitution" name="Educational institution accident reporting" isExecutable="false">
+    <bpmn:startEvent id="Start_EducationalAccident" name="Insured person physically injured or killed in a work accident"/>
+    <bpmn:task id="Task_GatherEducationalInformation" name="Gather information about the accident"/>
+    <bpmn:sendTask id="Task_EducationalReport" name="Report the accident to the accident insurance provider in triplicate within five days"/>
+    <bpmn:endEvent id="End_EducationalReported" name="Accident insurance provider reporting completed"/>
+    <bpmn:sequenceFlow id="Flow_Edu_1" sourceRef="Start_EducationalAccident" targetRef="Task_GatherEducationalInformation"/>
+    <bpmn:sequenceFlow id="Flow_Edu_2" sourceRef="Task_GatherEducationalInformation" targetRef="Task_EducationalReport"/>
+    <bpmn:sequenceFlow id="Flow_Edu_3" sourceRef="Task_EducationalReport" targetRef="End_EducationalReported"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_PrivateInsured" name="Private insurance accident reporting" isExecutable="false">
+    <bpmn:startEvent id="Start_PrivateAccident" name="Private-insured accident"/>
+    <bpmn:task id="Task_GatherPrivateInformation" name="Gather information about the accident"/>
+    <bpmn:sendTask id="Task_PrivateImmediateReport" name="Report the accident in writing immediately in line with the insurance conditions"/>
+    <bpmn:exclusiveGateway id="Gateway_PrivateFatality" name="Did the accident involve a fatality?"/>
+    <bpmn:sendTask id="Task_PrivateFatalityReport" name="Report the fatality within three days, even if the accident has already been reported"/>
+    <bpmn:endEvent id="End_PrivateReported" name="Private insurance reporting completed"/>
+    <bpmn:sequenceFlow id="Flow_Private_1" sourceRef="Start_PrivateAccident" targetRef="Task_GatherPrivateInformation"/>
+    <bpmn:sequenceFlow id="Flow_Private_2" sourceRef="Task_GatherPrivateInformation" targetRef="Task_PrivateImmediateReport"/>
+    <bpmn:sequenceFlow id="Flow_Private_3" sourceRef="Task_PrivateImmediateReport" targetRef="Gateway_PrivateFatality"/>
+    <bpmn:sequenceFlow id="Flow_Private_4" sourceRef="Gateway_PrivateFatality" targetRef="Task_PrivateFatalityReport">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">fatality = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Private_5" sourceRef="Gateway_PrivateFatality" targetRef="End_PrivateReported" name="No fatality">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">fatality = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Private_6" sourceRef="Task_PrivateFatalityReport" targetRef="End_PrivateReported"/>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_WorkAccident" name="Work accident reporting">
+    <bpmn:participant id="Participant_Employee" name="Employee" processRef="Process_Employee"/>
+    <bpmn:participant id="Participant_Employer" name="Employer" processRef="Process_Employer"/>
+    <bpmn:participant id="Participant_SelfEmployed" name="Self-employed person" processRef="Process_SelfEmployed"/>
+    <bpmn:participant id="Participant_Student" name="Student or schoolchild" processRef="Process_Student"/>
+    <bpmn:participant id="Participant_EducationalInstitution" name="School, educational facility or university" processRef="Process_EducationalInstitution"/>
+    <bpmn:participant id="Participant_PrivateInsured" name="Privately insured person" processRef="Process_PrivateInsured"/>
+    <bpmn:participant id="Participant_AccidentInsurer" name="Responsible accident insurance provider"/>
+    <bpmn:participant id="Participant_LabourInspectorate" name="Labour Inspectorate"/>
+    <bpmn:participant id="Participant_Directorate" name="Competent directorate"/>
+    <bpmn:messageFlow id="MessageFlow_EmployeeToEmployer" name="Immediate accident or safety report" sourceRef="Task_InformEmployer" targetRef="Start_EmployerReport" messageRef="Message_EmployeeReport"/>
+    <bpmn:messageFlow id="MessageFlow_EmployerToInsurer" name="Accident report" sourceRef="Task_ReportAccidentInsurer" targetRef="Participant_AccidentInsurer" messageRef="Message_EmployerInsuranceReport"/>
+    <bpmn:messageFlow id="MessageFlow_EmployerToInspectorate" name="Fatal or serious accident report" sourceRef="Task_ReportInspectorate" targetRef="Participant_LabourInspectorate" messageRef="Message_EmployerInspectorateReport"/>
+    <bpmn:messageFlow id="MessageFlow_SelfEmployedToInsurer" name="Accident report" sourceRef="Task_SelfEmployedReport" targetRef="Participant_AccidentInsurer" messageRef="Message_SelfEmployedInsuranceReport"/>
+    <bpmn:messageFlow id="MessageFlow_StudentToDirectorate" name="Accident report" sourceRef="Task_StudentReport" targetRef="Participant_Directorate" messageRef="Message_StudentReport"/>
+    <bpmn:messageFlow id="MessageFlow_EducationToInsurer" name="Report in triplicate" sourceRef="Task_EducationalReport" targetRef="Participant_AccidentInsurer" messageRef="Message_SchoolInsuranceReport"/>
+    <bpmn:messageFlow id="MessageFlow_PrivateImmediateToInsurer" name="Immediate written accident report" sourceRef="Task_PrivateImmediateReport" targetRef="Participant_AccidentInsurer" messageRef="Message_PrivateImmediateReport"/>
+    <bpmn:messageFlow id="MessageFlow_PrivateFatalityToInsurer" name="Fatality report" sourceRef="Task_PrivateFatalityReport" targetRef="Participant_AccidentInsurer" messageRef="Message_PrivateFatalityReport"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

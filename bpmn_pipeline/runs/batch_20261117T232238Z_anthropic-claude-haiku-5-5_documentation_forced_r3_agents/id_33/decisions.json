@@ -1,0 +1,319 @@
+{
+ "id": "33",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 24,
+  "T6": 3
+ },
+ "first_pass_error_counts": {
+  "T5": 24,
+  "T6": 3
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline",
+   "guideline_id": "LRN-090",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines GW-02 (The reference has exclusive gateways for the stock check ('Plastic available'), for the heated check ('Heated?') and around the parallel preparation start, and the generated model omits them. The description places the color check and the optional order before the concurrent printer and G-code preparation, so the decision must gate the parallel start and its alternative branches must merge before )",
+   "guideline_id": "LRN-091",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "existing_documentation_rule",
+   "detail": "documentation rule GW-03 not applied (Reference ExclusiveGateway_6 merges the two alternative paths (stock check and ordering) before the printer preparation step, and description S6 states the ordering alternative. The generated model omits this merge, so the alternatives reach the next step without a join. GW-03 already requires an exclusive merge for alternative paths, so this guideline restates it for the case where one alternativ)",
+   "guideline_id": null,
+   "ref": "GW-03",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines GW-03 (The reference has an exclusive gateway after the availability check that merges the in-stock and ordered paths before the printer preparation step (M5). The generated model lacks it, so the alternatives were not merged. The description states that the stock branch and the order branch both lead on to the printing preparation, which supports a merge. The reference's extra gateways (M6, M7) lack any)",
+   "guideline_id": "LRN-092",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines GW-02 (Records M5, M6 and M7 show that the reference has exclusive gateways for conditional checks that the generated model dropped, while the generated model kept only the activities. S4, S5 and S6 state the in-stock check, the quantity check and the not-in-stock alternative as separate sentences, so the opposite case and the nested check must become explicit gateway branches. GW-02 already requires an )",
+   "guideline_id": "LRN-093",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-014 (The records show reference exclusive gateways (ExclusiveGateway_6, 'Heated?', ExclusiveGateway_8, ExclusiveGateway_2) missing where the description states conditional checks such as 'if in stock', 'if under 100 grams', and the heating condition. The generated model dropped the split/merge structure for these conditions. The trigger is an explicit condition, not a team's optional choice, so it is c)",
+   "guideline_id": "LRN-014",
+   "ref": "LRN-014",
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-090",
+   "instruction": "When the description says an external device keeps sending its status while a preparation activity runs in parallel with other work, and a later step may only start once the status shows the device is ready: Model the preparation as a task that runs in parallel with the other work. Model each arriving status as a message intermediate catch event that waits for the message, followed by an exclusive gateway that checks readiness. Give the not-ready branch a sequence flow back to the status wait, and give the ready branch a sequence flow to the synchronization point of the parallel work. Do not place the status check after the parallel join, and do not model the repeated status as a single one-time wait.",
+   "situation": "the description says an external device keeps sending its status while a preparation activity runs in parallel with other work, and a later step may only start once the status shows the device is ready",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-091",
+   "instruction": "When the description states a yes/no check on a condition (for example, whether a supply or a state is already in place) and the activities that follow that check are then started together, so the check decides whether the concurrent start is reached: Model an exclusive gateway directly after the activity that establishes the condition, with one labeled flow for each answer. Route the branch that needs a preparatory step through that step and into a separate exclusive merge placed before the parallel gateway that starts the concurrent activities. Do not connect the check straight to the parallel gateway, and do not leave the decision implicit before the concurrent start.",
+   "situation": "the description states a yes/no check on a condition (for example, whether a supply or a state is already in place) and the activities that follow that check are then started together, so the check decides whether the concurrent start is reached",
+   "source": "learned guideline (refines GW-02)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "GW-03",
+   "instruction": "Use an exclusive merge for alternative paths; it does not wait for inactive alternatives.",
+   "situation": "the description gives two alternative branches (if ... otherwise ...) that both lead to the same next activity, and one branch may include an extra optional step before reaching that activity",
+   "source": "documentation rule not applied",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-092",
+   "instruction": "When the description says that alternative paths, chosen by a condition and one of which contains an extra action, come together again so that one following step is performed after either path: Place an exclusive gateway as a merge where the alternative paths meet, before the shared following step. Route each alternative path into that merge gateway, then connect the merge gateway to the shared step. Do not route several alternative paths directly into the shared step without a merge gateway.",
+   "situation": "the description says that alternative paths, chosen by a condition and one of which contains an extra action, come together again so that one following step is performed after either path",
+   "source": "learned guideline (refines GW-03)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-093",
+   "instruction": "When the description states a yes/no condition on the state of something and then gives the opposite case as its own separate sentence (for example 'If X, do A' followed by 'If not X, do B'), with the condition possibly followed by a further check on a different criterion: Model the condition as an exclusive gateway split with one labeled outgoing branch for each stated case, including the opposite case described in the separate sentence, and make the branch for the opposite case perform its stated action. If a further check on a different criterion follows one of the cases, place a second exclusive gateway on that branch. Rejoin alternative branches that reach a common later element with an exclusive merge placed just before it.",
+   "situation": "the description states a yes/no condition on the state of something and then gives the opposite case as its own separate sentence (for example 'If X, do A' followed by 'If not X, do B'), with the condition possibly followed by a further check on a different criterion",
+   "source": "learned guideline (refines GW-02)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-014",
+   "instruction": "When the description states that an activity may optionally be carried out (for example 'may also conduct' an activity), with no condition beyond the team's own choice, and the process continues with a shared step afterwards: Model the optional activity as one branch of an exclusive gateway split, with a labeled bypass flow that skips it. Connect the end of the optional activity and the bypass flow into a separate exclusive gateway merge placed before the shared step. Do not link the optional activity directly to the following step, and do not omit the split or the merge.",
+   "situation": "the description states a conditional check (for example 'if you have it in stock, check how much is left; if it is under a stated amount, add it to the list') where the conditioned step is performed only when the condition holds, and the process continues afterwards regardless of the outcome",
+   "source": "learned guideline (refines GW-03)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

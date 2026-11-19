@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_InventoryRestock" targetNamespace="http://example.com/bpmn/inventory-restock">
+  <bpmn:message id="Message_Reorder" name="Reorder"/>
+  <bpmn:message id="Message_StockDelivery" name="Stock delivery"/>
+  <bpmn:process id="Process_InventoryRestock" name="Restock inventory" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Monitoring" name="Begin monitoring inventory"/>
+    <bpmn:task id="Task_MonitorInventory" name="Monitor inventory levels">
+      <bpmn:incoming>Flow_Start_Monitor</bpmn:incoming>
+      <bpmn:outgoing>Flow_Monitor_Threshold</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Threshold" name="Reorder threshold reached?" default="Flow_Threshold_NotReached">
+      <bpmn:incoming>Flow_Monitor_Threshold</bpmn:incoming>
+      <bpmn:incoming>Flow_Threshold_NotReached</bpmn:incoming>
+      <bpmn:outgoing>Flow_Threshold_Reached</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Threshold_NotReached</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_SignalReorder" name="Signal need to reorder (automated alert or manual check)">
+      <bpmn:incoming>Flow_Threshold_Reached</bpmn:incoming>
+      <bpmn:outgoing>Flow_Signal_PlaceOrder</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_PlaceOrder" name="Place order with supplier, considering cost, delivery time, and reliability" messageRef="Message_Reorder">
+      <bpmn:incoming>Flow_Signal_PlaceOrder</bpmn:incoming>
+      <bpmn:outgoing>Flow_Order_UpdateDates</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:serviceTask id="Task_UpdateExpectedDelivery" name="Update expected delivery dates in inventory system">
+      <bpmn:incoming>Flow_Order_UpdateDates</bpmn:incoming>
+      <bpmn:outgoing>Flow_UpdateDates_WaitDelivery</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateCatchEvent id="Event_StockDelivery" name="Receive stock delivery">
+      <bpmn:incoming>Flow_UpdateDates_WaitDelivery</bpmn:incoming>
+      <bpmn:outgoing>Flow_Delivery_Inspect</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_StockDelivery" messageRef="Message_StockDelivery"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_InspectStock" name="Inspect stock quality">
+      <bpmn:incoming>Flow_Delivery_Inspect</bpmn:incoming>
+      <bpmn:outgoing>Flow_Inspect_Record</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_RecordStock" name="Record stock in the system">
+      <bpmn:incoming>Flow_Inspect_Record</bpmn:incoming>
+      <bpmn:outgoing>Flow_Record_Store</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_PlaceStock" name="Place stock on shelves or in storage">
+      <bpmn:incoming>Flow_Record_Store</bpmn:incoming>
+      <bpmn:outgoing>Flow_Store_UpdateLevels</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:serviceTask id="Task_UpdateInventoryLevels" name="Update inventory levels after restock">
+      <bpmn:incoming>Flow_Store_UpdateLevels</bpmn:incoming>
+      <bpmn:outgoing>Flow_UpdateLevels_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_RestockComplete" name="Restock complete">
+      <bpmn:incoming>Flow_UpdateLevels_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Monitor" sourceRef="StartEvent_Monitoring" targetRef="Task_MonitorInventory"/>
+    <bpmn:sequenceFlow id="Flow_Monitor_Threshold" sourceRef="Task_MonitorInventory" targetRef="Gateway_Threshold"/>
+    <bpmn:sequenceFlow id="Flow_Threshold_Reached" name="Threshold reached" sourceRef="Gateway_Threshold" targetRef="Task_SignalReorder">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">stock level is at or below the predefined reorder threshold</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Threshold_NotReached" name="Threshold not reached" sourceRef="Gateway_Threshold" targetRef="Task_MonitorInventory"/>
+    <bpmn:sequenceFlow id="Flow_Signal_PlaceOrder" sourceRef="Task_SignalReorder" targetRef="Task_PlaceOrder"/>
+    <bpmn:sequenceFlow id="Flow_Order_UpdateDates" sourceRef="Task_PlaceOrder" targetRef="Task_UpdateExpectedDelivery"/>
+    <bpmn:sequenceFlow id="Flow_UpdateDates_WaitDelivery" sourceRef="Task_UpdateExpectedDelivery" targetRef="Event_StockDelivery"/>
+    <bpmn:sequenceFlow id="Flow_Delivery_Inspect" sourceRef="Event_StockDelivery" targetRef="Task_InspectStock"/>
+    <bpmn:sequenceFlow id="Flow_Inspect_Record" sourceRef="Task_InspectStock" targetRef="Task_RecordStock"/>
+    <bpmn:sequenceFlow id="Flow_Record_Store" sourceRef="Task_RecordStock" targetRef="Task_PlaceStock"/>
+    <bpmn:sequenceFlow id="Flow_Store_UpdateLevels" sourceRef="Task_PlaceStock" targetRef="Task_UpdateInventoryLevels"/>
+    <bpmn:sequenceFlow id="Flow_UpdateLevels_End" sourceRef="Task_UpdateInventoryLevels" targetRef="EndEvent_RestockComplete"/>
+  </bpmn:process>
+  <bpmn:collaboration id="Collaboration_InventoryRestock">
+    <bpmn:participant id="Participant_Inventory" name="Warehouse or store" processRef="Process_InventoryRestock"/>
+    <bpmn:participant id="Participant_Supplier" name="Supplier"/>
+    <bpmn:messageFlow id="MessageFlow_Reorder" name="Reorder" sourceRef="Task_PlaceOrder" targetRef="Participant_Supplier" messageRef="Message_Reorder"/>
+    <bpmn:messageFlow id="MessageFlow_StockDelivery" name="Stock delivery" sourceRef="Participant_Supplier" targetRef="Event_StockDelivery" messageRef="Message_StockDelivery"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

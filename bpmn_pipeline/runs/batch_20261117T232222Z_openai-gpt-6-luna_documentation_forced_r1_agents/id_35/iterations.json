@@ -1,0 +1,820 @@
+{
+ "id": "35",
+ "kept_round": 1,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 80.6,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 43,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 14,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.225652,
+    "workflow_order_similarity": 0.432432,
+    "connection_f1": 0.114286,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.5,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.173579,
+    "activity_semantic_similarity": 0.376087,
+    "activity_label_precision": 0.714286,
+    "activity_label_recall": 0.416667,
+    "activity_label_f1": 0.526316
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Chainsaw\"\n                  targetNamespace=\"http://example.com/bpmn/chainsaw\">\n  <bpmn:message id=\"Message_ChainsawProperties\" name=\"Chainsaw properties\"/>\n  <bpmn:message id=\"Message_CustomerUpdate\" name=\"Production update\"/>\n  <bpmn:message id=\"Message_FirstSaw\" name=\"First saw\"/>\n  <bpmn:message id=\"Message_CustomerFeedback\" name=\"Feedback on first saw\"/>\n\n  <bpmn:process id=\"Process_ChainsawProduction\" name=\"Chainsaw production\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Properties\" name=\"Customer provides chainsaw properties\">\n      <bpmn:documentation>The customer specifies at least five properties, such as guide bar length (Schwertlaenge), chain width, and electric or motor chainsaw.</bpmn:documentation>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Properties\" messageRef=\"Message_ChainsawProperties\"/>\n    </bpmn:startEvent>\n\n    <bpmn:parallelGateway id=\"Gateway_ProductionAndUpdates_Split\" name=\"Produce and send updates in parallel\"/>\n    <bpmn:task id=\"Task_OrderParts\" name=\"Order parts from online sources\">\n      <bpmn:multiInstanceLoopCharacteristics isSequential=\"false\"/>\n    </bpmn:task>\n    <bpmn:task id=\"Task_ReceiveParts\" name=\"Receive ordered parts\"/>\n    <bpmn:manualTask id=\"Task_InspectParts\" name=\"Manually inspect all parts\"/>\n    <bpmn:task id=\"Task_AssembleFirstSaw\" name=\"Assemble first saw\"/>\n\n    <bpmn:sendTask id=\"Task_SendUpdates\" name=\"Send regular customer updates\" messageRef=\"Message_CustomerUpdate\">\n      <bpmn:standardLoopCharacteristics testBefore=\"false\">\n        <bpmn:loopCondition xsi:type=\"bpmn:tFormalExpression\">First saw production is ongoing</bpmn:loopCondition>\n      </bpmn:standardLoopCharacteristics>\n    </bpmn:sendTask>\n    <bpmn:parallelGateway id=\"Gateway_ProductionAndUpdates_Join\" name=\"First saw ready and updates complete\"/>\n\n    <bpmn:sendTask id=\"Task_SendFirstSaw\" name=\"Send first saw to customer\" messageRef=\"Message_FirstSaw\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_CatchFeedback\" name=\"Receive customer feedback\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_CustomerFeedback\" messageRef=\"Message_CustomerFeedback\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_FirstSawLiked\" name=\"Does the customer like the first saw?\" default=\"Flow_NotLiked\"/>\n    <bpmn:task id=\"Task_ProduceRemainingSaws\" name=\"Produce the rest of the order\"/>\n    <bpmn:endEvent id=\"EndEvent_OrderProduced\" name=\"Order produced\"/>\n    <bpmn:endEvent id=\"EndEvent_NotContinued\" name=\"No further saws produced\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_ToSplit\" sourceRef=\"StartEvent_Properties\" targetRef=\"Gateway_ProductionAndUpdates_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_ToOrderParts\" sourceRef=\"Gateway_ProductionAndUpdates_Split\" targetRef=\"Task_OrderParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderParts_ToReceive\" sourceRef=\"Task_OrderParts\" targetRef=\"Task_ReceiveParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Receive_ToInspect\" sourceRef=\"Task_ReceiveParts\" targetRef=\"Task_InspectParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Inspect_ToAssemble\" sourceRef=\"Task_InspectParts\" targetRef=\"Task_AssembleFirstSaw\"/>\n    <bpmn:sequenceFlow id=\"Flow_Assemble_ToJoin\" sourceRef=\"Task_AssembleFirstSaw\" targetRef=\"Gateway_ProductionAndUpdates_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_ToUpdates\" sourceRef=\"Gateway_ProductionAndUpdates_Split\" targetRef=\"Task_SendUpdates\"/>\n    <bpmn:sequenceFlow id=\"Flow_Updates_ToJoin\" sourceRef=\"Task_SendUpdates\" targetRef=\"Gateway_ProductionAndUpdates_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_Join_ToSendFirstSaw\" sourceRef=\"Gateway_ProductionAndUpdates_Join\" targetRef=\"Task_SendFirstSaw\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendFirstSaw_ToFeedback\" sourceRef=\"Task_SendFirstSaw\" targetRef=\"Event_CatchFeedback\"/>\n    <bpmn:sequenceFlow id=\"Flow_Feedback_ToDecision\" sourceRef=\"Event_CatchFeedback\" targetRef=\"Gateway_FirstSawLiked\"/>\n    <bpmn:sequenceFlow id=\"Flow_Liked_ToProduceRest\" name=\"Likes it\" sourceRef=\"Gateway_FirstSawLiked\" targetRef=\"Task_ProduceRemainingSaws\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">Customer likes the first saw</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ProduceRest_ToEnd\" sourceRef=\"Task_ProduceRemainingSaws\" targetRef=\"EndEvent_OrderProduced\"/>\n    <bpmn:sequenceFlow id=\"Flow_NotLiked\" name=\"Does not like it\" sourceRef=\"Gateway_FirstSawLiked\" targetRef=\"EndEvent_NotContinued\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_Chainsaw\">\n    <bpmn:participant id=\"Participant_Producer\" name=\"Chainsaw producer\" processRef=\"Process_ChainsawProduction\"/>\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CustomerProperties\" name=\"Chainsaw properties\" sourceRef=\"Participant_Customer\" targetRef=\"StartEvent_Properties\" messageRef=\"Message_ChainsawProperties\"/>\n    <bpmn:messageFlow id=\"MessageFlow_UpdatesToCustomer\" name=\"Production updates\" sourceRef=\"Task_SendUpdates\" targetRef=\"Participant_Customer\" messageRef=\"Message_CustomerUpdate\"/>\n    <bpmn:messageFlow id=\"MessageFlow_FirstSawToCustomer\" name=\"First saw\" sourceRef=\"Task_SendFirstSaw\" targetRef=\"Participant_Customer\" messageRef=\"Message_FirstSaw\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CustomerFeedback\" name=\"Feedback on first saw\" sourceRef=\"Participant_Customer\" targetRef=\"Event_CatchFeedback\" messageRef=\"Message_CustomerFeedback\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 498.4,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 43,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 14,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.254977,
+    "workflow_order_similarity": 0.451389,
+    "connection_f1": 0.114286,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.555556,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.196136,
+    "activity_semantic_similarity": 0.424961,
+    "activity_label_precision": 0.857143,
+    "activity_label_recall": 0.5,
+    "activity_label_f1": 0.631579
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Chainsaw\"\n                  targetNamespace=\"http://example.com/bpmn/chainsaw\">\n  <bpmn:message id=\"Message_ChainsawProperties\" name=\"Chainsaw properties\"/>\n  <bpmn:message id=\"Message_CustomerUpdate\" name=\"Production update\"/>\n  <bpmn:message id=\"Message_FirstSaw\" name=\"First saw\"/>\n  <bpmn:message id=\"Message_CustomerFeedback\" name=\"Feedback on first saw\"/>\n\n  <bpmn:process id=\"Process_ChainsawProduction\" name=\"Chainsaw production\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Properties\" name=\"Customer provides chainsaw properties\">\n      <bpmn:documentation>The customer specifies at least five properties, such as guide bar length (Schwertlaenge), chain width, and electric or motor chainsaw.</bpmn:documentation>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Properties\" messageRef=\"Message_ChainsawProperties\"/>\n    </bpmn:startEvent>\n\n    <bpmn:task id=\"Task_OrderParts\" name=\"Order parts from various online sources in parallel\">\n      <bpmn:incoming>Flow_Start_ToOrderParts</bpmn:incoming>\n      <bpmn:outgoing>Flow_OrderParts_ToSplit</bpmn:outgoing>\n      <bpmn:multiInstanceLoopCharacteristics isSequential=\"false\"/>\n    </bpmn:task>\n\n    <bpmn:parallelGateway id=\"Gateway_ProductionUpdates_Split\" name=\"Continue production and send updates\">\n      <bpmn:incoming>Flow_OrderParts_ToSplit</bpmn:incoming>\n      <bpmn:outgoing>Flow_Split_ToReceiveParts</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Split_ToUpdates</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:task id=\"Task_ReceiveParts\" name=\"Receive parts\">\n      <bpmn:incoming>Flow_Split_ToReceiveParts</bpmn:incoming>\n      <bpmn:outgoing>Flow_Receive_ToInspect</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:manualTask id=\"Task_InspectParts\" name=\"Manually inspect all parts\">\n      <bpmn:incoming>Flow_Receive_ToInspect</bpmn:incoming>\n      <bpmn:outgoing>Flow_Inspect_ToAssemble</bpmn:outgoing>\n    </bpmn:manualTask>\n    <bpmn:task id=\"Task_AssembleFirstSaw\" name=\"Assemble the first saw\">\n      <bpmn:incoming>Flow_Inspect_ToAssemble</bpmn:incoming>\n      <bpmn:outgoing>Flow_Assemble_ToJoin</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:sendTask id=\"Task_SendUpdates\" name=\"Send regular updates to the customer\" messageRef=\"Message_CustomerUpdate\">\n      <bpmn:incoming>Flow_Split_ToUpdates</bpmn:incoming>\n      <bpmn:outgoing>Flow_Updates_ToJoin</bpmn:outgoing>\n      <bpmn:standardLoopCharacteristics testBefore=\"false\">\n        <bpmn:loopCondition xsi:type=\"bpmn:tFormalExpression\">productionOngoing</bpmn:loopCondition>\n      </bpmn:standardLoopCharacteristics>\n    </bpmn:sendTask>\n\n    <bpmn:parallelGateway id=\"Gateway_ProductionUpdates_Join\" name=\"First saw produced and updates complete\">\n      <bpmn:incoming>Flow_Assemble_ToJoin</bpmn:incoming>\n      <bpmn:incoming>Flow_Updates_ToJoin</bpmn:incoming>\n      <bpmn:outgoing>Flow_Join_ToSendFirstSaw</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:sendTask id=\"Task_SendFirstSaw\" name=\"Send the first saw to the customer\" messageRef=\"Message_FirstSaw\">\n      <bpmn:incoming>Flow_Join_ToSendFirstSaw</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendFirstSaw_ToFeedback</bpmn:outgoing>\n    </bpmn:sendTask>\n    <bpmn:intermediateCatchEvent id=\"Event_CatchFeedback\" name=\"Receive customer feedback\">\n      <bpmn:incoming>Flow_SendFirstSaw_ToFeedback</bpmn:incoming>\n      <bpmn:outgoing>Flow_Feedback_ToDecision</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_CustomerFeedback\" messageRef=\"Message_CustomerFeedback\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_FirstSawLiked\" name=\"Does the customer like the first saw?\" default=\"Flow_NotLiked\">\n      <bpmn:incoming>Flow_Feedback_ToDecision</bpmn:incoming>\n      <bpmn:outgoing>Flow_Liked_ToProduceRest</bpmn:outgoing>\n      <bpmn:outgoing>Flow_NotLiked</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:task id=\"Task_ProduceRemainingSaws\" name=\"Produce the rest of the order\">\n      <bpmn:incoming>Flow_Liked_ToProduceRest</bpmn:incoming>\n      <bpmn:outgoing>Flow_ProduceRest_ToEnd</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:endEvent id=\"EndEvent_OrderProduced\" name=\"Rest of order produced\">\n      <bpmn:incoming>Flow_ProduceRest_ToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:endEvent id=\"EndEvent_NotContinued\" name=\"Rest of order not produced\">\n      <bpmn:incoming>Flow_NotLiked</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_ToOrderParts\" sourceRef=\"StartEvent_Properties\" targetRef=\"Task_OrderParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderParts_ToSplit\" sourceRef=\"Task_OrderParts\" targetRef=\"Gateway_ProductionUpdates_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_ToReceiveParts\" sourceRef=\"Gateway_ProductionUpdates_Split\" targetRef=\"Task_ReceiveParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Receive_ToInspect\" sourceRef=\"Task_ReceiveParts\" targetRef=\"Task_InspectParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Inspect_ToAssemble\" sourceRef=\"Task_InspectParts\" targetRef=\"Task_AssembleFirstSaw\"/>\n    <bpmn:sequenceFlow id=\"Flow_Assemble_ToJoin\" sourceRef=\"Task_AssembleFirstSaw\" targetRef=\"Gateway_ProductionUpdates_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_ToUpdates\" sourceRef=\"Gateway_ProductionUpdates_Split\" targetRef=\"Task_SendUpdates\"/>\n    <bpmn:sequenceFlow id=\"Flow_Updates_ToJoin\" sourceRef=\"Task_SendUpdates\" targetRef=\"Gateway_ProductionUpdates_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_Join_ToSendFirstSaw\" sourceRef=\"Gateway_ProductionUpdates_Join\" targetRef=\"Task_SendFirstSaw\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendFirstSaw_ToFeedback\" sourceRef=\"Task_SendFirstSaw\" targetRef=\"Event_CatchFeedback\"/>\n    <bpmn:sequenceFlow id=\"Flow_Feedback_ToDecision\" sourceRef=\"Event_CatchFeedback\" targetRef=\"Gateway_FirstSawLiked\"/>\n    <bpmn:sequenceFlow id=\"Flow_Liked_ToProduceRest\" name=\"Customer likes it\" sourceRef=\"Gateway_FirstSawLiked\" targetRef=\"Task_ProduceRemainingSaws\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">customerLikesFirstSaw</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ProduceRest_ToEnd\" sourceRef=\"Task_ProduceRemainingSaws\" targetRef=\"EndEvent_OrderProduced\"/>\n    <bpmn:sequenceFlow id=\"Flow_NotLiked\" name=\"Customer does not like it\" sourceRef=\"Gateway_FirstSawLiked\" targetRef=\"EndEvent_NotContinued\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_Chainsaw\">\n    <bpmn:participant id=\"Participant_Producer\" name=\"Chainsaw producer\" processRef=\"Process_ChainsawProduction\"/>\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CustomerProperties\" name=\"Chainsaw properties\" sourceRef=\"Participant_Customer\" targetRef=\"StartEvent_Properties\" messageRef=\"Message_ChainsawProperties\"/>\n    <bpmn:messageFlow id=\"MessageFlow_UpdatesToCustomer\" name=\"Production updates\" sourceRef=\"Task_SendUpdates\" targetRef=\"Participant_Customer\" messageRef=\"Message_CustomerUpdate\"/>\n    <bpmn:messageFlow id=\"MessageFlow_FirstSawToCustomer\" name=\"First saw\" sourceRef=\"Task_SendFirstSaw\" targetRef=\"Participant_Customer\" messageRef=\"Message_FirstSaw\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CustomerFeedback\" name=\"Feedback on first saw\" sourceRef=\"Participant_Customer\" targetRef=\"Event_CatchFeedback\" messageRef=\"Message_CustomerFeedback\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 901.6,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 42,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 14,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.254977,
+    "workflow_order_similarity": 0.368421,
+    "connection_f1": 0.058824,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.5,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.196136,
+    "activity_semantic_similarity": 0.424961,
+    "activity_label_precision": 0.857143,
+    "activity_label_recall": 0.5,
+    "activity_label_f1": 0.631579
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Chainsaw\"\n                  targetNamespace=\"http://example.com/bpmn/chainsaw\">\n  <bpmn:message id=\"Message_ChainsawProperties\" name=\"Chainsaw properties\"/>\n  <bpmn:message id=\"Message_CustomerUpdate\" name=\"Production update\"/>\n  <bpmn:message id=\"Message_FirstSaw\" name=\"First saw\"/>\n  <bpmn:message id=\"Message_CustomerFeedback\" name=\"Feedback on first saw\"/>\n\n  <bpmn:process id=\"Process_ChainsawProduction\" name=\"Chainsaw production\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Properties\" name=\"Customer provides chainsaw properties\">\n      <bpmn:documentation>The customer specifies at least five properties, such as guide bar length (Schwertlaenge), chain width, and electric or motor chainsaw.</bpmn:documentation>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Properties\" messageRef=\"Message_ChainsawProperties\"/>\n    </bpmn:startEvent>\n\n    <bpmn:task id=\"Task_OrderParts\" name=\"Order parts from various online sources in parallel\">\n      <bpmn:incoming>Flow_Start_ToOrderParts</bpmn:incoming>\n      <bpmn:outgoing>Flow_OrderParts_ToReceive</bpmn:outgoing>\n      <bpmn:multiInstanceLoopCharacteristics isSequential=\"false\"/>\n    </bpmn:task>\n\n    <bpmn:task id=\"Task_ReceiveParts\" name=\"Receive parts\">\n      <bpmn:incoming>Flow_OrderParts_ToReceive</bpmn:incoming>\n      <bpmn:outgoing>Flow_Receive_ToInspect</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:manualTask id=\"Task_InspectParts\" name=\"Manually inspect all parts\">\n      <bpmn:incoming>Flow_Receive_ToInspect</bpmn:incoming>\n      <bpmn:outgoing>Flow_Inspect_ToSplit</bpmn:outgoing>\n    </bpmn:manualTask>\n\n    <bpmn:parallelGateway id=\"Gateway_Production_Split\" name=\"Produce the saw and send updates\">\n      <bpmn:incoming>Flow_Inspect_ToSplit</bpmn:incoming>\n      <bpmn:outgoing>Flow_Split_ToAssemble</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Split_ToUpdates</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:task id=\"Task_AssembleFirstSaw\" name=\"Assemble the first saw\">\n      <bpmn:incoming>Flow_Split_ToAssemble</bpmn:incoming>\n      <bpmn:outgoing>Flow_Assemble_ToSendFirstSaw</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:sendTask id=\"Task_SendUpdates\" name=\"Send regular updates to the customer\" messageRef=\"Message_CustomerUpdate\">\n      <bpmn:incoming>Flow_Split_ToUpdates</bpmn:incoming>\n      <bpmn:outgoing>Flow_Updates_ToEnd</bpmn:outgoing>\n      <bpmn:standardLoopCharacteristics testBefore=\"false\">\n        <bpmn:loopCondition xsi:type=\"bpmn:tFormalExpression\">productionOngoing</bpmn:loopCondition>\n      </bpmn:standardLoopCharacteristics>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_UpdatesComplete\" name=\"Production updates complete\">\n      <bpmn:incoming>Flow_Updates_ToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sendTask id=\"Task_SendFirstSaw\" name=\"Send the first saw to the customer\" messageRef=\"Message_FirstSaw\">\n      <bpmn:incoming>Flow_Assemble_ToSendFirstSaw</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendFirstSaw_ToFeedback</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:intermediateCatchEvent id=\"Event_CatchFeedback\" name=\"Receive customer feedback\">\n      <bpmn:incoming>Flow_SendFirstSaw_ToFeedback</bpmn:incoming>\n      <bpmn:outgoing>Flow_Feedback_ToDecision</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_CustomerFeedback\" messageRef=\"Message_CustomerFeedback\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_FirstSawLiked\" name=\"Does the customer like the first saw?\" default=\"Flow_NotLiked\">\n      <bpmn:incoming>Flow_Feedback_ToDecision</bpmn:incoming>\n      <bpmn:outgoing>Flow_Liked_ToProduceRest</bpmn:outgoing>\n      <bpmn:outgoing>Flow_NotLiked</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:task id=\"Task_ProduceRemainingSaws\" name=\"Produce the rest of the order\">\n      <bpmn:incoming>Flow_Liked_ToProduceRest</bpmn:incoming>\n      <bpmn:outgoing>Flow_ProduceRest_ToEnd</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:endEvent id=\"EndEvent_OrderProduced\" name=\"Rest of order produced\">\n      <bpmn:incoming>Flow_ProduceRest_ToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:endEvent id=\"EndEvent_NotLiked\" name=\"Customer does not like the first saw\">\n      <bpmn:incoming>Flow_NotLiked</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_ToOrderParts\" sourceRef=\"StartEvent_Properties\" targetRef=\"Task_OrderParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderParts_ToReceive\" sourceRef=\"Task_OrderParts\" targetRef=\"Task_ReceiveParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Receive_ToInspect\" sourceRef=\"Task_ReceiveParts\" targetRef=\"Task_InspectParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Inspect_ToSplit\" sourceRef=\"Task_InspectParts\" targetRef=\"Gateway_Production_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_ToAssemble\" sourceRef=\"Gateway_Production_Split\" targetRef=\"Task_AssembleFirstSaw\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_ToUpdates\" sourceRef=\"Gateway_Production_Split\" targetRef=\"Task_SendUpdates\"/>\n    <bpmn:sequenceFlow id=\"Flow_Assemble_ToSendFirstSaw\" sourceRef=\"Task_AssembleFirstSaw\" targetRef=\"Task_SendFirstSaw\"/>\n    <bpmn:sequenceFlow id=\"Flow_Updates_ToEnd\" sourceRef=\"Task_SendUpdates\" targetRef=\"EndEvent_UpdatesComplete\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendFirstSaw_ToFeedback\" sourceRef=\"Task_SendFirstSaw\" targetRef=\"Event_CatchFeedback\"/>\n    <bpmn:sequenceFlow id=\"Flow_Feedback_ToDecision\" sourceRef=\"Event_CatchFeedback\" targetRef=\"Gateway_FirstSawLiked\"/>\n    <bpmn:sequenceFlow id=\"Flow_Liked_ToProduceRest\" name=\"Customer likes it\" sourceRef=\"Gateway_FirstSawLiked\" targetRef=\"Task_ProduceRemainingSaws\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">customerLikesFirstSaw</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ProduceRest_ToEnd\" sourceRef=\"Task_ProduceRemainingSaws\" targetRef=\"EndEvent_OrderProduced\"/>\n    <bpmn:sequenceFlow id=\"Flow_NotLiked\" name=\"Customer does not like it\" sourceRef=\"Gateway_FirstSawLiked\" targetRef=\"EndEvent_NotLiked\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_Chainsaw\">\n    <bpmn:participant id=\"Participant_Producer\" name=\"Chainsaw producer\" processRef=\"Process_ChainsawProduction\"/>\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CustomerProperties\" name=\"Chainsaw properties\" sourceRef=\"Participant_Customer\" targetRef=\"StartEvent_Properties\" messageRef=\"Message_ChainsawProperties\"/>\n    <bpmn:messageFlow id=\"MessageFlow_UpdatesToCustomer\" name=\"Production updates\" sourceRef=\"Task_SendUpdates\" targetRef=\"Participant_Customer\" messageRef=\"Message_CustomerUpdate\"/>\n    <bpmn:messageFlow id=\"MessageFlow_FirstSawToCustomer\" name=\"First saw\" sourceRef=\"Task_SendFirstSaw\" targetRef=\"Participant_Customer\" messageRef=\"Message_FirstSaw\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CustomerFeedback\" name=\"Feedback on first saw\" sourceRef=\"Participant_Customer\" targetRef=\"Event_CatchFeedback\" messageRef=\"Message_CustomerFeedback\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1325.0,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 45,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 15,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.260057,
+    "workflow_order_similarity": 0.442177,
+    "connection_f1": 0.055556,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.555556,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.200044,
+    "activity_semantic_similarity": 0.433429,
+    "activity_label_precision": 0.75,
+    "activity_label_recall": 0.5,
+    "activity_label_f1": 0.6
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Chainsaw\"\n                  targetNamespace=\"http://example.com/bpmn/chainsaw\">\n  <bpmn:message id=\"Message_ChainsawProperties\" name=\"Chainsaw properties\"/>\n  <bpmn:message id=\"Message_CustomerUpdate\" name=\"Production update\"/>\n  <bpmn:message id=\"Message_FirstSaw\" name=\"First saw\"/>\n  <bpmn:message id=\"Message_CustomerFeedback\" name=\"Feedback on first saw\"/>\n\n  <bpmn:process id=\"Process_ChainsawProduction\" name=\"Chainsaw production\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Properties\" name=\"Customer provides chainsaw properties\">\n      <bpmn:outgoing>Flow_Start_ToRecordProperties</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Properties\" messageRef=\"Message_ChainsawProperties\"/>\n    </bpmn:startEvent>\n\n    <bpmn:userTask id=\"Task_RecordProperties\" name=\"Record customer-provided properties (at least five)\">\n      <bpmn:incoming>Flow_Start_ToRecordProperties</bpmn:incoming>\n      <bpmn:outgoing>Flow_RecordProperties_ToOrderParts</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:task id=\"Task_OrderParts\" name=\"Order parts from various online sources\">\n      <bpmn:incoming>Flow_RecordProperties_ToOrderParts</bpmn:incoming>\n      <bpmn:outgoing>Flow_OrderParts_ToReceiveParts</bpmn:outgoing>\n      <bpmn:multiInstanceLoopCharacteristics isSequential=\"false\"/>\n    </bpmn:task>\n\n    <bpmn:task id=\"Task_ReceiveParts\" name=\"Receive parts\">\n      <bpmn:incoming>Flow_OrderParts_ToReceiveParts</bpmn:incoming>\n      <bpmn:outgoing>Flow_ReceiveParts_ToInspect</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:manualTask id=\"Task_InspectParts\" name=\"Manually inspect all parts\">\n      <bpmn:incoming>Flow_ReceiveParts_ToInspect</bpmn:incoming>\n      <bpmn:outgoing>Flow_Inspect_ToProductionSplit</bpmn:outgoing>\n    </bpmn:manualTask>\n\n    <bpmn:parallelGateway id=\"Gateway_Production_Split\" name=\"Produce first saw and send updates\">\n      <bpmn:incoming>Flow_Inspect_ToProductionSplit</bpmn:incoming>\n      <bpmn:outgoing>Flow_Split_ToAssembleFirstSaw</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Split_ToSendUpdates</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:task id=\"Task_AssembleFirstSaw\" name=\"Assemble the first saw\">\n      <bpmn:incoming>Flow_Split_ToAssembleFirstSaw</bpmn:incoming>\n      <bpmn:outgoing>Flow_AssembleFirstSaw_ToProductionJoin</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:sendTask id=\"Task_SendUpdates\" name=\"Send regular updates to the customer\" messageRef=\"Message_CustomerUpdate\">\n      <bpmn:incoming>Flow_Split_ToSendUpdates</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendUpdates_ToProductionJoin</bpmn:outgoing>\n      <bpmn:standardLoopCharacteristics testBefore=\"false\">\n        <bpmn:loopCondition xsi:type=\"bpmn:tFormalExpression\">productionOngoing</bpmn:loopCondition>\n      </bpmn:standardLoopCharacteristics>\n    </bpmn:sendTask>\n\n    <bpmn:parallelGateway id=\"Gateway_Production_Join\" name=\"First saw assembled and updates sent\">\n      <bpmn:incoming>Flow_AssembleFirstSaw_ToProductionJoin</bpmn:incoming>\n      <bpmn:incoming>Flow_SendUpdates_ToProductionJoin</bpmn:incoming>\n      <bpmn:outgoing>Flow_ProductionJoin_ToSendFirstSaw</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:sendTask id=\"Task_SendFirstSaw\" name=\"Send the first saw to the customer\" messageRef=\"Message_FirstSaw\">\n      <bpmn:incoming>Flow_ProductionJoin_ToSendFirstSaw</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendFirstSaw_ToFeedback</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:intermediateCatchEvent id=\"Event_CatchFeedback\" name=\"Receive customer feedback on the first saw\">\n      <bpmn:incoming>Flow_SendFirstSaw_ToFeedback</bpmn:incoming>\n      <bpmn:outgoing>Flow_Feedback_ToDecision</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_CustomerFeedback\" messageRef=\"Message_CustomerFeedback\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_FirstSawLiked\" name=\"Does the customer like the first saw?\" default=\"Flow_NotLiked\"/>\n    <bpmn:task id=\"Task_ProduceRemainingSaws\" name=\"Produce the rest of the order\">\n      <bpmn:incoming>Flow_Liked_ToProduceRest</bpmn:incoming>\n      <bpmn:outgoing>Flow_ProduceRest_ToEnd</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:endEvent id=\"EndEvent_OrderProduced\" name=\"Rest of the order produced\">\n      <bpmn:incoming>Flow_ProduceRest_ToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:endEvent id=\"EndEvent_NotContinued\" name=\"Rest of the order not produced\">\n      <bpmn:incoming>Flow_NotLiked</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_ToRecordProperties\" sourceRef=\"StartEvent_Properties\" targetRef=\"Task_RecordProperties\"/>\n    <bpmn:sequenceFlow id=\"Flow_RecordProperties_ToOrderParts\" sourceRef=\"Task_RecordProperties\" targetRef=\"Task_OrderParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderParts_ToReceiveParts\" sourceRef=\"Task_OrderParts\" targetRef=\"Task_ReceiveParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReceiveParts_ToInspect\" sourceRef=\"Task_ReceiveParts\" targetRef=\"Task_InspectParts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Inspect_ToProductionSplit\" sourceRef=\"Task_InspectParts\" targetRef=\"Gateway_Production_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_ToAssembleFirstSaw\" sourceRef=\"Gateway_Production_Split\" targetRef=\"Task_AssembleFirstSaw\"/>\n    <bpmn:sequenceFlow id=\"Flow_Split_ToSendUpdates\" sourceRef=\"Gateway_Production_Split\" targetRef=\"Task_SendUpdates\"/>\n    <bpmn:sequenceFlow id=\"Flow_AssembleFirstSaw_ToProductionJoin\" sourceRef=\"Task_AssembleFirstSaw\" targetRef=\"Gateway_Production_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendUpdates_ToProductionJoin\" sourceRef=\"Task_SendUpdates\" targetRef=\"Gateway_Production_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_ProductionJoin_ToSendFirstSaw\" sourceRef=\"Gateway_Production_Join\" targetRef=\"Task_SendFirstSaw\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendFirstSaw_ToFeedback\" sourceRef=\"Task_SendFirstSaw\" targetRef=\"Event_CatchFeedback\"/>\n    <bpmn:sequenceFlow id=\"Flow_Feedback_ToDecision\" sourceRef=\"Event_CatchFeedback\" targetRef=\"Gateway_FirstSawLiked\"/>\n    <bpmn:sequenceFlow id=\"Flow_Liked_ToProduceRest\" name=\"Customer likes it\" sourceRef=\"Gateway_FirstSawLiked\" targetRef=\"Task_ProduceRemainingSaws\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">customerLikesFirstSaw</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ProduceRest_ToEnd\" sourceRef=\"Task_ProduceRemainingSaws\" targetRef=\"EndEvent_OrderProduced\"/>\n    <bpmn:sequenceFlow id=\"Flow_NotLiked\" name=\"Customer does not like it\" sourceRef=\"Gateway_FirstSawLiked\" targetRef=\"EndEvent_NotContinued\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_Chainsaw\">\n    <bpmn:participant id=\"Participant_Producer\" name=\"Chainsaw producer\" processRef=\"Process_ChainsawProduction\"/>\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CustomerProperties\" name=\"Chainsaw properties\" sourceRef=\"Participant_Customer\" targetRef=\"StartEvent_Properties\" messageRef=\"Message_ChainsawProperties\"/>\n    <bpmn:messageFlow id=\"MessageFlow_UpdatesToCustomer\" name=\"Production updates\" sourceRef=\"Task_SendUpdates\" targetRef=\"Participant_Customer\" messageRef=\"Message_CustomerUpdate\"/>\n    <bpmn:messageFlow id=\"MessageFlow_FirstSawToCustomer\" name=\"First saw\" sourceRef=\"Task_SendFirstSaw\" targetRef=\"Participant_Customer\" messageRef=\"Message_FirstSaw\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CustomerFeedback\" name=\"Feedback on first saw\" sourceRef=\"Participant_Customer\" targetRef=\"Event_CatchFeedback\" messageRef=\"Message_CustomerFeedback\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": true,
+  "failed_levels": [],
+  "metrics": {
+   "semantic_similarity": 0.225652,
+   "activity_semantic_similarity": 0.376087,
+   "activity_label_precision": 0.714286,
+   "activity_label_recall": 0.416667,
+   "activity_label_f1": 0.526316,
+   "activity_matched": 5,
+   "activity_reference": 12,
+   "activity_generated": 7,
+   "alignment_coverage": 0.5,
+   "connection_precision": 0.142857,
+   "connection_recall": 0.095238,
+   "connection_f1": 0.114286,
+   "connection_tp": 2,
+   "connection_fp": 12,
+   "connection_fn": 19,
+   "workflow_order_similarity": 0.432432,
+   "order_consistency": 0.864865,
+   "order_coverage": 0.5,
+   "order_tp": 32,
+   "order_fp": 2,
+   "order_fn": 3,
+   "collaboration_similarity": null,
+   "collaboration_applicable": false,
+   "collaboration_tp": 0,
+   "collaboration_fp": 0,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 0.8571,
+   "type_recall_diagnostic": 0.6667,
+   "type_f1_diagnostic": 0.75,
+   "counts": {
+    "gold_nodes": 18,
+    "generated_nodes": 14,
+    "gold_flows": 21,
+    "generated_flows": 14
+   },
+   "collaboration_ignored": true,
+   "semantic_similarity_strict": 0.173579,
+   "activity_semantic_similarity_strict": 0.376087,
+   "alignment_coverage_strict": 0.5,
+   "connection_precision_strict": 0.142857,
+   "connection_recall_strict": 0.095238,
+   "connection_f1_strict": 0.114286,
+   "workflow_order_similarity_strict": 0.432432,
+   "collaboration_similarity_strict": 0.0,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T5",
+   "T6"
+  ],
+  "error_counts": {
+   "T5": 31,
+   "T6": 9
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-026",
+    "instruction": "When the description states a sequence of activities or a conditional step followed by a later activity: Connect the activities and any modeled gateways in the stated order with sequence flows, including every described transition.",
+    "situation": "the description explicitly states an activity sequence, including what starts the process or transitions through an intervening gateway",
+    "source": "learned guideline (refines PROC-03)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-062",
+    "instruction": "When the description states a specific action, decision, or outcome, but a generated BPMN element label expresses a different meaning: Label the element to preserve the meaning of the corresponding described step; do not substitute another action, decision, outcome, or an inferred purpose.",
+    "situation": "the description states a specific action, decision, or outcome corresponding to a BPMN element",
+    "source": "learned guideline (refines FID-03)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-051",
+    "instruction": "When the description explicitly orders process steps, including steps separated by a waiting condition or event: Connect the corresponding BPMN elements with sequence flows in the described order, keeping any intervening events in the flow.",
+    "situation": "the description states an order or dependency between process activities, including activities that occur alongside other work",
+    "source": "learned guideline (refines FID-02)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-007",
+    "instruction": "When the description distinguishes a process trigger, an activity, or an outcome from other stages of the process: Label each BPMN element according to the meaning of its corresponding described trigger, activity, or outcome; do not substitute a different stage or its purpose or result.",
+    "situation": "the description distinguishes successive activities, decisions, or outcomes",
+    "source": "learned guideline (refines FID-03)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-066",
+    "instruction": "When the description says a person must choose or specify inputs before automated work begins.: Model that choice or specification as a user task before the automated work.",
+    "situation": "the description states that a person provides or specifies required inputs before dependent work begins",
+    "source": "learned guideline (new)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-020",
+    "instruction": "When the description distinguishes an event or activity by its action, actor, object, recipient, or another meaningful qualifier: Label each BPMN element so that it preserves those stated details without substituting a broader or different meaning.",
+    "situation": "the description distinguishes activities, events, decisions, or outcomes by their action or meaningful qualifiers",
+    "source": "learned guideline (refines FID-03)",
+    "failure_type": "T6"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-026",
+    "LRN-062"
+   ],
+   "before": {
+    "semantic_similarity": 0.225652,
+    "workflow_order_similarity": 0.432432,
+    "connection_f1": 0.114286,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.5,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.173579,
+    "activity_semantic_similarity": 0.376087,
+    "activity_label_precision": 0.714286,
+    "activity_label_recall": 0.416667,
+    "activity_label_f1": 0.526316
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 31,
+    "T6": 9
+   },
+   "after": {
+    "semantic_similarity": 0.254977,
+    "workflow_order_similarity": 0.451389,
+    "connection_f1": 0.114286,
+    "alignment_coverage": 0.555556
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.029325,
+    "workflow_order_similarity": 0.018957,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.055556
+   },
+   "mean_change": 0.02596,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 31,
+    "T6": 7
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.254977,
+    "activity_semantic_similarity": 0.424961,
+    "activity_label_precision": 0.857143,
+    "activity_label_recall": 0.5,
+    "activity_label_f1": 0.631579,
+    "activity_matched": 6,
+    "activity_reference": 12,
+    "activity_generated": 7,
+    "alignment_coverage": 0.555556,
+    "connection_precision": 0.142857,
+    "connection_recall": 0.095238,
+    "connection_f1": 0.114286,
+    "connection_tp": 2,
+    "connection_fp": 12,
+    "connection_fn": 19,
+    "workflow_order_similarity": 0.451389,
+    "order_consistency": 0.8125,
+    "order_coverage": 0.555556,
+    "order_tp": 39,
+    "order_fp": 4,
+    "order_fn": 5,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.8571,
+    "type_recall_diagnostic": 0.6667,
+    "type_f1_diagnostic": 0.75,
+    "counts": {
+     "gold_nodes": 18,
+     "generated_nodes": 14,
+     "gold_flows": 21,
+     "generated_flows": 14
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.196136,
+    "activity_semantic_similarity_strict": 0.424961,
+    "alignment_coverage_strict": 0.555556,
+    "connection_precision_strict": 0.142857,
+    "connection_recall_strict": 0.095238,
+    "connection_f1_strict": 0.114286,
+    "workflow_order_similarity_strict": 0.451389,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 43,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 14,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-026": {
+     "failure_type": "T5",
+     "errors_before": 31,
+     "errors_after": 31,
+     "removed": 0
+    },
+    "LRN-062": {
+     "failure_type": "T6",
+     "errors_before": 9,
+     "errors_after": 7,
+     "removed": 2
+    }
+   },
+   "confirmed": true,
+   "promoted": [],
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "LRN-051",
+    "LRN-007"
+   ],
+   "before": {
+    "semantic_similarity": 0.254977,
+    "workflow_order_similarity": 0.451389,
+    "connection_f1": 0.114286,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.555556,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.196136,
+    "activity_semantic_similarity": 0.424961,
+    "activity_label_precision": 0.857143,
+    "activity_label_recall": 0.5,
+    "activity_label_f1": 0.631579
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 31,
+    "T6": 7
+   },
+   "reverted": {
+    "draft": 2,
+    "errors": {
+     "T5": 32,
+     "T6": 7
+    },
+    "errors_before": {
+     "T5": 31,
+     "T6": 7
+    },
+    "mean_change": -0.048496
+   },
+   "after": {
+    "semantic_similarity": 0.254977,
+    "workflow_order_similarity": 0.451389,
+    "connection_f1": 0.114286,
+    "alignment_coverage": 0.555556
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 31,
+    "T6": 7
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.254977,
+    "activity_semantic_similarity": 0.424961,
+    "activity_label_precision": 0.857143,
+    "activity_label_recall": 0.5,
+    "activity_label_f1": 0.631579,
+    "activity_matched": 6,
+    "activity_reference": 12,
+    "activity_generated": 7,
+    "alignment_coverage": 0.555556,
+    "connection_precision": 0.142857,
+    "connection_recall": 0.095238,
+    "connection_f1": 0.114286,
+    "connection_tp": 2,
+    "connection_fp": 12,
+    "connection_fn": 19,
+    "workflow_order_similarity": 0.451389,
+    "order_consistency": 0.8125,
+    "order_coverage": 0.555556,
+    "order_tp": 39,
+    "order_fp": 4,
+    "order_fn": 5,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.8571,
+    "type_recall_diagnostic": 0.6667,
+    "type_f1_diagnostic": 0.75,
+    "counts": {
+     "gold_nodes": 18,
+     "generated_nodes": 14,
+     "gold_flows": 21,
+     "generated_flows": 14
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.196136,
+    "activity_semantic_similarity_strict": 0.424961,
+    "alignment_coverage_strict": 0.555556,
+    "connection_precision_strict": 0.142857,
+    "connection_recall_strict": 0.095238,
+    "connection_f1_strict": 0.114286,
+    "workflow_order_similarity_strict": 0.451389,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 43,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 14,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-007": {
+     "failure_type": "T6",
+     "errors_before": 7,
+     "errors_after": 7,
+     "removed": 0
+    },
+    "LRN-051": {
+     "failure_type": "T5",
+     "errors_before": 31,
+     "errors_after": 31,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [
+    "LRN-066",
+    "LRN-020"
+   ],
+   "before": {
+    "semantic_similarity": 0.254977,
+    "workflow_order_similarity": 0.451389,
+    "connection_f1": 0.114286,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.555556,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.196136,
+    "activity_semantic_similarity": 0.424961,
+    "activity_label_precision": 0.857143,
+    "activity_label_recall": 0.5,
+    "activity_label_f1": 0.631579
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 31,
+    "T6": 7
+   },
+   "reverted": {
+    "draft": 3,
+    "errors": {
+     "T5": 34,
+     "T6": 8
+    },
+    "errors_before": {
+     "T5": 31,
+     "T6": 7
+    },
+    "mean_change": -0.015716
+   },
+   "after": {
+    "semantic_similarity": 0.254977,
+    "workflow_order_similarity": 0.451389,
+    "connection_f1": 0.114286,
+    "alignment_coverage": 0.555556
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 31,
+    "T6": 7
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.254977,
+    "activity_semantic_similarity": 0.424961,
+    "activity_label_precision": 0.857143,
+    "activity_label_recall": 0.5,
+    "activity_label_f1": 0.631579,
+    "activity_matched": 6,
+    "activity_reference": 12,
+    "activity_generated": 7,
+    "alignment_coverage": 0.555556,
+    "connection_precision": 0.142857,
+    "connection_recall": 0.095238,
+    "connection_f1": 0.114286,
+    "connection_tp": 2,
+    "connection_fp": 12,
+    "connection_fn": 19,
+    "workflow_order_similarity": 0.451389,
+    "order_consistency": 0.8125,
+    "order_coverage": 0.555556,
+    "order_tp": 39,
+    "order_fp": 4,
+    "order_fn": 5,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.8571,
+    "type_recall_diagnostic": 0.6667,
+    "type_f1_diagnostic": 0.75,
+    "counts": {
+     "gold_nodes": 18,
+     "generated_nodes": 14,
+     "gold_flows": 21,
+     "generated_flows": 14
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.196136,
+    "activity_semantic_similarity_strict": 0.424961,
+    "alignment_coverage_strict": 0.555556,
+    "connection_precision_strict": 0.142857,
+    "connection_recall_strict": 0.095238,
+    "connection_f1_strict": 0.114286,
+    "workflow_order_similarity_strict": 0.451389,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 43,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 14,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-020": {
+     "failure_type": "T6",
+     "errors_before": 7,
+     "errors_after": 7,
+     "removed": 0
+    },
+    "LRN-066": {
+     "failure_type": "T5",
+     "errors_before": 31,
+     "errors_after": 31,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.254977,
+  "activity_semantic_similarity": 0.424961,
+  "activity_label_precision": 0.857143,
+  "activity_label_recall": 0.5,
+  "activity_label_f1": 0.631579,
+  "activity_matched": 6,
+  "activity_reference": 12,
+  "activity_generated": 7,
+  "alignment_coverage": 0.555556,
+  "connection_precision": 0.142857,
+  "connection_recall": 0.095238,
+  "connection_f1": 0.114286,
+  "connection_tp": 2,
+  "connection_fp": 12,
+  "connection_fn": 19,
+  "workflow_order_similarity": 0.451389,
+  "order_consistency": 0.8125,
+  "order_coverage": 0.555556,
+  "order_tp": 39,
+  "order_fp": 4,
+  "order_fn": 5,
+  "collaboration_similarity": null,
+  "collaboration_applicable": false,
+  "collaboration_tp": 0,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 0.8571,
+  "type_recall_diagnostic": 0.6667,
+  "type_f1_diagnostic": 0.75,
+  "counts": {
+   "gold_nodes": 18,
+   "generated_nodes": 14,
+   "gold_flows": 21,
+   "generated_flows": 14
+  },
+  "collaboration_ignored": true,
+  "semantic_similarity_strict": 0.196136,
+  "activity_semantic_similarity_strict": 0.424961,
+  "alignment_coverage_strict": 0.555556,
+  "connection_precision_strict": 0.142857,
+  "connection_recall_strict": 0.095238,
+  "connection_f1_strict": 0.114286,
+  "workflow_order_similarity_strict": 0.451389,
+  "collaboration_similarity_strict": 0.0,
+  "collaboration_applicable_strict": true
+ }
+}

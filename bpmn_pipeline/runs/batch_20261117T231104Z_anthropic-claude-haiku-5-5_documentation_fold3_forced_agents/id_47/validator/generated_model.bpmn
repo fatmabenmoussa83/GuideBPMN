@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_USI_CourseRegistration" targetNamespace="http://www.sportsinstitute.example/bpmn/usi-course-registration">
+  <bpmn:message id="Message_ActivationResponse" name="Activation response received"/>
+  <bpmn:process id="Process_USI_CourseRegistration" name="New Application for Registering for an USI course" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Registration" name="Registration for course wanted">
+      <bpmn:outgoing>Flow_Start_SelectCourse</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_SelectCourse" name="Select course">
+      <bpmn:incoming>Flow_Start_SelectCourse</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelectCourse_SlotCheck</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Slots_Split" name="Slots free?" default="Flow_Slots_No">
+      <bpmn:incoming>Flow_SelectCourse_SlotCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_Slots_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Slots_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_ShowCoursesDates" name="Show courses and dates">
+      <bpmn:incoming>Flow_Slots_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_ShowCourses_SelectDate</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_NoSlots" name="No free slots">
+      <bpmn:incoming>Flow_Slots_No</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="Task_SelectCourseDate" name="Select one course and date">
+      <bpmn:incoming>Flow_ShowCourses_SelectDate</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelectDate_CheckAccount</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_CheckAccount" name="Check whether account exists">
+      <bpmn:incoming>Flow_SelectDate_CheckAccount</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckAccount_AccountSplit</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Account_Split" name="Already has account?" default="Flow_NoAccount_CheckEligibility">
+      <bpmn:incoming>Flow_CheckAccount_AccountSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_HasAccount</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoAccount_CheckEligibility</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_CheckEligibility" name="Check registration at eligible university">
+      <bpmn:incoming>Flow_NoAccount_CheckEligibility</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckEligibility_EligibilitySplit</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Eligibility_Split" name="Registered at eligible university?" default="Flow_NotEligible_RequestActivation">
+      <bpmn:incoming>Flow_CheckEligibility_EligibilitySplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_Eligible_RegisterAccount</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotEligible_RequestActivation</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_RegisterAccount" name="Register account">
+      <bpmn:incoming>Flow_Eligible_RegisterAccount</bpmn:incoming>
+      <bpmn:outgoing>Flow_RegisterAccount_AccountMerge</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_RequestActivation" name="Request activation">
+      <bpmn:incoming>Flow_NotEligible_RequestActivation</bpmn:incoming>
+      <bpmn:outgoing>Flow_RequestActivation_WaitResponse</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="Event_ActivationResponse" name="Activation response received">
+      <bpmn:incoming>Flow_RequestActivation_WaitResponse</bpmn:incoming>
+      <bpmn:outgoing>Flow_ActivationResponse_AccountMerge</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_ActivationResponse" messageRef="Message_ActivationResponse"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_Account_Merge" name="Account available">
+      <bpmn:incoming>Flow_HasAccount</bpmn:incoming>
+      <bpmn:incoming>Flow_RegisterAccount_AccountMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_ActivationResponse_AccountMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_AccountMerge_Login</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Login" name="Log into account">
+      <bpmn:incoming>Flow_AccountMerge_Login</bpmn:incoming>
+      <bpmn:outgoing>Flow_Login_ParallelSplit</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="Gateway_Parallel_Split" name="Start tweet, registration and payment">
+      <bpmn:incoming>Flow_Login_ParallelSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_ParallelSplit_Tweet</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ParallelSplit_CompleteRegistration</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ParallelSplit_Payment</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_TweetFriends" name="Tweet to friends via Twitter account">
+      <bpmn:incoming>Flow_ParallelSplit_Tweet</bpmn:incoming>
+      <bpmn:outgoing>Flow_Tweet_ParallelJoin</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_CompleteRegistration" name="Complete course registration">
+      <bpmn:incoming>Flow_ParallelSplit_CompleteRegistration</bpmn:incoming>
+      <bpmn:outgoing>Flow_CompleteRegistration_ParallelJoin</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_ProvidePayment" name="Provide payment information">
+      <bpmn:incoming>Flow_ParallelSplit_Payment</bpmn:incoming>
+      <bpmn:outgoing>Flow_Payment_ParallelJoin</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="Gateway_Parallel_Join" name="Tweet, registration and payment done">
+      <bpmn:incoming>Flow_Tweet_ParallelJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_CompleteRegistration_ParallelJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_Payment_ParallelJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_ParallelJoin_IssueTicket</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_IssueTicket" name="Issue course ticket">
+      <bpmn:incoming>Flow_ParallelJoin_IssueTicket</bpmn:incoming>
+      <bpmn:outgoing>Flow_IssueTicket_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_TicketReceived" name="Course ticket received">
+      <bpmn:incoming>Flow_IssueTicket_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_SelectCourse" sourceRef="StartEvent_Registration" targetRef="Task_SelectCourse"/>
+    <bpmn:sequenceFlow id="Flow_SelectCourse_SlotCheck" sourceRef="Task_SelectCourse" targetRef="Gateway_Slots_Split"/>
+    <bpmn:sequenceFlow id="Flow_Slots_Yes" name="Slots free" sourceRef="Gateway_Slots_Split" targetRef="Task_ShowCoursesDates">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${slotsAvailable}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Slots_No" name="No slots" sourceRef="Gateway_Slots_Split" targetRef="EndEvent_NoSlots"/>
+    <bpmn:sequenceFlow id="Flow_ShowCourses_SelectDate" sourceRef="Task_ShowCoursesDates" targetRef="Task_SelectCourseDate"/>
+    <bpmn:sequenceFlow id="Flow_SelectDate_CheckAccount" sourceRef="Task_SelectCourseDate" targetRef="Task_CheckAccount"/>
+    <bpmn:sequenceFlow id="Flow_CheckAccount_AccountSplit" sourceRef="Task_CheckAccount" targetRef="Gateway_Account_Split"/>
+    <bpmn:sequenceFlow id="Flow_HasAccount" name="Has account" sourceRef="Gateway_Account_Split" targetRef="Gateway_Account_Merge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${hasAccount}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoAccount_CheckEligibility" name="No account" sourceRef="Gateway_Account_Split" targetRef="Task_CheckEligibility"/>
+    <bpmn:sequenceFlow id="Flow_CheckEligibility_EligibilitySplit" sourceRef="Task_CheckEligibility" targetRef="Gateway_Eligibility_Split"/>
+    <bpmn:sequenceFlow id="Flow_Eligible_RegisterAccount" name="Eligible university" sourceRef="Gateway_Eligibility_Split" targetRef="Task_RegisterAccount">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${eligibleUniversity}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotEligible_RequestActivation" name="Not eligible" sourceRef="Gateway_Eligibility_Split" targetRef="Task_RequestActivation"/>
+    <bpmn:sequenceFlow id="Flow_RegisterAccount_AccountMerge" sourceRef="Task_RegisterAccount" targetRef="Gateway_Account_Merge"/>
+    <bpmn:sequenceFlow id="Flow_RequestActivation_WaitResponse" sourceRef="Task_RequestActivation" targetRef="Event_ActivationResponse"/>
+    <bpmn:sequenceFlow id="Flow_ActivationResponse_AccountMerge" sourceRef="Event_ActivationResponse" targetRef="Gateway_Account_Merge"/>
+    <bpmn:sequenceFlow id="Flow_AccountMerge_Login" sourceRef="Gateway_Account_Merge" targetRef="Task_Login"/>
+    <bpmn:sequenceFlow id="Flow_Login_ParallelSplit" sourceRef="Task_Login" targetRef="Gateway_Parallel_Split"/>
+    <bpmn:sequenceFlow id="Flow_ParallelSplit_Tweet" sourceRef="Gateway_Parallel_Split" targetRef="Task_TweetFriends"/>
+    <bpmn:sequenceFlow id="Flow_ParallelSplit_CompleteRegistration" sourceRef="Gateway_Parallel_Split" targetRef="Task_CompleteRegistration"/>
+    <bpmn:sequenceFlow id="Flow_ParallelSplit_Payment" sourceRef="Gateway_Parallel_Split" targetRef="Task_ProvidePayment"/>
+    <bpmn:sequenceFlow id="Flow_Tweet_ParallelJoin" sourceRef="Task_TweetFriends" targetRef="Gateway_Parallel_Join"/>
+    <bpmn:sequenceFlow id="Flow_CompleteRegistration_ParallelJoin" sourceRef="Task_CompleteRegistration" targetRef="Gateway_Parallel_Join"/>
+    <bpmn:sequenceFlow id="Flow_Payment_ParallelJoin" sourceRef="Task_ProvidePayment" targetRef="Gateway_Parallel_Join"/>
+    <bpmn:sequenceFlow id="Flow_ParallelJoin_IssueTicket" sourceRef="Gateway_Parallel_Join" targetRef="Task_IssueTicket"/>
+    <bpmn:sequenceFlow id="Flow_IssueTicket_End" sourceRef="Task_IssueTicket" targetRef="EndEvent_TicketReceived"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,819 @@
+{
+ "id": "22",
+ "kept_round": 3,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 41.7,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 48,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 15,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.384387,
+    "workflow_order_similarity": 0.629365,
+    "connection_f1": 0.648649,
+    "collaboration_similarity": 0.142857,
+    "alignment_coverage": 0.65,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.384387,
+    "activity_semantic_similarity": 0.633042,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.666667,
+    "activity_label_f1": 0.8
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  targetNamespace=\"http://example.com/insurant-recourse\">\n  <bpmn:message id=\"Message_PaymentRequest\" name=\"Request for payment\"/>\n  <bpmn:message id=\"Message_Payment\" name=\"Payment\"/>\n  <bpmn:message id=\"Message_Disagreement\" name=\"Disagreement with recourse\"/>\n  <bpmn:message id=\"Message_CollectionCase\" name=\"Case forwarded to collection agency\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Recourse\">\n    <bpmn:participant id=\"Participant_Recourse\" name=\"Recourse process\" processRef=\"Process_Recourse\"/>\n    <bpmn:participant id=\"Participant_Insurant\" name=\"Insurant\"/>\n    <bpmn:participant id=\"Participant_CollectionAgency\" name=\"Collection agency\"/>\n    <bpmn:messageFlow id=\"MessageFlow_PaymentRequest\" name=\"Request for payment\" sourceRef=\"Task_SendRequest\" targetRef=\"Participant_Insurant\" messageRef=\"Message_PaymentRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Payment\" name=\"Payment\" sourceRef=\"Participant_Insurant\" targetRef=\"Event_PaymentReceived\" messageRef=\"Message_Payment\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Disagreement\" name=\"Disagreement\" sourceRef=\"Participant_Insurant\" targetRef=\"Event_DisagreementReceived\" messageRef=\"Message_Disagreement\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CollectionCase\" name=\"Case forwarded\" sourceRef=\"Task_ForwardCase\" targetRef=\"Participant_CollectionAgency\" messageRef=\"Message_CollectionCase\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Recourse\" name=\"Handle recourse case\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Information\" name=\"Information about possible subrogation received\">\n      <bpmn:outgoing>Flow_Start_Check</bpmn:outgoing>\n    </bpmn:startEvent>\n\n    <bpmn:task id=\"Task_CheckCase\" name=\"Check case\">\n      <bpmn:incoming>Flow_Start_Check</bpmn:incoming>\n      <bpmn:outgoing>Flow_Check_Decision</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_RecoursePossible\" name=\"Is recourse possible?\" default=\"Flow_NotPossible\">\n      <bpmn:incoming>Flow_Check_Decision</bpmn:incoming>\n      <bpmn:outgoing>Flow_Possible</bpmn:outgoing>\n      <bpmn:outgoing>Flow_NotPossible</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:sendTask id=\"Task_SendRequest\" name=\"Send request for payment\">\n      <bpmn:incoming>Flow_Possible</bpmn:incoming>\n      <bpmn:outgoing>Flow_Request_Reminder</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_MakeReminder\" name=\"Make reminder\">\n      <bpmn:incoming>Flow_Request_Reminder</bpmn:incoming>\n      <bpmn:outgoing>Flow_Reminder_Wait</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForOutcome\" name=\"Wait for case outcome\">\n      <bpmn:incoming>Flow_Reminder_Wait</bpmn:incoming>\n      <bpmn:outgoing>Flow_Wait_Payment</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Wait_Disagreement</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Wait_Deadline</bpmn:outgoing>\n    </bpmn:eventBasedGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_PaymentReceived\" name=\"Money received\">\n      <bpmn:incoming>Flow_Wait_Payment</bpmn:incoming>\n      <bpmn:outgoing>Flow_Payment_Book</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Payment\" messageRef=\"Message_Payment\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:task id=\"Task_MakeBooking\" name=\"Make booking\">\n      <bpmn:incoming>Flow_Payment_Book</bpmn:incoming>\n      <bpmn:outgoing>Flow_Book_Close</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DisagreementReceived\" name=\"Disagreement received\">\n      <bpmn:incoming>Flow_Wait_Disagreement</bpmn:incoming>\n      <bpmn:outgoing>Flow_Disagreement_Check</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Disagreement\" messageRef=\"Message_Disagreement\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:task id=\"Task_CheckReasoning\" name=\"Check reasoning\">\n      <bpmn:incoming>Flow_Disagreement_Check</bpmn:incoming>\n      <bpmn:outgoing>Flow_Reasoning_Decision</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ReasoningValid\" name=\"Is the insurant right?\" default=\"Flow_InsurantWrong\">\n      <bpmn:incoming>Flow_Reasoning_Decision</bpmn:incoming>\n      <bpmn:outgoing>Flow_InsurantRight</bpmn:outgoing>\n      <bpmn:outgoing>Flow_InsurantWrong</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DeadlineReached\" name=\"Disagreement deadline reached\">\n      <bpmn:incoming>Flow_Wait_Deadline</bpmn:incoming>\n      <bpmn:outgoing>Flow_Deadline_Forward</bpmn:outgoing>\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_Deadline\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"Task_ForwardCase\" name=\"Forward case to collection agency\">\n      <bpmn:incoming>Flow_InsurantWrong</bpmn:incoming>\n      <bpmn:incoming>Flow_Deadline_Forward</bpmn:incoming>\n      <bpmn:outgoing>Flow_Forward_End</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"End_CaseClosed\" name=\"Case closed\">\n      <bpmn:incoming>Flow_NotPossible</bpmn:incoming>\n      <bpmn:incoming>Flow_Book_Close</bpmn:incoming>\n      <bpmn:incoming>Flow_InsurantRight</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:endEvent id=\"End_Forwarded\" name=\"Case forwarded to collection agency\">\n      <bpmn:incoming>Flow_Forward_End</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Check\" sourceRef=\"Start_Information\" targetRef=\"Task_CheckCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Check_Decision\" sourceRef=\"Task_CheckCase\" targetRef=\"Gateway_RecoursePossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_Possible\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_SendRequest\">\n      <bpmn:conditionExpression>The possibility of recourse is confirmed</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotPossible\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"End_CaseClosed\"/>\n    <bpmn:sequenceFlow id=\"Flow_Request_Reminder\" sourceRef=\"Task_SendRequest\" targetRef=\"Task_MakeReminder\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reminder_Wait\" sourceRef=\"Task_MakeReminder\" targetRef=\"Gateway_WaitForOutcome\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Payment\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_PaymentReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Disagreement\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DisagreementReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Deadline\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DeadlineReached\"/>\n    <bpmn:sequenceFlow id=\"Flow_Payment_Book\" sourceRef=\"Event_PaymentReceived\" targetRef=\"Task_MakeBooking\"/>\n    <bpmn:sequenceFlow id=\"Flow_Book_Close\" sourceRef=\"Task_MakeBooking\" targetRef=\"End_CaseClosed\"/>\n    <bpmn:sequenceFlow id=\"Flow_Disagreement_Check\" sourceRef=\"Event_DisagreementReceived\" targetRef=\"Task_CheckReasoning\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reasoning_Decision\" sourceRef=\"Task_CheckReasoning\" targetRef=\"Gateway_ReasoningValid\"/>\n    <bpmn:sequenceFlow id=\"Flow_InsurantRight\" sourceRef=\"Gateway_ReasoningValid\" targetRef=\"End_CaseClosed\">\n      <bpmn:conditionExpression>The insurant is right</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_InsurantWrong\" sourceRef=\"Gateway_ReasoningValid\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Deadline_Forward\" sourceRef=\"Event_DeadlineReached\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Forward_End\" sourceRef=\"Task_ForwardCase\" targetRef=\"End_Forwarded\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 475.5,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 42,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 17,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": null,
+     "correct": 0,
+     "incorrect": 0,
+     "accuracy": null,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.466079,
+    "workflow_order_similarity": 0.662162,
+    "connection_f1": 0.666667,
+    "collaboration_similarity": 0.0,
+    "alignment_coverage": 0.7,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.466079,
+    "activity_semantic_similarity": 0.717086,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.777778,
+    "activity_label_f1": 0.875
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  targetNamespace=\"http://example.com/insurant-recourse\">\n  <bpmn:message id=\"Message_Payment\" name=\"Money received\"/>\n  <bpmn:message id=\"Message_Disagreement\" name=\"Disagreement with recourse\"/>\n\n  <bpmn:process id=\"Process_Recourse\" name=\"Handle recourse case\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Information\" name=\"Information about possible subrogation received\">\n      <bpmn:outgoing>Flow_Start_Check</bpmn:outgoing>\n    </bpmn:startEvent>\n\n    <bpmn:task id=\"Task_CheckCase\" name=\"Check case\">\n      <bpmn:incoming>Flow_Start_Check</bpmn:incoming>\n      <bpmn:outgoing>Flow_Check_Decision</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_RecoursePossible\" name=\"Is recourse possible?\" default=\"Flow_NotPossible\">\n      <bpmn:incoming>Flow_Check_Decision</bpmn:incoming>\n      <bpmn:outgoing>Flow_Possible</bpmn:outgoing>\n      <bpmn:outgoing>Flow_NotPossible</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:sendTask id=\"Task_SendRequest\" name=\"Send request for payment to the insurant\">\n      <bpmn:incoming>Flow_Possible</bpmn:incoming>\n      <bpmn:outgoing>Flow_Request_Reminder</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_MakeReminder\" name=\"Make reminder\">\n      <bpmn:incoming>Flow_Request_Reminder</bpmn:incoming>\n      <bpmn:outgoing>Flow_Reminder_Wait</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForOutcome\" name=\"Wait for payment, disagreement, or deadline\">\n      <bpmn:incoming>Flow_Reminder_Wait</bpmn:incoming>\n      <bpmn:outgoing>Flow_Wait_Payment</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Wait_Disagreement</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Wait_Deadline</bpmn:outgoing>\n    </bpmn:eventBasedGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_PaymentReceived\" name=\"Money received\">\n      <bpmn:incoming>Flow_Wait_Payment</bpmn:incoming>\n      <bpmn:outgoing>Flow_Payment_Book</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Payment\" messageRef=\"Message_Payment\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:task id=\"Task_MakeBooking\" name=\"Make booking\">\n      <bpmn:incoming>Flow_Payment_Book</bpmn:incoming>\n      <bpmn:outgoing>Flow_Book_CloseMerge</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DisagreementReceived\" name=\"Disagreement with recourse received\">\n      <bpmn:incoming>Flow_Wait_Disagreement</bpmn:incoming>\n      <bpmn:outgoing>Flow_Disagreement_Check</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Disagreement\" messageRef=\"Message_Disagreement\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:task id=\"Task_CheckReasoning\" name=\"Check the insurant's reasoning\">\n      <bpmn:incoming>Flow_Disagreement_Check</bpmn:incoming>\n      <bpmn:outgoing>Flow_Reasoning_Decision</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ReasoningValid\" name=\"Is the insurant right?\" default=\"Flow_InsurantWrong\">\n      <bpmn:incoming>Flow_Reasoning_Decision</bpmn:incoming>\n      <bpmn:outgoing>Flow_InsurantRight</bpmn:outgoing>\n      <bpmn:outgoing>Flow_InsurantWrong</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DeadlineReached\" name=\"Deadline reached with no money received\">\n      <bpmn:incoming>Flow_Wait_Deadline</bpmn:incoming>\n      <bpmn:outgoing>Flow_Deadline_Forward</bpmn:outgoing>\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_Deadline\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:task id=\"Task_ForwardCase\" name=\"Forward case to collection agency\">\n      <bpmn:incoming>Flow_InsurantWrong</bpmn:incoming>\n      <bpmn:incoming>Flow_Deadline_Forward</bpmn:incoming>\n      <bpmn:outgoing>Flow_Forward_End</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ClosureMerge\" name=\"Continue to close case\">\n      <bpmn:incoming>Flow_NotPossible</bpmn:incoming>\n      <bpmn:incoming>Flow_Book_CloseMerge</bpmn:incoming>\n      <bpmn:incoming>Flow_InsurantRight</bpmn:incoming>\n      <bpmn:outgoing>Flow_CloseCase</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:task id=\"Task_CloseCase\" name=\"Close case\">\n      <bpmn:incoming>Flow_CloseCase</bpmn:incoming>\n      <bpmn:outgoing>Flow_Close_End</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:endEvent id=\"End_CaseClosed\" name=\"Case closed\">\n      <bpmn:incoming>Flow_Close_End</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:endEvent id=\"End_Forwarded\" name=\"Case forwarded to collection agency\">\n      <bpmn:incoming>Flow_Forward_End</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Check\" sourceRef=\"Start_Information\" targetRef=\"Task_CheckCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Check_Decision\" sourceRef=\"Task_CheckCase\" targetRef=\"Gateway_RecoursePossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_Possible\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_SendRequest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">Recourse is possible</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotPossible\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Gateway_ClosureMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Request_Reminder\" sourceRef=\"Task_SendRequest\" targetRef=\"Task_MakeReminder\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reminder_Wait\" sourceRef=\"Task_MakeReminder\" targetRef=\"Gateway_WaitForOutcome\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Payment\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_PaymentReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Disagreement\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DisagreementReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Deadline\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DeadlineReached\"/>\n    <bpmn:sequenceFlow id=\"Flow_Payment_Book\" sourceRef=\"Event_PaymentReceived\" targetRef=\"Task_MakeBooking\"/>\n    <bpmn:sequenceFlow id=\"Flow_Book_CloseMerge\" sourceRef=\"Task_MakeBooking\" targetRef=\"Gateway_ClosureMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Disagreement_Check\" sourceRef=\"Event_DisagreementReceived\" targetRef=\"Task_CheckReasoning\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reasoning_Decision\" sourceRef=\"Task_CheckReasoning\" targetRef=\"Gateway_ReasoningValid\"/>\n    <bpmn:sequenceFlow id=\"Flow_InsurantRight\" sourceRef=\"Gateway_ReasoningValid\" targetRef=\"Gateway_ClosureMerge\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">The insurant is right</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_InsurantWrong\" sourceRef=\"Gateway_ReasoningValid\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Deadline_Forward\" sourceRef=\"Event_DeadlineReached\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_CloseCase\" sourceRef=\"Gateway_ClosureMerge\" targetRef=\"Task_CloseCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Close_End\" sourceRef=\"Task_CloseCase\" targetRef=\"End_CaseClosed\"/>\n    <bpmn:sequenceFlow id=\"Flow_Forward_End\" sourceRef=\"Task_ForwardCase\" targetRef=\"End_Forwarded\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 977.8,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 44,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 17,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 1,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.400514,
+    "workflow_order_similarity": 0.662162,
+    "connection_f1": 0.666667,
+    "collaboration_similarity": 0.05,
+    "alignment_coverage": 0.7,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.400514,
+    "activity_semantic_similarity": 0.695284,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.777778,
+    "activity_label_f1": 0.875
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  targetNamespace=\"http://example.com/insurant-recourse\">\n  <bpmn:collaboration id=\"Collaboration_Recourse\">\n    <bpmn:participant id=\"Participant_Actor\" name=\"I\" processRef=\"Process_Recourse\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Recourse\" name=\"Handle recourse case\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Recourse\">\n      <bpmn:lane id=\"Lane_Actor\" name=\"I\">\n        <bpmn:flowNodeRef>Start_Information</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_CheckCase</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_RecoursePossible</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_SendRequest</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_MakeReminder</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_WaitForOutcome</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Event_PaymentReceived</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_MakeBooking</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Event_DisagreementReceived</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_CheckReasoning</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_ReasoningValid</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Event_DeadlineReached</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_ForwardCase</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_ClosureMerge</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_CloseCase</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_CaseClosed</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Forwarded</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n\n    <bpmn:startEvent id=\"Start_Information\" name=\"Information about possible subrogation received\">\n      <bpmn:outgoing>Flow_Start_Check</bpmn:outgoing>\n    </bpmn:startEvent>\n\n    <bpmn:task id=\"Task_CheckCase\" name=\"Check the case\">\n      <bpmn:incoming>Flow_Start_Check</bpmn:incoming>\n      <bpmn:outgoing>Flow_Check_Decision</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_RecoursePossible\" name=\"Is recourse possible?\" default=\"Flow_NotPossible\">\n      <bpmn:incoming>Flow_Check_Decision</bpmn:incoming>\n      <bpmn:outgoing>Flow_Possible</bpmn:outgoing>\n      <bpmn:outgoing>Flow_NotPossible</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:sendTask id=\"Task_SendRequest\" name=\"Send request for payment to the insurant\">\n      <bpmn:incoming>Flow_Possible</bpmn:incoming>\n      <bpmn:outgoing>Flow_Request_Reminder</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_MakeReminder\" name=\"Make a reminder\">\n      <bpmn:incoming>Flow_Request_Reminder</bpmn:incoming>\n      <bpmn:outgoing>Flow_Reminder_Wait</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForOutcome\" name=\"Wait for payment, disagreement, or deadline\">\n      <bpmn:incoming>Flow_Reminder_Wait</bpmn:incoming>\n      <bpmn:outgoing>Flow_Wait_Payment</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Wait_Disagreement</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Wait_Deadline</bpmn:outgoing>\n    </bpmn:eventBasedGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_PaymentReceived\" name=\"Money received\">\n      <bpmn:incoming>Flow_Wait_Payment</bpmn:incoming>\n      <bpmn:outgoing>Flow_Payment_Book</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Payment\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:task id=\"Task_MakeBooking\" name=\"Make a booking\">\n      <bpmn:incoming>Flow_Payment_Book</bpmn:incoming>\n      <bpmn:outgoing>Flow_Book_CloseMerge</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DisagreementReceived\" name=\"Insurant disagrees with recourse\">\n      <bpmn:incoming>Flow_Wait_Disagreement</bpmn:incoming>\n      <bpmn:outgoing>Flow_Disagreement_Check</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Disagreement\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:task id=\"Task_CheckReasoning\" name=\"Check the insurant's reasoning\">\n      <bpmn:incoming>Flow_Disagreement_Check</bpmn:incoming>\n      <bpmn:outgoing>Flow_Reasoning_Decision</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ReasoningValid\" name=\"Is the insurant right?\" default=\"Flow_InsurantWrong\">\n      <bpmn:incoming>Flow_Reasoning_Decision</bpmn:incoming>\n      <bpmn:outgoing>Flow_InsurantRight</bpmn:outgoing>\n      <bpmn:outgoing>Flow_InsurantWrong</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DeadlineReached\" name=\"Disagreement deadline reached with no money received\">\n      <bpmn:incoming>Flow_Wait_Deadline</bpmn:incoming>\n      <bpmn:outgoing>Flow_Deadline_Forward</bpmn:outgoing>\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_Deadline\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"Task_ForwardCase\" name=\"Forward the case to a collection agency\">\n      <bpmn:incoming>Flow_InsurantWrong</bpmn:incoming>\n      <bpmn:incoming>Flow_Deadline_Forward</bpmn:incoming>\n      <bpmn:outgoing>Flow_Forward_End</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ClosureMerge\" name=\"Continue to close the case\">\n      <bpmn:incoming>Flow_NotPossible</bpmn:incoming>\n      <bpmn:incoming>Flow_Book_CloseMerge</bpmn:incoming>\n      <bpmn:incoming>Flow_InsurantRight</bpmn:incoming>\n      <bpmn:outgoing>Flow_CloseCase</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:task id=\"Task_CloseCase\" name=\"Close the case\">\n      <bpmn:incoming>Flow_CloseCase</bpmn:incoming>\n      <bpmn:outgoing>Flow_Close_End</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:endEvent id=\"End_CaseClosed\" name=\"Case closed\">\n      <bpmn:incoming>Flow_Close_End</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:endEvent id=\"End_Forwarded\" name=\"Case forwarded to collection agency\">\n      <bpmn:incoming>Flow_Forward_End</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Check\" sourceRef=\"Start_Information\" targetRef=\"Task_CheckCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Check_Decision\" sourceRef=\"Task_CheckCase\" targetRef=\"Gateway_RecoursePossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_Possible\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_SendRequest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recoursePossible</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotPossible\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Gateway_ClosureMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Request_Reminder\" sourceRef=\"Task_SendRequest\" targetRef=\"Task_MakeReminder\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reminder_Wait\" sourceRef=\"Task_MakeReminder\" targetRef=\"Gateway_WaitForOutcome\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Payment\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_PaymentReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Disagreement\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DisagreementReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Deadline\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DeadlineReached\"/>\n    <bpmn:sequenceFlow id=\"Flow_Payment_Book\" sourceRef=\"Event_PaymentReceived\" targetRef=\"Task_MakeBooking\"/>\n    <bpmn:sequenceFlow id=\"Flow_Book_CloseMerge\" sourceRef=\"Task_MakeBooking\" targetRef=\"Gateway_ClosureMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Disagreement_Check\" sourceRef=\"Event_DisagreementReceived\" targetRef=\"Task_CheckReasoning\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reasoning_Decision\" sourceRef=\"Task_CheckReasoning\" targetRef=\"Gateway_ReasoningValid\"/>\n    <bpmn:sequenceFlow id=\"Flow_InsurantRight\" sourceRef=\"Gateway_ReasoningValid\" targetRef=\"Gateway_ClosureMerge\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">insurantIsRight</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_InsurantWrong\" sourceRef=\"Gateway_ReasoningValid\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Deadline_Forward\" sourceRef=\"Event_DeadlineReached\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_CloseCase\" sourceRef=\"Gateway_ClosureMerge\" targetRef=\"Task_CloseCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Close_End\" sourceRef=\"Task_CloseCase\" targetRef=\"End_CaseClosed\"/>\n    <bpmn:sequenceFlow id=\"Flow_Forward_End\" sourceRef=\"Task_ForwardCase\" targetRef=\"End_Forwarded\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1371.7,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 48,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 17,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 0,
+     "incorrect": 0,
+     "accuracy": null,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.460658,
+    "workflow_order_similarity": 0.662162,
+    "connection_f1": 0.666667,
+    "collaboration_similarity": 1.0,
+    "alignment_coverage": 0.7,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.460658,
+    "activity_semantic_similarity": 0.703832,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.777778,
+    "activity_label_f1": 0.875
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  targetNamespace=\"http://example.com/insurant-recourse\">\n  <bpmn:message id=\"Message_SubrogationInformation\" name=\"Information about possible subrogation\"/>\n  <bpmn:message id=\"Message_PaymentRequest\" name=\"Request for payment\"/>\n  <bpmn:message id=\"Message_MoneyReceived\" name=\"Money received\"/>\n  <bpmn:message id=\"Message_Disagreement\" name=\"Disagreement with recourse\"/>\n  <bpmn:message id=\"Message_ForwardedCase\" name=\"Case forwarded to collection agency\"/>\n\n  <bpmn:process id=\"Process_Recourse\" name=\"Handle recourse case\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Information\" name=\"Information about possible subrogation received\">\n      <bpmn:outgoing>Flow_Start_Check</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_SubrogationInformation\" messageRef=\"Message_SubrogationInformation\"/>\n    </bpmn:startEvent>\n\n    <bpmn:task id=\"Task_CheckCase\" name=\"Check case\">\n      <bpmn:incoming>Flow_Start_Check</bpmn:incoming>\n      <bpmn:outgoing>Flow_Check_Decision</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_RecoursePossible\" name=\"Is recourse possible?\" default=\"Flow_NotPossible\">\n      <bpmn:incoming>Flow_Check_Decision</bpmn:incoming>\n      <bpmn:outgoing>Flow_Possible</bpmn:outgoing>\n      <bpmn:outgoing>Flow_NotPossible</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:sendTask id=\"Task_SendRequest\" name=\"Send request for payment to the insurant\" messageRef=\"Message_PaymentRequest\">\n      <bpmn:incoming>Flow_Possible</bpmn:incoming>\n      <bpmn:outgoing>Flow_Request_Reminder</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_MakeReminder\" name=\"Make a reminder\">\n      <bpmn:incoming>Flow_Request_Reminder</bpmn:incoming>\n      <bpmn:outgoing>Flow_Reminder_Wait</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForOutcome\" name=\"Wait for payment, disagreement, or deadline\">\n      <bpmn:incoming>Flow_Reminder_Wait</bpmn:incoming>\n      <bpmn:outgoing>Flow_Wait_Payment</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Wait_Disagreement</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Wait_Deadline</bpmn:outgoing>\n    </bpmn:eventBasedGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_PaymentReceived\" name=\"Money received\">\n      <bpmn:incoming>Flow_Wait_Payment</bpmn:incoming>\n      <bpmn:outgoing>Flow_Payment_Book</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Payment\" messageRef=\"Message_MoneyReceived\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:task id=\"Task_MakeBooking\" name=\"Make a booking\">\n      <bpmn:incoming>Flow_Payment_Book</bpmn:incoming>\n      <bpmn:outgoing>Flow_Book_CloseMerge</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DisagreementReceived\" name=\"Disagreement with recourse received\">\n      <bpmn:incoming>Flow_Wait_Disagreement</bpmn:incoming>\n      <bpmn:outgoing>Flow_Disagreement_Check</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Disagreement\" messageRef=\"Message_Disagreement\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:task id=\"Task_CheckReasoning\" name=\"Check the insurant's reasoning\">\n      <bpmn:incoming>Flow_Disagreement_Check</bpmn:incoming>\n      <bpmn:outgoing>Flow_Reasoning_Decision</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ReasoningValid\" name=\"Is the insurant right?\" default=\"Flow_InsurantWrong\">\n      <bpmn:incoming>Flow_Reasoning_Decision</bpmn:incoming>\n      <bpmn:outgoing>Flow_InsurantRight</bpmn:outgoing>\n      <bpmn:outgoing>Flow_InsurantWrong</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DeadlineReached\" name=\"Deadline reached without receiving money\">\n      <bpmn:incoming>Flow_Wait_Deadline</bpmn:incoming>\n      <bpmn:outgoing>Flow_Deadline_Forward</bpmn:outgoing>\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_Deadline\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"Task_ForwardCase\" name=\"Forward the case to the collection agency\" messageRef=\"Message_ForwardedCase\">\n      <bpmn:incoming>Flow_InsurantWrong</bpmn:incoming>\n      <bpmn:incoming>Flow_Deadline_Forward</bpmn:incoming>\n      <bpmn:outgoing>Flow_Forward_End</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ClosureMerge\" name=\"Continue to close the case\">\n      <bpmn:incoming>Flow_NotPossible</bpmn:incoming>\n      <bpmn:incoming>Flow_Book_CloseMerge</bpmn:incoming>\n      <bpmn:incoming>Flow_InsurantRight</bpmn:incoming>\n      <bpmn:outgoing>Flow_CloseCase</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:task id=\"Task_CloseCase\" name=\"Close the case\">\n      <bpmn:incoming>Flow_CloseCase</bpmn:incoming>\n      <bpmn:outgoing>Flow_Close_End</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:endEvent id=\"End_CaseClosed\" name=\"Case closed\">\n      <bpmn:incoming>Flow_Close_End</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:endEvent id=\"End_Forwarded\" name=\"Case forwarded to collection agency\">\n      <bpmn:incoming>Flow_Forward_End</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Check\" sourceRef=\"Start_Information\" targetRef=\"Task_CheckCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Check_Decision\" sourceRef=\"Task_CheckCase\" targetRef=\"Gateway_RecoursePossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_Possible\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_SendRequest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">Recourse is possible</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotPossible\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Gateway_ClosureMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Request_Reminder\" sourceRef=\"Task_SendRequest\" targetRef=\"Task_MakeReminder\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reminder_Wait\" sourceRef=\"Task_MakeReminder\" targetRef=\"Gateway_WaitForOutcome\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Payment\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_PaymentReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Disagreement\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DisagreementReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_Deadline\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DeadlineReached\"/>\n    <bpmn:sequenceFlow id=\"Flow_Payment_Book\" sourceRef=\"Event_PaymentReceived\" targetRef=\"Task_MakeBooking\"/>\n    <bpmn:sequenceFlow id=\"Flow_Book_CloseMerge\" sourceRef=\"Task_MakeBooking\" targetRef=\"Gateway_ClosureMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Disagreement_Check\" sourceRef=\"Event_DisagreementReceived\" targetRef=\"Task_CheckReasoning\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reasoning_Decision\" sourceRef=\"Task_CheckReasoning\" targetRef=\"Gateway_ReasoningValid\"/>\n    <bpmn:sequenceFlow id=\"Flow_InsurantRight\" sourceRef=\"Gateway_ReasoningValid\" targetRef=\"Gateway_ClosureMerge\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">The insurant is right</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_InsurantWrong\" sourceRef=\"Gateway_ReasoningValid\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Deadline_Forward\" sourceRef=\"Event_DeadlineReached\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_CloseCase\" sourceRef=\"Gateway_ClosureMerge\" targetRef=\"Task_CloseCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_Close_End\" sourceRef=\"Task_CloseCase\" targetRef=\"End_CaseClosed\"/>\n    <bpmn:sequenceFlow id=\"Flow_Forward_End\" sourceRef=\"Task_ForwardCase\" targetRef=\"End_Forwarded\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_Recourse\">\n    <bpmn:participant id=\"Participant_Actor\" name=\"Case handler\" processRef=\"Process_Recourse\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": true,
+  "failed_levels": [],
+  "metrics": {
+   "semantic_similarity": 0.384387,
+   "activity_semantic_similarity": 0.633042,
+   "activity_label_precision": 1.0,
+   "activity_label_recall": 0.666667,
+   "activity_label_f1": 0.8,
+   "activity_matched": 6,
+   "activity_reference": 9,
+   "activity_generated": 6,
+   "alignment_coverage": 0.65,
+   "connection_precision": 0.705882,
+   "connection_recall": 0.6,
+   "connection_f1": 0.648649,
+   "connection_tp": 12,
+   "connection_fp": 5,
+   "connection_fn": 8,
+   "workflow_order_similarity": 0.629365,
+   "order_consistency": 0.968254,
+   "order_coverage": 0.65,
+   "order_tp": 61,
+   "order_fp": 2,
+   "order_fn": 0,
+   "collaboration_similarity": 0.142857,
+   "collaboration_applicable": true,
+   "collaboration_tp": 1,
+   "collaboration_fp": 6,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 1.0,
+   "type_recall_diagnostic": 0.75,
+   "type_f1_diagnostic": 0.8571,
+   "counts": {
+    "gold_nodes": 20,
+    "generated_nodes": 15,
+    "gold_flows": 20,
+    "generated_flows": 17
+   },
+   "collaboration_ignored": false,
+   "semantic_similarity_strict": 0.384387,
+   "activity_semantic_similarity_strict": 0.633042,
+   "alignment_coverage_strict": 0.65,
+   "connection_precision_strict": 0.705882,
+   "connection_recall_strict": 0.6,
+   "connection_f1_strict": 0.648649,
+   "workflow_order_similarity_strict": 0.629365,
+   "collaboration_similarity_strict": 0.142857,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T5",
+   "T6",
+   "T7"
+  ],
+  "error_counts": {
+   "T5": 13,
+   "T6": 3,
+   "T7": 6
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-031",
+    "instruction": "When the description explicitly states that a matter is brought to completion after a decision or another activity: Model the stated completion work as an activity on the applicable path before the process outcome.",
+    "situation": "the description explicitly states that a matter is brought to completion after a decision or another activity",
+    "source": "learned guideline (refines FID-01)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-015",
+    "instruction": "When the description states the action, purpose, recipient, scope, or outcome of a process element: Label the corresponding BPMN element with a concise phrase that preserves those stated semantics; do not substitute a related but different meaning, omit distinguishing details, or add unsupported details.",
+    "situation": "the description states the action, decision, or event trigger of a process element",
+    "source": "learned guideline (refines FID-03)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-032",
+    "instruction": "When the description mentions an external person or organization only as the recipient or source of a communication, without describing that party performing process activities or a separate process: Model the stated communication and any resulting wait or receipt within the described process; do not add a separate participant pool or message flows for that party.",
+    "situation": "the description mentions an external person or organization only as the recipient or source of a communication, without describing that party performing process activities or a separate process",
+    "source": "learned guideline (new)",
+    "failure_type": "T7"
+   },
+   {
+    "rule_id": "LRN-026",
+    "instruction": "When the description explicitly states that an activity follows the process start or another activity: connect the corresponding BPMN elements with sequence flows in the stated order, preserving any intervening gateways and branches",
+    "situation": "the description states that an activity, start, or decision outcome is followed by another activity or a process outcome",
+    "source": "learned guideline (refines FLOW-01)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-033",
+    "instruction": "When the description narrates work performed by a first-person actor and states that the actor communicates with people or organizations outside that work: Model the narrated actor as a participant pool in the collaboration, with the actor’s described work in its process.",
+    "situation": "the description narrates work performed by a first-person actor and states that the actor communicates with people or organizations outside that work",
+    "source": "learned guideline (refines COL-01)",
+    "failure_type": "T7"
+   },
+   {
+    "rule_id": "LRN-034",
+    "instruction": "When the description states that an actor performs a concrete action on a decision outcome or after another activity: Model the stated work as an activity on the applicable path. Use gateways to route or synchronize flow, not as substitutes for the work.",
+    "situation": "the description states that an actor performs a concrete action on a decision outcome or after another activity",
+    "source": "learned guideline (refines FID-01)",
+    "failure_type": "T5"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-031",
+    "LRN-015",
+    "LRN-032"
+   ],
+   "before": {
+    "semantic_similarity": 0.384387,
+    "workflow_order_similarity": 0.629365,
+    "connection_f1": 0.648649,
+    "collaboration_similarity": 0.142857,
+    "alignment_coverage": 0.65,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.384387,
+    "activity_semantic_similarity": 0.633042,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.666667,
+    "activity_label_f1": 0.8
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 13,
+    "T6": 3,
+    "T7": 6
+   },
+   "after": {
+    "semantic_similarity": 0.466079,
+    "workflow_order_similarity": 0.662162,
+    "connection_f1": 0.666667,
+    "alignment_coverage": 0.7
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.081692,
+    "workflow_order_similarity": 0.032797,
+    "connection_f1": 0.018018,
+    "alignment_coverage": 0.05
+   },
+   "mean_change": 0.045627,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 13,
+    "T6": 2,
+    "T7": 1
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.466079,
+    "activity_semantic_similarity": 0.717086,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.777778,
+    "activity_label_f1": 0.875,
+    "activity_matched": 7,
+    "activity_reference": 9,
+    "activity_generated": 7,
+    "alignment_coverage": 0.7,
+    "connection_precision": 0.684211,
+    "connection_recall": 0.65,
+    "connection_f1": 0.666667,
+    "connection_tp": 13,
+    "connection_fp": 6,
+    "connection_fn": 7,
+    "workflow_order_similarity": 0.662162,
+    "order_consistency": 0.945946,
+    "order_coverage": 0.7,
+    "order_tp": 70,
+    "order_fp": 4,
+    "order_fn": 0,
+    "collaboration_similarity": 0.0,
+    "collaboration_applicable": true,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 1,
+    "type_precision_diagnostic": 0.9412,
+    "type_recall_diagnostic": 0.8,
+    "type_f1_diagnostic": 0.8649,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 17,
+     "gold_flows": 20,
+     "generated_flows": 19
+    },
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.466079,
+    "activity_semantic_similarity_strict": 0.717086,
+    "alignment_coverage_strict": 0.7,
+    "connection_precision_strict": 0.684211,
+    "connection_recall_strict": 0.65,
+    "connection_f1_strict": 0.666667,
+    "workflow_order_similarity_strict": 0.662162,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 42,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 17,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": null,
+     "correct": 0,
+     "incorrect": 0,
+     "accuracy": null,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-015": {
+     "failure_type": "T6",
+     "errors_before": 3,
+     "errors_after": 2,
+     "removed": 1
+    },
+    "LRN-031": {
+     "failure_type": "T5",
+     "errors_before": 13,
+     "errors_after": 13,
+     "removed": 0
+    },
+    "LRN-032": {
+     "failure_type": "T7",
+     "errors_before": 6,
+     "errors_after": 1,
+     "removed": 5
+    }
+   },
+   "confirmed": true,
+   "promoted": [],
+   "detected_after": [
+    "T5",
+    "T6",
+    "T7"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "LRN-026",
+    "LRN-033"
+   ],
+   "before": {
+    "semantic_similarity": 0.466079,
+    "workflow_order_similarity": 0.662162,
+    "connection_f1": 0.666667,
+    "collaboration_similarity": 0.0,
+    "alignment_coverage": 0.7,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.466079,
+    "activity_semantic_similarity": 0.717086,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.777778,
+    "activity_label_f1": 0.875
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 13,
+    "T6": 2,
+    "T7": 1
+   },
+   "reverted": {
+    "draft": 2,
+    "errors": {
+     "T5": 13,
+     "T6": 2,
+     "T7": 19
+    },
+    "errors_before": {
+     "T5": 13,
+     "T6": 2,
+     "T7": 1
+    },
+    "mean_change": -0.016391
+   },
+   "after": {
+    "semantic_similarity": 0.466079,
+    "workflow_order_similarity": 0.662162,
+    "connection_f1": 0.666667,
+    "alignment_coverage": 0.7
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 13,
+    "T6": 2,
+    "T7": 1
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.466079,
+    "activity_semantic_similarity": 0.717086,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.777778,
+    "activity_label_f1": 0.875,
+    "activity_matched": 7,
+    "activity_reference": 9,
+    "activity_generated": 7,
+    "alignment_coverage": 0.7,
+    "connection_precision": 0.684211,
+    "connection_recall": 0.65,
+    "connection_f1": 0.666667,
+    "connection_tp": 13,
+    "connection_fp": 6,
+    "connection_fn": 7,
+    "workflow_order_similarity": 0.662162,
+    "order_consistency": 0.945946,
+    "order_coverage": 0.7,
+    "order_tp": 70,
+    "order_fp": 4,
+    "order_fn": 0,
+    "collaboration_similarity": 0.0,
+    "collaboration_applicable": true,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 1,
+    "type_precision_diagnostic": 0.9412,
+    "type_recall_diagnostic": 0.8,
+    "type_f1_diagnostic": 0.8649,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 17,
+     "gold_flows": 20,
+     "generated_flows": 19
+    },
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.466079,
+    "activity_semantic_similarity_strict": 0.717086,
+    "alignment_coverage_strict": 0.7,
+    "connection_precision_strict": 0.684211,
+    "connection_recall_strict": 0.65,
+    "connection_f1_strict": 0.666667,
+    "workflow_order_similarity_strict": 0.662162,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 42,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 17,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": null,
+     "correct": 0,
+     "incorrect": 0,
+     "accuracy": null,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-026": {
+     "failure_type": "T5",
+     "errors_before": 13,
+     "errors_after": 13,
+     "removed": 0
+    },
+    "LRN-033": {
+     "failure_type": "T7",
+     "errors_before": 1,
+     "errors_after": 1,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6",
+    "T7"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [
+    "LRN-034"
+   ],
+   "before": {
+    "semantic_similarity": 0.466079,
+    "workflow_order_similarity": 0.662162,
+    "connection_f1": 0.666667,
+    "collaboration_similarity": 0.0,
+    "alignment_coverage": 0.7,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.466079,
+    "activity_semantic_similarity": 0.717086,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.777778,
+    "activity_label_f1": 0.875
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 13,
+    "T6": 2,
+    "T7": 1
+   },
+   "after": {
+    "semantic_similarity": 0.460658,
+    "workflow_order_similarity": 0.662162,
+    "connection_f1": 0.666667,
+    "alignment_coverage": 0.7
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": -0.005421,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": -0.001355,
+   "kept_round": 3,
+   "errors_after": {
+    "T5": 13,
+    "T6": 2
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.460658,
+    "activity_semantic_similarity": 0.703832,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.777778,
+    "activity_label_f1": 0.875,
+    "activity_matched": 7,
+    "activity_reference": 9,
+    "activity_generated": 7,
+    "alignment_coverage": 0.7,
+    "connection_precision": 0.684211,
+    "connection_recall": 0.65,
+    "connection_f1": 0.666667,
+    "connection_tp": 13,
+    "connection_fp": 6,
+    "connection_fn": 7,
+    "workflow_order_similarity": 0.662162,
+    "order_consistency": 0.945946,
+    "order_coverage": 0.7,
+    "order_tp": 70,
+    "order_fp": 4,
+    "order_fn": 0,
+    "collaboration_similarity": 1.0,
+    "collaboration_applicable": true,
+    "collaboration_tp": 1,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.9412,
+    "type_recall_diagnostic": 0.8,
+    "type_f1_diagnostic": 0.8649,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 17,
+     "gold_flows": 20,
+     "generated_flows": 19
+    },
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.460658,
+    "activity_semantic_similarity_strict": 0.703832,
+    "alignment_coverage_strict": 0.7,
+    "connection_precision_strict": 0.684211,
+    "connection_recall_strict": 0.65,
+    "connection_f1_strict": 0.666667,
+    "workflow_order_similarity_strict": 0.662162,
+    "collaboration_similarity_strict": 1.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 48,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 17,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 0,
+     "incorrect": 0,
+     "accuracy": null,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-034": {
+     "failure_type": "T5",
+     "errors_before": 13,
+     "errors_after": 13,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.460658,
+  "activity_semantic_similarity": 0.703832,
+  "activity_label_precision": 1.0,
+  "activity_label_recall": 0.777778,
+  "activity_label_f1": 0.875,
+  "activity_matched": 7,
+  "activity_reference": 9,
+  "activity_generated": 7,
+  "alignment_coverage": 0.7,
+  "connection_precision": 0.684211,
+  "connection_recall": 0.65,
+  "connection_f1": 0.666667,
+  "connection_tp": 13,
+  "connection_fp": 6,
+  "connection_fn": 7,
+  "workflow_order_similarity": 0.662162,
+  "order_consistency": 0.945946,
+  "order_coverage": 0.7,
+  "order_tp": 70,
+  "order_fp": 4,
+  "order_fn": 0,
+  "collaboration_similarity": 1.0,
+  "collaboration_applicable": true,
+  "collaboration_tp": 1,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 0.9412,
+  "type_recall_diagnostic": 0.8,
+  "type_f1_diagnostic": 0.8649,
+  "counts": {
+   "gold_nodes": 20,
+   "generated_nodes": 17,
+   "gold_flows": 20,
+   "generated_flows": 19
+  },
+  "collaboration_ignored": false,
+  "semantic_similarity_strict": 0.460658,
+  "activity_semantic_similarity_strict": 0.703832,
+  "alignment_coverage_strict": 0.7,
+  "connection_precision_strict": 0.684211,
+  "connection_recall_strict": 0.65,
+  "connection_f1_strict": 0.666667,
+  "workflow_order_similarity_strict": 0.662162,
+  "collaboration_similarity_strict": 1.0,
+  "collaboration_applicable_strict": true
+ }
+}

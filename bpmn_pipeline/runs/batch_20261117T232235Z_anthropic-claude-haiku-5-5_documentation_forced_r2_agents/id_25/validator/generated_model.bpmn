@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_FindAJob" targetNamespace="http://example.org/bpmn/find-a-job">
+  <bpmn:message id="Msg_JobApplication" name="Job application"/>
+  <bpmn:message id="Msg_PotentialJobOffer" name="Potential job offer"/>
+  <bpmn:message id="Msg_ProbationOffer" name="Probation offer"/>
+  <bpmn:message id="Msg_JobMadePermanent" name="Job made permanent"/>
+
+  <bpmn:collaboration id="Collaboration_FindAJob">
+    <bpmn:participant id="Participant_Applicant" name="Job applicant" processRef="Process_Applicant"/>
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_Company"/>
+    <bpmn:messageFlow id="MF_Application" name="Send job application" sourceRef="A_SendApplication" targetRef="C_Start" messageRef="Msg_JobApplication"/>
+    <bpmn:messageFlow id="MF_Probation" name="Offer probation" sourceRef="C_SendProbation" targetRef="A_CatchProbation" messageRef="Msg_ProbationOffer"/>
+    <bpmn:messageFlow id="MF_Permanent" name="Job made permanent" sourceRef="C_SendPermanent" targetRef="A_CatchPermanent" messageRef="Msg_JobMadePermanent"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Applicant" name="Job applicant" isExecutable="false">
+    <bpmn:startEvent id="A_Start" name="Job search started"/>
+    <bpmn:sendTask id="A_SendApplication" name="Send job application"/>
+    <bpmn:exclusiveGateway id="A_MergeReporting" name="Reporting cycle"/>
+    <bpmn:userTask id="A_Report" name="Report job applications to companies"/>
+    <bpmn:eventBasedGateway id="A_EventGateway" name="Next event"/>
+    <bpmn:intermediateCatchEvent id="A_CatchOffer" name="Potential job offer received">
+      <bpmn:messageEventDefinition id="A_CatchOffer_ED" messageRef="Msg_PotentialJobOffer"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="A_CatchProbation" name="Probation offer received">
+      <bpmn:messageEventDefinition id="A_CatchProbation_ED" messageRef="Msg_ProbationOffer"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="A_CompleteProbation" name="Complete probation phase"/>
+    <bpmn:exclusiveGateway id="A_RateChoice" name="Rate company?" default="Flow_A_RateSkip"/>
+    <bpmn:userTask id="A_RateCompany" name="Rate company"/>
+    <bpmn:exclusiveGateway id="A_RateMerge" name="Rating step done"/>
+    <bpmn:intermediateCatchEvent id="A_CatchPermanent" name="Job made permanent received">
+      <bpmn:messageEventDefinition id="A_CatchPermanent_ED" messageRef="Msg_JobMadePermanent"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="A_RatingDecision" name="Company rated C or less?" default="Flow_A_EndDefault"/>
+    <bpmn:exclusiveGateway id="A_MergeOffers" name="Continue receiving offers"/>
+    <bpmn:intermediateCatchEvent id="A_CatchOfferContinuing" name="Potential job offer received">
+      <bpmn:messageEventDefinition id="A_CatchOfferContinuing_ED" messageRef="Msg_PotentialJobOffer"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="A_ContinueDecision" name="Keep receiving offers?" default="Flow_A_ContinueLoop"/>
+    <bpmn:endEvent id="A_End" name="Job search ended"/>
+
+    <bpmn:sequenceFlow id="Flow_A1" sourceRef="A_Start" targetRef="A_SendApplication"/>
+    <bpmn:sequenceFlow id="Flow_A2" sourceRef="A_SendApplication" targetRef="A_MergeReporting"/>
+    <bpmn:sequenceFlow id="Flow_A3" sourceRef="A_MergeReporting" targetRef="A_Report"/>
+    <bpmn:sequenceFlow id="Flow_A4" sourceRef="A_Report" targetRef="A_EventGateway"/>
+    <bpmn:sequenceFlow id="Flow_A5" sourceRef="A_EventGateway" targetRef="A_CatchOffer"/>
+    <bpmn:sequenceFlow id="Flow_A6" sourceRef="A_EventGateway" targetRef="A_CatchProbation"/>
+    <bpmn:sequenceFlow id="Flow_A7" sourceRef="A_CatchOffer" targetRef="A_MergeReporting"/>
+    <bpmn:sequenceFlow id="Flow_A8" sourceRef="A_CatchProbation" targetRef="A_CompleteProbation"/>
+    <bpmn:sequenceFlow id="Flow_A9" sourceRef="A_CompleteProbation" targetRef="A_RateChoice"/>
+    <bpmn:sequenceFlow id="Flow_A10" name="Yes" sourceRef="A_RateChoice" targetRef="A_RateCompany"/>
+    <bpmn:sequenceFlow id="Flow_A_RateSkip" name="No" sourceRef="A_RateChoice" targetRef="A_RateMerge"/>
+    <bpmn:sequenceFlow id="Flow_A11" sourceRef="A_RateCompany" targetRef="A_RateMerge"/>
+    <bpmn:sequenceFlow id="Flow_A12" sourceRef="A_RateMerge" targetRef="A_CatchPermanent"/>
+    <bpmn:sequenceFlow id="Flow_A13" sourceRef="A_CatchPermanent" targetRef="A_RatingDecision"/>
+    <bpmn:sequenceFlow id="Flow_A14" name="C or less" sourceRef="A_RatingDecision" targetRef="A_MergeOffers">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${companyRatingCOrLess}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_A_EndDefault" name="Otherwise" sourceRef="A_RatingDecision" targetRef="A_End"/>
+    <bpmn:sequenceFlow id="Flow_A15" sourceRef="A_MergeOffers" targetRef="A_CatchOfferContinuing"/>
+    <bpmn:sequenceFlow id="Flow_A16" sourceRef="A_CatchOfferContinuing" targetRef="A_ContinueDecision"/>
+    <bpmn:sequenceFlow id="Flow_A17" name="Stop receiving offers" sourceRef="A_ContinueDecision" targetRef="A_End">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${offerSearchStopped}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_A_ContinueLoop" name="Continue" sourceRef="A_ContinueDecision" targetRef="A_MergeOffers"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Company" name="Company" isExecutable="false">
+    <bpmn:startEvent id="C_Start" name="Job application received">
+      <bpmn:messageEventDefinition id="C_Start_ED" messageRef="Msg_JobApplication"/>
+    </bpmn:startEvent>
+    <bpmn:userTask id="C_ConfirmReceipt" name="Confirm receipt of application"/>
+    <bpmn:userTask id="C_RateApplication" name="Rate application"/>
+    <bpmn:exclusiveGateway id="C_InterviewSplit" name="Interview negotiated?" default="Flow_C_NoInterview"/>
+    <bpmn:userTask id="C_NegotiateInterview" name="Negotiate job interview"/>
+    <bpmn:exclusiveGateway id="C_InterviewMerge" name="Interview decision merge"/>
+    <bpmn:exclusiveGateway id="C_HireSplit" name="Company wants you to work for them?" default="Flow_C_NoHire"/>
+    <bpmn:endEvent id="C_NoHireEnd" name="Application not pursued"/>
+    <bpmn:sendTask id="C_SendProbation" name="Send probation offer"/>
+    <bpmn:userTask id="C_ProbationPhase" name="Conduct probation phase"/>
+    <bpmn:exclusiveGateway id="C_RateChoice" name="Rate applicant?" default="Flow_C_RateSkip"/>
+    <bpmn:userTask id="C_RateApplicant" name="Rate applicant"/>
+    <bpmn:exclusiveGateway id="C_RateMerge" name="Rating step done"/>
+    <bpmn:parallelGateway id="C_ParallelSplit" name="Split after rating"/>
+    <bpmn:sendTask id="C_SendPermanent" name="Confirm job made permanent"/>
+    <bpmn:endEvent id="C_EndPermanent" name="Job made permanent"/>
+    <bpmn:intermediateCatchEvent id="C_TimerOneYear" name="Wait one year">
+      <bpmn:timerEventDefinition id="C_TimerOneYear_ED">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P1Y</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="C_MakeReviewsVisible" name="Make company reviews visible to applicants"/>
+    <bpmn:endEvent id="C_EndReviewsVisible" name="Reviews released"/>
+
+    <bpmn:sequenceFlow id="Flow_C1" sourceRef="C_Start" targetRef="C_ConfirmReceipt"/>
+    <bpmn:sequenceFlow id="Flow_C2" sourceRef="C_ConfirmReceipt" targetRef="C_RateApplication"/>
+    <bpmn:sequenceFlow id="Flow_C3" sourceRef="C_RateApplication" targetRef="C_InterviewSplit"/>
+    <bpmn:sequenceFlow id="Flow_C4" name="Interview negotiated" sourceRef="C_InterviewSplit" targetRef="C_NegotiateInterview">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${interviewNegotiated}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_C_NoInterview" name="No interview" sourceRef="C_InterviewSplit" targetRef="C_InterviewMerge"/>
+    <bpmn:sequenceFlow id="Flow_C5" sourceRef="C_NegotiateInterview" targetRef="C_InterviewMerge"/>
+    <bpmn:sequenceFlow id="Flow_C6" sourceRef="C_InterviewMerge" targetRef="C_HireSplit"/>
+    <bpmn:sequenceFlow id="Flow_C7" name="Hire" sourceRef="C_HireSplit" targetRef="C_SendProbation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${companyWantsToHire}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_C_NoHire" name="No hire" sourceRef="C_HireSplit" targetRef="C_NoHireEnd"/>
+    <bpmn:sequenceFlow id="Flow_C8" sourceRef="C_SendProbation" targetRef="C_ProbationPhase"/>
+    <bpmn:sequenceFlow id="Flow_C9" sourceRef="C_ProbationPhase" targetRef="C_RateChoice"/>
+    <bpmn:sequenceFlow id="Flow_C10" name="Yes" sourceRef="C_RateChoice" targetRef="C_RateApplicant"/>
+    <bpmn:sequenceFlow id="Flow_C_RateSkip" name="No" sourceRef="C_RateChoice" targetRef="C_RateMerge"/>
+    <bpmn:sequenceFlow id="Flow_C11" sourceRef="C_RateApplicant" targetRef="C_RateMerge"/>
+    <bpmn:sequenceFlow id="Flow_C12" sourceRef="C_RateMerge" targetRef="C_ParallelSplit"/>
+    <bpmn:sequenceFlow id="Flow_C13" sourceRef="C_ParallelSplit" targetRef="C_SendPermanent"/>
+    <bpmn:sequenceFlow id="Flow_C14" sourceRef="C_SendPermanent" targetRef="C_EndPermanent"/>
+    <bpmn:sequenceFlow id="Flow_C15" sourceRef="C_ParallelSplit" targetRef="C_TimerOneYear"/>
+    <bpmn:sequenceFlow id="Flow_C16" sourceRef="C_TimerOneYear" targetRef="C_MakeReviewsVisible"/>
+    <bpmn:sequenceFlow id="Flow_C17" sourceRef="C_MakeReviewsVisible" targetRef="C_EndReviewsVisible"/>
+  </bpmn:process>
+</bpmn:definitions>

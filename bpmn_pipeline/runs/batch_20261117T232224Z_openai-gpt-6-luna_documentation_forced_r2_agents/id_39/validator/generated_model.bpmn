@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/bpmn/smartphone-repair">
+  <bpmn:process id="Process_SmartphoneRepair" name="DIY Repair of a Broken Smartphone Screen" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Repair">
+      <bpmn:lane id="Lane_DIYer" name="DIYer">
+        <bpmn:flowNodeRef>Start_Repair</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterPhoneDetails</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CheckOwnedItems</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_FriendsAvailable</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ContactFriends</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_FriendsMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_BuyRemainingItems</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RepairPhone</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_RepairOutcome</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendReviewOrVideo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendPhoneToExpert</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_RepairWorked</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_SentToExpert</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_OnlineTool" name="Online tool">
+        <bpmn:flowNodeRef>Task_ProvideListsAndChoices</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ProvideInstructions</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Repair" name="Start DIY repair"/>
+    <bpmn:userTask id="Task_EnterPhoneDetails" name="Enter phone model and what is broken"/>
+    <bpmn:serviceTask id="Task_ProvideListsAndChoices" name="Provide materials, tools, and ordering choices"/>
+    <bpmn:userTask id="Task_CheckOwnedItems" name="Check which items are already available"/>
+    <bpmn:exclusiveGateway id="Gateway_FriendsAvailable" name="Can items be obtained from friends?" default="Flow_SkipFriends"/>
+    <bpmn:sendTask id="Task_ContactFriends" name="Contact friends to borrow or buy items cheaply"/>
+    <bpmn:exclusiveGateway id="Gateway_FriendsMerge" name="Continue after friend option"/>
+    <bpmn:userTask id="Task_BuyRemainingItems" name="Buy the remaining items"/>
+    <bpmn:serviceTask id="Task_ProvideInstructions" name="Provide repair instructions"/>
+    <bpmn:userTask id="Task_RepairPhone" name="Repair the phone"/>
+    <bpmn:exclusiveGateway id="Gateway_RepairOutcome" name="Did the repair work?" default="Flow_RepairFailed"/>
+    <bpmn:userTask id="Task_SendReviewOrVideo" name="Send a review and/or video of the repair"/>
+    <bpmn:sendTask id="Task_SendPhoneToExpert" name="Send the phone to an expert"/>
+    <bpmn:endEvent id="End_RepairWorked" name="Repair worked and feedback sent"/>
+    <bpmn:endEvent id="End_SentToExpert" name="Phone sent to an expert"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Enter" sourceRef="Start_Repair" targetRef="Task_EnterPhoneDetails"/>
+    <bpmn:sequenceFlow id="Flow_Enter_Lists" sourceRef="Task_EnterPhoneDetails" targetRef="Task_ProvideListsAndChoices"/>
+    <bpmn:sequenceFlow id="Flow_Lists_Check" sourceRef="Task_ProvideListsAndChoices" targetRef="Task_CheckOwnedItems"/>
+    <bpmn:sequenceFlow id="Flow_Check_Friends" sourceRef="Task_CheckOwnedItems" targetRef="Gateway_FriendsAvailable"/>
+    <bpmn:sequenceFlow id="Flow_ContactFriends" name="Yes" sourceRef="Gateway_FriendsAvailable" targetRef="Task_ContactFriends">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Items can be borrowed or bought cheaply from friends</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SkipFriends" name="No" sourceRef="Gateway_FriendsAvailable" targetRef="Gateway_FriendsMerge"/>
+    <bpmn:sequenceFlow id="Flow_Friends_Merge" sourceRef="Task_ContactFriends" targetRef="Gateway_FriendsMerge"/>
+    <bpmn:sequenceFlow id="Flow_Merge_Buy" sourceRef="Gateway_FriendsMerge" targetRef="Task_BuyRemainingItems"/>
+    <bpmn:sequenceFlow id="Flow_Buy_Instructions" sourceRef="Task_BuyRemainingItems" targetRef="Task_ProvideInstructions"/>
+    <bpmn:sequenceFlow id="Flow_Instructions_Repair" sourceRef="Task_ProvideInstructions" targetRef="Task_RepairPhone"/>
+    <bpmn:sequenceFlow id="Flow_Repair_Outcome" sourceRef="Task_RepairPhone" targetRef="Gateway_RepairOutcome"/>
+    <bpmn:sequenceFlow id="Flow_RepairWorked" name="Yes" sourceRef="Gateway_RepairOutcome" targetRef="Task_SendReviewOrVideo">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">The repair worked</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_RepairFailed" name="No" sourceRef="Gateway_RepairOutcome" targetRef="Task_SendPhoneToExpert"/>
+    <bpmn:sequenceFlow id="Flow_Feedback_End" sourceRef="Task_SendReviewOrVideo" targetRef="End_RepairWorked"/>
+    <bpmn:sequenceFlow id="Flow_Expert_End" sourceRef="Task_SendPhoneToExpert" targetRef="End_SentToExpert"/>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_SmartphoneRepair">
+    <bpmn:participant id="Participant_DIYer" name="DIYer" processRef="Process_SmartphoneRepair"/>
+    <bpmn:participant id="Participant_Friends" name="Friends"/>
+    <bpmn:participant id="Participant_Expert" name="Expert"/>
+    <bpmn:messageFlow id="MessageFlow_ContactFriends" name="Contact friends" sourceRef="Task_ContactFriends" targetRef="Participant_Friends"/>
+    <bpmn:messageFlow id="MessageFlow_SendToExpert" name="Send phone for expert repair" sourceRef="Task_SendPhoneToExpert" targetRef="Participant_Expert"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

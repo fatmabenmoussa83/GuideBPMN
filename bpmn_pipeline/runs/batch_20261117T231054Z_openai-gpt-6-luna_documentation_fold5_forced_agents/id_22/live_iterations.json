@@ -1,0 +1,211 @@
+{
+ "id": "22",
+ "live": true,
+ "kept_round": 1,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 44.3,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 58,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 21,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.532537,
+    "workflow_order_similarity": 0.731324,
+    "connection_f1": 0.682927,
+    "collaboration_similarity": 0.142857,
+    "alignment_coverage": 0.857143,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.532537,
+    "activity_semantic_similarity": 0.966375,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 1.0,
+    "activity_label_f1": 1.0
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  targetNamespace=\"http://example.com/recourse\">\n  <bpmn:message id=\"Message_PaymentRequest\" name=\"Payment request\"/>\n  <bpmn:message id=\"Message_Payment\" name=\"Payment\"/>\n  <bpmn:message id=\"Message_Disagreement\" name=\"Disagreement\"/>\n  <bpmn:message id=\"Message_CaseReferral\" name=\"Case referral\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Recourse\">\n    <bpmn:participant id=\"Participant_CaseHandler\" name=\"Case handler\" processRef=\"Process_Recourse\"/>\n    <bpmn:participant id=\"Participant_Insurant\" name=\"Insurant\"/>\n    <bpmn:participant id=\"Participant_CollectionAgency\" name=\"Collection agency\"/>\n    <bpmn:messageFlow id=\"MessageFlow_PaymentRequest\" name=\"Payment request\" sourceRef=\"Task_SendPaymentRequest\" targetRef=\"Participant_Insurant\" messageRef=\"Message_PaymentRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Payment\" name=\"Payment\" sourceRef=\"Participant_Insurant\" targetRef=\"Event_PaymentReceived\" messageRef=\"Message_Payment\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Disagreement\" name=\"Disagreement\" sourceRef=\"Participant_Insurant\" targetRef=\"Event_DisagreementReceived\" messageRef=\"Message_Disagreement\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CaseReferral\" name=\"Case referral\" sourceRef=\"Task_ForwardCase\" targetRef=\"Participant_CollectionAgency\" messageRef=\"Message_CaseReferral\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Recourse\" name=\"Handle possible recourse\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_InformationReceived\" name=\"Information about possible recourse received\"/>\n    <bpmn:task id=\"Task_CheckCase\" name=\"Check case\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_RecoursePossible\" name=\"Is recourse possible?\" default=\"Flow_RecourseNo\"/>\n    <bpmn:sendTask id=\"Task_SendPaymentRequest\" name=\"Send request for payment\" messageRef=\"Message_PaymentRequest\"/>\n    <bpmn:task id=\"Task_MakeReminder\" name=\"Make reminder\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForOutcome\" name=\"Wait for outcome\" gatewayDirection=\"Diverging\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_PaymentReceived\" name=\"Money received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_PaymentReceived\" messageRef=\"Message_Payment\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_MakeBooking\" name=\"Make booking\"/>\n    <bpmn:task id=\"Task_CloseAfterPayment\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_PaidCaseClosed\" name=\"Case closed after payment\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DisagreementReceived\" name=\"Disagreement received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_DisagreementReceived\" messageRef=\"Message_Disagreement\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_CheckReasoning\" name=\"Check reasoning\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ReasoningCorrect\" name=\"Is the reasoning correct?\" default=\"Flow_ReasoningWrong\"/>\n    <bpmn:task id=\"Task_CloseAfterCorrectReasoning\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_CorrectReasoningCaseClosed\" name=\"Case closed after correct reasoning\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DeadlineReached\" name=\"Deadline for disagreement reached\">\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_Deadline\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_ForwardCaseMerge\" name=\"Forward case\"/>\n    <bpmn:sendTask id=\"Task_ForwardCase\" name=\"Forward case to collection agency\" messageRef=\"Message_CaseReferral\"/>\n    <bpmn:endEvent id=\"End_CaseForwarded\" name=\"Case forwarded to collection agency\"/>\n\n    <bpmn:task id=\"Task_CloseWhenRecourseNotPossible\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_RecourseNotPossible\" name=\"Case closed: recourse not possible\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToCheck\" sourceRef=\"Start_InformationReceived\" targetRef=\"Task_CheckCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckToDecision\" sourceRef=\"Task_CheckCase\" targetRef=\"Gateway_RecoursePossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_RecourseYes\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_SendPaymentRequest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${recoursePossible}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_RecourseNo\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_CloseWhenRecourseNotPossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_CloseNotPossibleToEnd\" sourceRef=\"Task_CloseWhenRecourseNotPossible\" targetRef=\"End_RecourseNotPossible\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_RequestToReminder\" sourceRef=\"Task_SendPaymentRequest\" targetRef=\"Task_MakeReminder\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReminderToWait\" sourceRef=\"Task_MakeReminder\" targetRef=\"Gateway_WaitForOutcome\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForPayment\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_PaymentReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_PaymentToBooking\" sourceRef=\"Event_PaymentReceived\" targetRef=\"Task_MakeBooking\"/>\n    <bpmn:sequenceFlow id=\"Flow_BookingToClose\" sourceRef=\"Task_MakeBooking\" targetRef=\"Task_CloseAfterPayment\"/>\n    <bpmn:sequenceFlow id=\"Flow_ClosePaidToEnd\" sourceRef=\"Task_CloseAfterPayment\" targetRef=\"End_PaidCaseClosed\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_WaitForDisagreement\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DisagreementReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_DisagreementToReasoning\" sourceRef=\"Event_DisagreementReceived\" targetRef=\"Task_CheckReasoning\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningToDecision\" sourceRef=\"Task_CheckReasoning\" targetRef=\"Gateway_ReasoningCorrect\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningCorrect\" sourceRef=\"Gateway_ReasoningCorrect\" targetRef=\"Task_CloseAfterCorrectReasoning\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${reasoningCorrect}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_CloseCorrectReasoningToEnd\" sourceRef=\"Task_CloseAfterCorrectReasoning\" targetRef=\"End_CorrectReasoningCaseClosed\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningWrong\" sourceRef=\"Gateway_ReasoningCorrect\" targetRef=\"Gateway_ForwardCaseMerge\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_WaitForDeadline\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DeadlineReached\"/>\n    <bpmn:sequenceFlow id=\"Flow_DeadlineToForwardMerge\" sourceRef=\"Event_DeadlineReached\" targetRef=\"Gateway_ForwardCaseMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ForwardMergeToTask\" sourceRef=\"Gateway_ForwardCaseMerge\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_ForwardToEnd\" sourceRef=\"Task_ForwardCase\" targetRef=\"End_CaseForwarded\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 264.3,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 50,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": null,
+     "correct": 0,
+     "incorrect": 0,
+     "accuracy": null,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.71005,
+    "workflow_order_similarity": 0.818966,
+    "connection_f1": 0.85,
+    "collaboration_similarity": 0.0,
+    "alignment_coverage": 0.95,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.71005,
+    "activity_semantic_similarity": 0.966375,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 1.0,
+    "activity_label_f1": 1.0
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  targetNamespace=\"http://example.com/recourse\">\n  <bpmn:message id=\"Message_RecourseInformation\" name=\"Information about possible recourse\"/>\n  <bpmn:message id=\"Message_PaymentRequest\" name=\"Request for payment\"/>\n  <bpmn:message id=\"Message_Payment\" name=\"Payment\"/>\n  <bpmn:message id=\"Message_Disagreement\" name=\"Disagreement\"/>\n  <bpmn:message id=\"Message_CaseReferral\" name=\"Case referral to collection agency\"/>\n\n  <bpmn:process id=\"Process_Recourse\" name=\"Handle possible recourse\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_InformationReceived\" name=\"Information about possible recourse received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_RecourseInformation\" messageRef=\"Message_RecourseInformation\"/>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Task_CheckCase\" name=\"Check case\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_RecoursePossible\" name=\"Is recourse possible?\" default=\"Flow_RecourseNo\"/>\n    <bpmn:sendTask id=\"Task_SendPaymentRequest\" name=\"Send request for payment\" messageRef=\"Message_PaymentRequest\"/>\n    <bpmn:task id=\"Task_MakeReminder\" name=\"Make reminder\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForOutcome\" name=\"Wait for payment, disagreement, or deadline\" gatewayDirection=\"Diverging\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_PaymentReceived\" name=\"Money received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Payment\" messageRef=\"Message_Payment\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_MakeBooking\" name=\"Make booking\"/>\n    <bpmn:task id=\"Task_CloseAfterPayment\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_PaidCaseClosed\" name=\"Case closed after payment\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DisagreementReceived\" name=\"Disagreement received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Disagreement\" messageRef=\"Message_Disagreement\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_CheckReasoning\" name=\"Check reasoning\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ReasoningCorrect\" name=\"Is the reasoning correct?\" default=\"Flow_ReasoningWrong\"/>\n    <bpmn:task id=\"Task_CloseAfterCorrectReasoning\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_CorrectReasoningCaseClosed\" name=\"Case closed after correct reasoning\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DeadlineReached\" name=\"Deadline for disagreement reached without payment\">\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_Deadline\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:sendTask id=\"Task_ForwardCase\" name=\"Forward case to collection agency\" messageRef=\"Message_CaseReferral\"/>\n    <bpmn:endEvent id=\"End_CaseForwarded\" name=\"Case forwarded to collection agency\"/>\n\n    <bpmn:task id=\"Task_CloseWhenRecourseNotPossible\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_RecourseNotPossible\" name=\"Case closed: recourse not possible\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToCheck\" sourceRef=\"Start_InformationReceived\" targetRef=\"Task_CheckCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckToDecision\" sourceRef=\"Task_CheckCase\" targetRef=\"Gateway_RecoursePossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_RecourseYes\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_SendPaymentRequest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${recoursePossible}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_RecourseNo\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_CloseWhenRecourseNotPossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_CloseNotPossibleToEnd\" sourceRef=\"Task_CloseWhenRecourseNotPossible\" targetRef=\"End_RecourseNotPossible\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_RequestToReminder\" sourceRef=\"Task_SendPaymentRequest\" targetRef=\"Task_MakeReminder\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReminderToWait\" sourceRef=\"Task_MakeReminder\" targetRef=\"Gateway_WaitForOutcome\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForPayment\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_PaymentReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_PaymentToBooking\" sourceRef=\"Event_PaymentReceived\" targetRef=\"Task_MakeBooking\"/>\n    <bpmn:sequenceFlow id=\"Flow_BookingToClose\" sourceRef=\"Task_MakeBooking\" targetRef=\"Task_CloseAfterPayment\"/>\n    <bpmn:sequenceFlow id=\"Flow_ClosePaidToEnd\" sourceRef=\"Task_CloseAfterPayment\" targetRef=\"End_PaidCaseClosed\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_WaitForDisagreement\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DisagreementReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_DisagreementToReasoning\" sourceRef=\"Event_DisagreementReceived\" targetRef=\"Task_CheckReasoning\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningToDecision\" sourceRef=\"Task_CheckReasoning\" targetRef=\"Gateway_ReasoningCorrect\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningCorrect\" sourceRef=\"Gateway_ReasoningCorrect\" targetRef=\"Task_CloseAfterCorrectReasoning\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${reasoningCorrect}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_CloseCorrectReasoningToEnd\" sourceRef=\"Task_CloseAfterCorrectReasoning\" targetRef=\"End_CorrectReasoningCaseClosed\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningWrong\" sourceRef=\"Gateway_ReasoningCorrect\" targetRef=\"Task_ForwardCase\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_WaitForDeadline\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DeadlineReached\"/>\n    <bpmn:sequenceFlow id=\"Flow_DeadlineToForward\" sourceRef=\"Event_DeadlineReached\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_ForwardToEnd\" sourceRef=\"Task_ForwardCase\" targetRef=\"End_CaseForwarded\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 529.8,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 49,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 21,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 0,
+     "incorrect": 0,
+     "accuracy": null,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.639185,
+    "workflow_order_similarity": 0.668737,
+    "connection_f1": 0.634146,
+    "collaboration_similarity": 1.0,
+    "alignment_coverage": 0.809524,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.639185,
+    "activity_semantic_similarity": 0.966375,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 1.0,
+    "activity_label_f1": 1.0
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  targetNamespace=\"http://example.com/recourse\">\n  <bpmn:collaboration id=\"Collaboration_Recourse\">\n    <bpmn:participant id=\"Participant_Narrator\" name=\"Narrator\" processRef=\"Process_Recourse\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Recourse\" name=\"Handle possible recourse\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_InformationReceived\" name=\"Information about possible subrogation received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_InformationReceived\"/>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Task_CheckCase\" name=\"Check case\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_RecoursePossible\" name=\"Is recourse possible?\" default=\"Flow_RecourseNo\"/>\n    <bpmn:sendTask id=\"Task_SendPaymentRequest\" name=\"Send request for payment\"/>\n    <bpmn:task id=\"Task_MakeReminder\" name=\"Make reminder\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForOutcome\" name=\"Wait for payment, disagreement, or deadline\" gatewayDirection=\"Diverging\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_PaymentReceived\" name=\"Money received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_PaymentReceived\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_MakeBooking\" name=\"Make booking\"/>\n    <bpmn:task id=\"Task_CloseAfterPayment\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_PaidCaseClosed\" name=\"Case closed after payment\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DisagreementReceived\" name=\"Disagreement received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_DisagreementReceived\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_CheckReasoning\" name=\"Check reasoning\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ReasoningCorrect\" name=\"Is the insurant right?\" default=\"Flow_ReasoningWrong\"/>\n    <bpmn:task id=\"Task_CloseAfterCorrectReasoning\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_CorrectReasoningCaseClosed\" name=\"Case closed after reasoning accepted\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DeadlineReached\" name=\"Deadline for disagreement reached without payment\">\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_Deadline\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_ForwardMerge\" name=\"Merge referral paths\" gatewayDirection=\"Converging\"/>\n    <bpmn:sendTask id=\"Task_ForwardCase\" name=\"Forward case to collection agency\"/>\n    <bpmn:endEvent id=\"End_CaseForwarded\" name=\"Case forwarded to collection agency\"/>\n\n    <bpmn:task id=\"Task_CloseWhenRecourseNotPossible\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_RecourseNotPossible\" name=\"Case closed: recourse not possible\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToCheck\" sourceRef=\"Start_InformationReceived\" targetRef=\"Task_CheckCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckToDecision\" sourceRef=\"Task_CheckCase\" targetRef=\"Gateway_RecoursePossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_RecourseYes\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_SendPaymentRequest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${recoursePossible}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_RecourseNo\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_CloseWhenRecourseNotPossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_CloseNotPossibleToEnd\" sourceRef=\"Task_CloseWhenRecourseNotPossible\" targetRef=\"End_RecourseNotPossible\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_RequestToReminder\" sourceRef=\"Task_SendPaymentRequest\" targetRef=\"Task_MakeReminder\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReminderToWait\" sourceRef=\"Task_MakeReminder\" targetRef=\"Gateway_WaitForOutcome\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForPayment\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_PaymentReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_PaymentToBooking\" sourceRef=\"Event_PaymentReceived\" targetRef=\"Task_MakeBooking\"/>\n    <bpmn:sequenceFlow id=\"Flow_BookingToClose\" sourceRef=\"Task_MakeBooking\" targetRef=\"Task_CloseAfterPayment\"/>\n    <bpmn:sequenceFlow id=\"Flow_ClosePaidToEnd\" sourceRef=\"Task_CloseAfterPayment\" targetRef=\"End_PaidCaseClosed\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_WaitForDisagreement\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DisagreementReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_DisagreementToReasoning\" sourceRef=\"Event_DisagreementReceived\" targetRef=\"Task_CheckReasoning\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningToDecision\" sourceRef=\"Task_CheckReasoning\" targetRef=\"Gateway_ReasoningCorrect\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningCorrect\" sourceRef=\"Gateway_ReasoningCorrect\" targetRef=\"Task_CloseAfterCorrectReasoning\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${insurantIsRight}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_CloseCorrectReasoningToEnd\" sourceRef=\"Task_CloseAfterCorrectReasoning\" targetRef=\"End_CorrectReasoningCaseClosed\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningWrong\" sourceRef=\"Gateway_ReasoningCorrect\" targetRef=\"Gateway_ForwardMerge\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_WaitForDeadline\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DeadlineReached\"/>\n    <bpmn:sequenceFlow id=\"Flow_DeadlineToForwardMerge\" sourceRef=\"Event_DeadlineReached\" targetRef=\"Gateway_ForwardMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ForwardMergeToAgency\" sourceRef=\"Gateway_ForwardMerge\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_ForwardToEnd\" sourceRef=\"Task_ForwardCase\" targetRef=\"End_CaseForwarded\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 722.8,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 52,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 0,
+     "incorrect": 0,
+     "accuracy": null,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.71005,
+    "workflow_order_similarity": 0.818966,
+    "connection_f1": 0.85,
+    "collaboration_similarity": 1.0,
+    "alignment_coverage": 0.95,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.71005,
+    "activity_semantic_similarity": 0.966375,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 1.0,
+    "activity_label_f1": 1.0
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  targetNamespace=\"http://example.com/recourse\">\n  <bpmn:message id=\"Message_RecourseInformation\" name=\"Information about possible recourse\"/>\n  <bpmn:message id=\"Message_PaymentRequest\" name=\"Request for payment\"/>\n  <bpmn:message id=\"Message_Payment\" name=\"Money received\"/>\n  <bpmn:message id=\"Message_Disagreement\" name=\"Disagreement with recourse\"/>\n  <bpmn:message id=\"Message_CaseReferral\" name=\"Case referral to collection agency\"/>\n\n  <bpmn:process id=\"Process_Recourse\" name=\"Handle possible recourse\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_InformationReceived\" name=\"Information about possible recourse received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_RecourseInformation\" messageRef=\"Message_RecourseInformation\"/>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Task_CheckCase\" name=\"Check case\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_RecoursePossible\" name=\"Is recourse possible?\" default=\"Flow_RecourseNo\"/>\n    <bpmn:sendTask id=\"Task_SendPaymentRequest\" name=\"Send request for payment\" messageRef=\"Message_PaymentRequest\"/>\n    <bpmn:task id=\"Task_MakeReminder\" name=\"Make reminder\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_WaitForOutcome\" name=\"Wait for payment, disagreement, or deadline\" gatewayDirection=\"Diverging\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_PaymentReceived\" name=\"Money received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Payment\" messageRef=\"Message_Payment\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_MakeBooking\" name=\"Make booking\"/>\n    <bpmn:task id=\"Task_CloseAfterPayment\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_PaidCaseClosed\" name=\"Case closed after payment\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DisagreementReceived\" name=\"Disagreement received\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Disagreement\" messageRef=\"Message_Disagreement\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:task id=\"Task_CheckReasoning\" name=\"Check reasoning\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ReasoningCorrect\" name=\"Is the reasoning correct?\" default=\"Flow_ReasoningWrong\"/>\n    <bpmn:task id=\"Task_CloseAfterCorrectReasoning\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_CorrectReasoningCaseClosed\" name=\"Case closed after correct reasoning\"/>\n\n    <bpmn:intermediateCatchEvent id=\"Event_DeadlineReached\" name=\"Deadline for disagreement reached without payment\">\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_Deadline\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:sendTask id=\"Task_ForwardCase\" name=\"Forward case to collection agency\" messageRef=\"Message_CaseReferral\"/>\n    <bpmn:endEvent id=\"End_CaseForwarded\" name=\"Case forwarded to collection agency\"/>\n\n    <bpmn:task id=\"Task_CloseWhenRecourseNotPossible\" name=\"Close case\"/>\n    <bpmn:endEvent id=\"End_RecourseNotPossible\" name=\"Case closed: recourse not possible\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToCheck\" sourceRef=\"Start_InformationReceived\" targetRef=\"Task_CheckCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckToDecision\" sourceRef=\"Task_CheckCase\" targetRef=\"Gateway_RecoursePossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_RecourseYes\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_SendPaymentRequest\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recoursePossible</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_RecourseNo\" sourceRef=\"Gateway_RecoursePossible\" targetRef=\"Task_CloseWhenRecourseNotPossible\"/>\n    <bpmn:sequenceFlow id=\"Flow_CloseNotPossibleToEnd\" sourceRef=\"Task_CloseWhenRecourseNotPossible\" targetRef=\"End_RecourseNotPossible\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_RequestToReminder\" sourceRef=\"Task_SendPaymentRequest\" targetRef=\"Task_MakeReminder\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReminderToWait\" sourceRef=\"Task_MakeReminder\" targetRef=\"Gateway_WaitForOutcome\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitForPayment\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_PaymentReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_PaymentToBooking\" sourceRef=\"Event_PaymentReceived\" targetRef=\"Task_MakeBooking\"/>\n    <bpmn:sequenceFlow id=\"Flow_BookingToClose\" sourceRef=\"Task_MakeBooking\" targetRef=\"Task_CloseAfterPayment\"/>\n    <bpmn:sequenceFlow id=\"Flow_ClosePaidToEnd\" sourceRef=\"Task_CloseAfterPayment\" targetRef=\"End_PaidCaseClosed\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_WaitForDisagreement\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DisagreementReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_DisagreementToReasoning\" sourceRef=\"Event_DisagreementReceived\" targetRef=\"Task_CheckReasoning\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningToDecision\" sourceRef=\"Task_CheckReasoning\" targetRef=\"Gateway_ReasoningCorrect\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningCorrect\" sourceRef=\"Gateway_ReasoningCorrect\" targetRef=\"Task_CloseAfterCorrectReasoning\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">reasoningCorrect</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_CloseCorrectReasoningToEnd\" sourceRef=\"Task_CloseAfterCorrectReasoning\" targetRef=\"End_CorrectReasoningCaseClosed\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReasoningWrong\" sourceRef=\"Gateway_ReasoningCorrect\" targetRef=\"Task_ForwardCase\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_WaitForDeadline\" sourceRef=\"Gateway_WaitForOutcome\" targetRef=\"Event_DeadlineReached\"/>\n    <bpmn:sequenceFlow id=\"Flow_DeadlineToForward\" sourceRef=\"Event_DeadlineReached\" targetRef=\"Task_ForwardCase\"/>\n    <bpmn:sequenceFlow id=\"Flow_ForwardToEnd\" sourceRef=\"Task_ForwardCase\" targetRef=\"End_CaseForwarded\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_Recourse\">\n    <bpmn:participant id=\"Participant_Narrator\" name=\"Narrator\" processRef=\"Process_Recourse\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  }
+ ]
+}

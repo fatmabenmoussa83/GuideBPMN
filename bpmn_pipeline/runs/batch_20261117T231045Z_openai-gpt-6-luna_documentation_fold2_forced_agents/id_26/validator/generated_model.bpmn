@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_BecomingAParent" targetNamespace="http://example.com/bpmn/becoming-a-parent">
+  <bpmn:collaboration id="Collaboration_BecomingAParent" name="Becoming A Parent">
+    <bpmn:participant id="Participant_Parent" name="Parent" processRef="Process_BecomingAParent"/>
+    <bpmn:participant id="Participant_SocialSecurity" name="Social Security"/>
+    <bpmn:participant id="Participant_Companies" name="Companies"/>
+    <bpmn:messageFlow id="MessageFlow_NotifySocialSecurity" name="Notify Social Security" sourceRef="Task_NotifySocialSecurity" targetRef="Participant_SocialSecurity"/>
+    <bpmn:messageFlow id="MessageFlow_NotifyCompanies" name="Notify company" sourceRef="Task_NotifyCompanies" targetRef="Participant_Companies"/>
+    <bpmn:messageFlow id="MessageFlow_InformationFromCompanies" name="Information from companies" sourceRef="Participant_Companies" targetRef="Task_GatherCompanyInformation"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_BecomingAParent" name="Becoming A Parent" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Planning" name="Planning maternity leave begins">
+      <bpmn:outgoing>Flow_Start_FetchInformation</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_FetchInformation" name="Fetch information about potential leave models, duration and split between parents">
+      <bpmn:incoming>Flow_Start_FetchInformation</bpmn:incoming>
+      <bpmn:outgoing>Flow_FetchInformation_SelectModel</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:userTask id="Task_SelectModel" name="Select a leave model">
+      <bpmn:incoming>Flow_FetchInformation_SelectModel</bpmn:incoming>
+      <bpmn:outgoing>Flow_SelectModel_CollectInformation</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:task id="Task_CollectInformation" name="Collect relevant information">
+      <bpmn:incoming>Flow_SelectModel_CollectInformation</bpmn:incoming>
+      <bpmn:outgoing>Flow_CollectInformation_NotifySplit</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Gateway_NotifySplit" name="Notify both">
+      <bpmn:incoming>Flow_CollectInformation_NotifySplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifySplit_SocialSecurity</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotifySplit_Companies</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sendTask id="Task_NotifySocialSecurity" name="Notify Social Security in time">
+      <bpmn:incoming>Flow_NotifySplit_SocialSecurity</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifySocialSecurity_NotifyJoin</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Task_NotifyCompanies" name="Notify company in time">
+      <bpmn:incoming>Flow_NotifySplit_Companies</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifyCompanies_NotifyJoin</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:parallelGateway id="Gateway_NotifyJoin" name="Notifications complete">
+      <bpmn:incoming>Flow_NotifySocialSecurity_NotifyJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_NotifyCompanies_NotifyJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifyJoin_GatherInformation</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:receiveTask id="Task_GatherCompanyInformation" name="Gather information from companies">
+      <bpmn:incoming>Flow_NotifyJoin_GatherInformation</bpmn:incoming>
+      <bpmn:outgoing>Flow_GatherInformation_TakeLeave</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:task id="Task_TakeMaternityLeave" name="Take maternity leave for the selected period">
+      <bpmn:incoming>Flow_GatherInformation_TakeLeave</bpmn:incoming>
+      <bpmn:outgoing>Flow_TakeLeave_DecideExtension</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:userTask id="Task_DecideExtension" name="Decide whether to extend maternity leave">
+      <bpmn:incoming>Flow_TakeLeave_DecideExtension</bpmn:incoming>
+      <bpmn:outgoing>Flow_DecideExtension_Outcome</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_ExtensionDecision" name="Extension decision" default="Flow_ExtensionNotSelected">
+      <bpmn:incoming>Flow_DecideExtension_Outcome</bpmn:incoming>
+      <bpmn:outgoing>Flow_ExtensionSelected</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ExtensionNotSelected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_ExtensionSelected" name="Extension chosen">
+      <bpmn:incoming>Flow_ExtensionSelected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_ExtensionNotSelected" name="No extension chosen">
+      <bpmn:incoming>Flow_ExtensionNotSelected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_FetchInformation" sourceRef="StartEvent_Planning" targetRef="Task_FetchInformation"/>
+    <bpmn:sequenceFlow id="Flow_FetchInformation_SelectModel" sourceRef="Task_FetchInformation" targetRef="Task_SelectModel"/>
+    <bpmn:sequenceFlow id="Flow_SelectModel_CollectInformation" sourceRef="Task_SelectModel" targetRef="Task_CollectInformation"/>
+    <bpmn:sequenceFlow id="Flow_CollectInformation_NotifySplit" sourceRef="Task_CollectInformation" targetRef="Gateway_NotifySplit"/>
+    <bpmn:sequenceFlow id="Flow_NotifySplit_SocialSecurity" sourceRef="Gateway_NotifySplit" targetRef="Task_NotifySocialSecurity"/>
+    <bpmn:sequenceFlow id="Flow_NotifySplit_Companies" sourceRef="Gateway_NotifySplit" targetRef="Task_NotifyCompanies"/>
+    <bpmn:sequenceFlow id="Flow_NotifySocialSecurity_NotifyJoin" sourceRef="Task_NotifySocialSecurity" targetRef="Gateway_NotifyJoin"/>
+    <bpmn:sequenceFlow id="Flow_NotifyCompanies_NotifyJoin" sourceRef="Task_NotifyCompanies" targetRef="Gateway_NotifyJoin"/>
+    <bpmn:sequenceFlow id="Flow_NotifyJoin_GatherInformation" sourceRef="Gateway_NotifyJoin" targetRef="Task_GatherCompanyInformation"/>
+    <bpmn:sequenceFlow id="Flow_GatherInformation_TakeLeave" sourceRef="Task_GatherCompanyInformation" targetRef="Task_TakeMaternityLeave"/>
+    <bpmn:sequenceFlow id="Flow_TakeLeave_DecideExtension" sourceRef="Task_TakeMaternityLeave" targetRef="Task_DecideExtension"/>
+    <bpmn:sequenceFlow id="Flow_DecideExtension_Outcome" sourceRef="Task_DecideExtension" targetRef="Gateway_ExtensionDecision"/>
+    <bpmn:sequenceFlow id="Flow_ExtensionSelected" name="Extension chosen" sourceRef="Gateway_ExtensionDecision" targetRef="EndEvent_ExtensionSelected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">extensionSelected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ExtensionNotSelected" name="No extension chosen" sourceRef="Gateway_ExtensionDecision" targetRef="EndEvent_ExtensionNotSelected"/>
+  </bpmn:process>
+</bpmn:definitions>

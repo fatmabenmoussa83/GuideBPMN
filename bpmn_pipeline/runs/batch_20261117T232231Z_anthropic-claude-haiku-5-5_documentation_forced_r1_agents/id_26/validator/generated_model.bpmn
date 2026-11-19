@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_MaternityLeave"
+                  targetNamespace="http://example.com/bpmn/maternity-leave">
+  <bpmn:process id="Process_BecomingAParent" name="Becoming A Parent" isExecutable="false">
+
+    <bpmn:startEvent id="StartEvent_Parent" name="Parent plans leave">
+      <bpmn:outgoing>Flow_Start_Fetch</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_FetchModels" name="Fetch leave models">
+      <bpmn:documentation>Information on potential leave models: duration in months and split between parents.</bpmn:documentation>
+      <bpmn:incoming>Flow_Start_Fetch</bpmn:incoming>
+      <bpmn:outgoing>Flow_Fetch_Select</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:manualTask id="Task_SelectModel" name="Select leave model">
+      <bpmn:incoming>Flow_Fetch_Select</bpmn:incoming>
+      <bpmn:outgoing>Flow_Select_Collect</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:task id="Task_CollectInfo" name="Collect relevant information">
+      <bpmn:incoming>Flow_Select_Collect</bpmn:incoming>
+      <bpmn:incoming>Flow_Extension_Collect</bpmn:incoming>
+      <bpmn:outgoing>Flow_Collect_NotifySplit</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="Gateway_Notify_Split" name="Notify parties">
+      <bpmn:incoming>Flow_Collect_NotifySplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifySplit_SS</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotifySplit_Company</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:sendTask id="Task_NotifySocialSecurity" name="Notify Social Security in time">
+      <bpmn:incoming>Flow_NotifySplit_SS</bpmn:incoming>
+      <bpmn:outgoing>Flow_SS_NotifyJoin</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:sendTask id="Task_NotifyCompany" name="Notify company in time">
+      <bpmn:incoming>Flow_NotifySplit_Company</bpmn:incoming>
+      <bpmn:outgoing>Flow_Company_NotifyJoin</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:parallelGateway id="Gateway_Notify_Join" name="Notifications done">
+      <bpmn:incoming>Flow_SS_NotifyJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_Company_NotifyJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifyJoin_Gather</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:task id="Task_GatherCompanyInfo" name="Gather information from companies">
+      <bpmn:incoming>Flow_NotifyJoin_Gather</bpmn:incoming>
+      <bpmn:outgoing>Flow_Gather_Wait</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:intermediateCatchEvent id="Event_LeaveEnds" name="End of leave period">
+      <bpmn:incoming>Flow_Gather_Wait</bpmn:incoming>
+      <bpmn:outgoing>Flow_Wait_Decide</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:manualTask id="Task_DecideExtension" name="Decide on leave extension">
+      <bpmn:incoming>Flow_Wait_Decide</bpmn:incoming>
+      <bpmn:outgoing>Flow_Decide_Gateway</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Extension" name="Extension requested?" default="Flow_NoExtension">
+      <bpmn:incoming>Flow_Decide_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Extension_Collect</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoExtension</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="EndEvent_LeaveEnded" name="Leave ended">
+      <bpmn:incoming>Flow_NoExtension</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_Fetch" sourceRef="StartEvent_Parent" targetRef="Task_FetchModels"/>
+    <bpmn:sequenceFlow id="Flow_Fetch_Select" sourceRef="Task_FetchModels" targetRef="Task_SelectModel"/>
+    <bpmn:sequenceFlow id="Flow_Select_Collect" sourceRef="Task_SelectModel" targetRef="Task_CollectInfo"/>
+    <bpmn:sequenceFlow id="Flow_Collect_NotifySplit" sourceRef="Task_CollectInfo" targetRef="Gateway_Notify_Split"/>
+    <bpmn:sequenceFlow id="Flow_NotifySplit_SS" sourceRef="Gateway_Notify_Split" targetRef="Task_NotifySocialSecurity"/>
+    <bpmn:sequenceFlow id="Flow_NotifySplit_Company" sourceRef="Gateway_Notify_Split" targetRef="Task_NotifyCompany"/>
+    <bpmn:sequenceFlow id="Flow_SS_NotifyJoin" sourceRef="Task_NotifySocialSecurity" targetRef="Gateway_Notify_Join"/>
+    <bpmn:sequenceFlow id="Flow_Company_NotifyJoin" sourceRef="Task_NotifyCompany" targetRef="Gateway_Notify_Join"/>
+    <bpmn:sequenceFlow id="Flow_NotifyJoin_Gather" sourceRef="Gateway_Notify_Join" targetRef="Task_GatherCompanyInfo"/>
+    <bpmn:sequenceFlow id="Flow_Gather_Wait" sourceRef="Task_GatherCompanyInfo" targetRef="Event_LeaveEnds"/>
+    <bpmn:sequenceFlow id="Flow_Wait_Decide" sourceRef="Event_LeaveEnds" targetRef="Task_DecideExtension"/>
+    <bpmn:sequenceFlow id="Flow_Decide_Gateway" sourceRef="Task_DecideExtension" targetRef="Gateway_Extension"/>
+    <bpmn:sequenceFlow id="Flow_Extension_Collect" name="Extension requested" sourceRef="Gateway_Extension" targetRef="Task_CollectInfo"/>
+    <bpmn:sequenceFlow id="Flow_NoExtension" name="No extension" sourceRef="Gateway_Extension" targetRef="EndEvent_LeaveEnded"/>
+  </bpmn:process>
+</bpmn:definitions>

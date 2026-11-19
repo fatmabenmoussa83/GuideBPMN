@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_WorkAccident" targetNamespace="http://example.com/bpmn/work-accident">
+  <bpmn:message id="Msg_EmployerNotification" name="Accident or near miss notification to employer"/>
+  <bpmn:message id="Msg_ReportToInsurer" name="Accident report to accident insurance provider"/>
+  <bpmn:message id="Msg_ReportToPrivateInsurer" name="Accident report to private insurer"/>
+  <bpmn:message id="Msg_ReportToDirectorate" name="Accident report to competent directorate"/>
+  <bpmn:message id="Msg_ReportToInspectorate" name="Fatality or serious injury report to Labour Inspectorate"/>
+
+  <bpmn:collaboration id="Collab_WorkAccident">
+    <bpmn:participant id="Participant_InsuredPerson" name="Insured Person" processRef="Process_InsuredPerson"/>
+    <bpmn:participant id="Participant_Employer" name="Employer" processRef="Process_Employer"/>
+    <bpmn:participant id="Participant_EducationalInstitution" name="Educational Institution"/>
+    <bpmn:participant id="Participant_LabourInspectorate" name="Labour Inspectorate"/>
+    <bpmn:participant id="Participant_AccidentInsurer" name="Accident Insurance Provider"/>
+    <bpmn:participant id="Participant_PrivateInsurer" name="Private Insurance Provider"/>
+    <bpmn:participant id="Participant_CompetentDirectorate" name="Competent Directorate"/>
+
+    <bpmn:messageFlow id="MF_AccidentToEmployer" name="Work accident notification" messageRef="Msg_EmployerNotification" sourceRef="SendTask_InformEmployerAccident" targetRef="StartEvent_EmployerNotification"/>
+    <bpmn:messageFlow id="MF_NearMissToEmployer" name="Near miss notification" messageRef="Msg_EmployerNotification" sourceRef="SendTask_InformEmployerNearMiss" targetRef="StartEvent_EmployerNotification"/>
+    <bpmn:messageFlow id="MF_RiskToEmployer" name="Risk or defect notification" messageRef="Msg_EmployerNotification" sourceRef="SendTask_InformEmployerRisk" targetRef="StartEvent_EmployerNotification"/>
+    <bpmn:messageFlow id="MF_OwnReportToInsurer" name="Self-employed accident report" messageRef="Msg_ReportToInsurer" sourceRef="SendTask_ReportOwnAccident" targetRef="Participant_AccidentInsurer"/>
+    <bpmn:messageFlow id="MF_PrivateReport" name="Written accident report" messageRef="Msg_ReportToPrivateInsurer" sourceRef="SendTask_ReportPrivate" targetRef="Participant_PrivateInsurer"/>
+    <bpmn:messageFlow id="MF_StudentReportToDirectorate" name="Student or schoolchild report" messageRef="Msg_ReportToDirectorate" sourceRef="SendTask_ReportDirectorate" targetRef="Participant_CompetentDirectorate"/>
+    <bpmn:messageFlow id="MF_EmployerReportToInspectorate" name="Fatality or serious injury report" messageRef="Msg_ReportToInspectorate" sourceRef="SendTask_ReportInspectorate" targetRef="Participant_LabourInspectorate"/>
+    <bpmn:messageFlow id="MF_EmployerReportToInsurer" name="Accident report within five days" messageRef="Msg_ReportToInsurer" sourceRef="SendTask_ReportInsurer" targetRef="Participant_AccidentInsurer"/>
+    <bpmn:messageFlow id="MF_InstitutionReportToInsurer" name="Accident report in triplicate within five days" messageRef="Msg_ReportToInsurer" sourceRef="Participant_EducationalInstitution" targetRef="Participant_AccidentInsurer"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_InsuredPerson" name="Insured Person Accident Reporting" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_AccidentOccurs" name="Accident or near miss occurs"/>
+    <bpmn:task id="Task_AssessEvent" name="Assess event against work accident criteria"/>
+    <bpmn:exclusiveGateway id="Gateway_EventType" name="Event type"/>
+    <bpmn:sendTask id="SendTask_InformEmployerAccident" name="Inform employer immediately of work accident" messageRef="Msg_EmployerNotification"/>
+    <bpmn:sendTask id="SendTask_InformEmployerNearMiss" name="Inform employer immediately of near miss" messageRef="Msg_EmployerNotification"/>
+    <bpmn:sendTask id="SendTask_InformEmployerRisk" name="Inform employer immediately of serious risk or protection defect" messageRef="Msg_EmployerNotification"/>
+    <bpmn:endEvent id="EndEvent_NearMissReported" name="Near miss reported"/>
+    <bpmn:endEvent id="EndEvent_RiskReported" name="Risk or defect reported"/>
+    <bpmn:exclusiveGateway id="Gateway_SelfEmployed" name="Self-employed?"/>
+    <bpmn:sendTask id="SendTask_ReportOwnAccident" name="Report own accident to accident insurance provider in good time" messageRef="Msg_ReportToInsurer"/>
+    <bpmn:exclusiveGateway id="Gateway_SelfEmployedJoin" name="Self-employment check merged"/>
+    <bpmn:exclusiveGateway id="Gateway_PrivateInsurance" name="Private accident insurance?"/>
+    <bpmn:sendTask id="SendTask_ReportPrivate" name="Report accident in writing immediately to private insurer (within three days if fatal)" messageRef="Msg_ReportToPrivateInsurer"/>
+    <bpmn:exclusiveGateway id="Gateway_PrivateJoin" name="Private insurance check merged"/>
+    <bpmn:exclusiveGateway id="Gateway_StudentOrPupil" name="Student or schoolchild?"/>
+    <bpmn:sendTask id="SendTask_ReportDirectorate" name="Report accident to competent directorate" messageRef="Msg_ReportToDirectorate"/>
+    <bpmn:exclusiveGateway id="Gateway_StudentJoin" name="Student check merged"/>
+    <bpmn:endEvent id="EndEvent_AccidentHandled" name="Accident information gathered"/>
+
+    <bpmn:sequenceFlow id="Flow_IP_01" sourceRef="StartEvent_AccidentOccurs" targetRef="Task_AssessEvent"/>
+    <bpmn:sequenceFlow id="Flow_IP_02" sourceRef="Task_AssessEvent" targetRef="Gateway_EventType"/>
+    <bpmn:sequenceFlow id="Flow_IP_03" name="Work accident" sourceRef="Gateway_EventType" targetRef="SendTask_InformEmployerAccident"/>
+    <bpmn:sequenceFlow id="Flow_IP_04" name="Near miss" sourceRef="Gateway_EventType" targetRef="SendTask_InformEmployerNearMiss"/>
+    <bpmn:sequenceFlow id="Flow_IP_05" name="Serious risk or protection defect" sourceRef="Gateway_EventType" targetRef="SendTask_InformEmployerRisk"/>
+    <bpmn:sequenceFlow id="Flow_IP_06" sourceRef="SendTask_InformEmployerNearMiss" targetRef="EndEvent_NearMissReported"/>
+    <bpmn:sequenceFlow id="Flow_IP_07" sourceRef="SendTask_InformEmployerRisk" targetRef="EndEvent_RiskReported"/>
+    <bpmn:sequenceFlow id="Flow_IP_08" sourceRef="SendTask_InformEmployerAccident" targetRef="Gateway_SelfEmployed"/>
+    <bpmn:sequenceFlow id="Flow_IP_09" name="Yes" sourceRef="Gateway_SelfEmployed" targetRef="SendTask_ReportOwnAccident"/>
+    <bpmn:sequenceFlow id="Flow_IP_10" name="No" sourceRef="Gateway_SelfEmployed" targetRef="Gateway_SelfEmployedJoin"/>
+    <bpmn:sequenceFlow id="Flow_IP_11" sourceRef="SendTask_ReportOwnAccident" targetRef="Gateway_SelfEmployedJoin"/>
+    <bpmn:sequenceFlow id="Flow_IP_12" sourceRef="Gateway_SelfEmployedJoin" targetRef="Gateway_PrivateInsurance"/>
+    <bpmn:sequenceFlow id="Flow_IP_13" name="Yes" sourceRef="Gateway_PrivateInsurance" targetRef="SendTask_ReportPrivate"/>
+    <bpmn:sequenceFlow id="Flow_IP_14" name="No" sourceRef="Gateway_PrivateInsurance" targetRef="Gateway_PrivateJoin"/>
+    <bpmn:sequenceFlow id="Flow_IP_15" sourceRef="SendTask_ReportPrivate" targetRef="Gateway_PrivateJoin"/>
+    <bpmn:sequenceFlow id="Flow_IP_16" sourceRef="Gateway_PrivateJoin" targetRef="Gateway_StudentOrPupil"/>
+    <bpmn:sequenceFlow id="Flow_IP_17" name="Yes" sourceRef="Gateway_StudentOrPupil" targetRef="SendTask_ReportDirectorate"/>
+    <bpmn:sequenceFlow id="Flow_IP_18" name="No" sourceRef="Gateway_StudentOrPupil" targetRef="Gateway_StudentJoin"/>
+    <bpmn:sequenceFlow id="Flow_IP_19" sourceRef="SendTask_ReportDirectorate" targetRef="Gateway_StudentJoin"/>
+    <bpmn:sequenceFlow id="Flow_IP_20" sourceRef="Gateway_StudentJoin" targetRef="EndEvent_AccidentHandled"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Employer" name="Employer Accident Reporting" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_EmployerNotification" name="Accident or near miss notification received">
+      <bpmn:messageEventDefinition id="MED_EmployerNotification" messageRef="Msg_EmployerNotification"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_RecordAccident" name="Record accident details"/>
+    <bpmn:exclusiveGateway id="Gateway_InspectorateCheck" name="Fatality or serious injury not reported to emergency services?"/>
+    <bpmn:sendTask id="SendTask_ReportInspectorate" name="Report to Labour Inspectorate immediately" messageRef="Msg_ReportToInspectorate"/>
+    <bpmn:exclusiveGateway id="Gateway_InspectorateJoin" name="Inspectorate check merged"/>
+    <bpmn:exclusiveGateway id="Gateway_InsurerCheck" name="Fatality or incapacity for three days or more?"/>
+    <bpmn:sendTask id="SendTask_ReportInsurer" name="Report to accident insurance provider within five days" messageRef="Msg_ReportToInsurer"/>
+    <bpmn:endEvent id="EndEvent_InsurerReported" name="Accident reported to insurer"/>
+    <bpmn:endEvent id="EndEvent_NoInsurerReport" name="No insurer report required"/>
+
+    <bpmn:sequenceFlow id="Flow_EM_01" sourceRef="StartEvent_EmployerNotification" targetRef="Task_RecordAccident"/>
+    <bpmn:sequenceFlow id="Flow_EM_02" sourceRef="Task_RecordAccident" targetRef="Gateway_InspectorateCheck"/>
+    <bpmn:sequenceFlow id="Flow_EM_03" name="Yes" sourceRef="Gateway_InspectorateCheck" targetRef="SendTask_ReportInspectorate"/>
+    <bpmn:sequenceFlow id="Flow_EM_04" name="No" sourceRef="Gateway_InspectorateCheck" targetRef="Gateway_InspectorateJoin"/>
+    <bpmn:sequenceFlow id="Flow_EM_05" sourceRef="SendTask_ReportInspectorate" targetRef="Gateway_InspectorateJoin"/>
+    <bpmn:sequenceFlow id="Flow_EM_06" sourceRef="Gateway_InspectorateJoin" targetRef="Gateway_InsurerCheck"/>
+    <bpmn:sequenceFlow id="Flow_EM_07" name="Yes" sourceRef="Gateway_InsurerCheck" targetRef="SendTask_ReportInsurer"/>
+    <bpmn:sequenceFlow id="Flow_EM_08" name="No" sourceRef="Gateway_InsurerCheck" targetRef="EndEvent_NoInsurerReport"/>
+    <bpmn:sequenceFlow id="Flow_EM_09" sourceRef="SendTask_ReportInsurer" targetRef="EndEvent_InsurerReported"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_ComputerRepair"
+                  targetNamespace="http://example.com/bpmn/computer-repair">
+  <bpmn:message id="Message_ComputerIntake" name="Defective computer"/>
+  <bpmn:message id="Message_RepairCost" name="Repair cost calculation"/>
+  <bpmn:message id="Message_AcceptCosts" name="Costs accepted"/>
+  <bpmn:message id="Message_RejectCosts" name="Costs rejected"/>
+
+  <bpmn:process id="Process_Customer" name="Customer" isExecutable="false">
+    <bpmn:startEvent id="Customer_Start" name="Customer brings in defective computer"/>
+    <bpmn:sendTask id="Customer_SubmitComputer" name="Hand over defective computer" messageRef="Message_ComputerIntake"/>
+    <bpmn:receiveTask id="Customer_ReceiveCost" name="Receive repair cost calculation" messageRef="Message_RepairCost"/>
+    <bpmn:exclusiveGateway id="Customer_CostDecision" name="Are the costs acceptable?"/>
+    <bpmn:sendTask id="Customer_AcceptCosts" name="Accept costs" messageRef="Message_AcceptCosts"/>
+    <bpmn:endEvent id="Customer_AcceptedEnd" name="Costs accepted"/>
+    <bpmn:sendTask id="Customer_RejectCosts" name="Reject costs" messageRef="Message_RejectCosts"/>
+    <bpmn:task id="Customer_TakeComputerHome" name="Take computer home unrepaired"/>
+    <bpmn:endEvent id="Customer_DeclinedEnd" name="Computer taken home unrepaired"/>
+
+    <bpmn:sequenceFlow id="Customer_Flow_1" sourceRef="Customer_Start" targetRef="Customer_SubmitComputer"/>
+    <bpmn:sequenceFlow id="Customer_Flow_2" sourceRef="Customer_SubmitComputer" targetRef="Customer_ReceiveCost"/>
+    <bpmn:sequenceFlow id="Customer_Flow_3" sourceRef="Customer_ReceiveCost" targetRef="Customer_CostDecision"/>
+    <bpmn:sequenceFlow id="Customer_Flow_4" sourceRef="Customer_CostDecision" targetRef="Customer_AcceptCosts">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">costsAcceptable</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Customer_Flow_5" sourceRef="Customer_CostDecision" targetRef="Customer_RejectCosts">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not costsAcceptable</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Customer_Flow_6" sourceRef="Customer_AcceptCosts" targetRef="Customer_AcceptedEnd"/>
+    <bpmn:sequenceFlow id="Customer_Flow_7" sourceRef="Customer_RejectCosts" targetRef="Customer_TakeComputerHome"/>
+    <bpmn:sequenceFlow id="Customer_Flow_8" sourceRef="Customer_TakeComputerHome" targetRef="Customer_DeclinedEnd"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_CRS" name="Computer repair service" isExecutable="false">
+    <bpmn:startEvent id="CRS_Start" name="Defective computer received">
+      <bpmn:messageEventDefinition id="CRS_Start_MessageDefinition" messageRef="Message_ComputerIntake"/>
+    </bpmn:startEvent>
+    <bpmn:task id="CRS_CheckDefect" name="Check defect"/>
+    <bpmn:sendTask id="CRS_SendCost" name="Hand out repair cost calculation" messageRef="Message_RepairCost"/>
+    <bpmn:eventBasedGateway id="CRS_WaitForDecision" name="Wait for customer decision" eventGatewayType="Exclusive"/>
+    <bpmn:intermediateCatchEvent id="CRS_CatchAcceptance" name="Costs accepted">
+      <bpmn:messageEventDefinition id="CRS_Acceptance_MessageDefinition" messageRef="Message_AcceptCosts"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="CRS_CatchRejection" name="Costs rejected">
+      <bpmn:messageEventDefinition id="CRS_Rejection_MessageDefinition" messageRef="Message_RejectCosts"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="CRS_DeclinedEnd" name="Repair declined"/>
+
+    <bpmn:parallelGateway id="Repair_InitialSplit" name="Perform both repair activities"/>
+    <bpmn:task id="Repair_Hardware" name="Check and repair hardware"/>
+    <bpmn:task id="Repair_TestAfterHardware" name="Test system functionality"/>
+    <bpmn:task id="Repair_Software" name="Check and configure software"/>
+    <bpmn:task id="Repair_TestAfterSoftware" name="Test system functionality"/>
+    <bpmn:parallelGateway id="Repair_InitialJoin" name="Both activities tested"/>
+    <bpmn:exclusiveGateway id="Repair_InitialErrorDecision" name="Was an error detected?"/>
+    <bpmn:exclusiveGateway id="Repair_AnotherActivityChoice" name="Choose another repair activity"/>
+    <bpmn:task id="Repair_HardwareAgain" name="Check and repair hardware"/>
+    <bpmn:task id="Repair_TestAfterHardwareAgain" name="Test system functionality"/>
+    <bpmn:task id="Repair_SoftwareAgain" name="Check and configure software"/>
+    <bpmn:task id="Repair_TestAfterSoftwareAgain" name="Test system functionality"/>
+    <bpmn:exclusiveGateway id="Repair_AnotherActivityMerge" name="Repair activity tested"/>
+    <bpmn:exclusiveGateway id="Repair_RepeatErrorDecision" name="Was an error detected?"/>
+    <bpmn:endEvent id="Repair_FinishedEnd" name="Repair finished"/>
+
+    <bpmn:sequenceFlow id="CRS_Flow_1" sourceRef="CRS_Start" targetRef="CRS_CheckDefect"/>
+    <bpmn:sequenceFlow id="CRS_Flow_2" sourceRef="CRS_CheckDefect" targetRef="CRS_SendCost"/>
+    <bpmn:sequenceFlow id="CRS_Flow_3" sourceRef="CRS_SendCost" targetRef="CRS_WaitForDecision"/>
+    <bpmn:sequenceFlow id="CRS_Flow_4" sourceRef="CRS_WaitForDecision" targetRef="CRS_CatchAcceptance"/>
+    <bpmn:sequenceFlow id="CRS_Flow_5" sourceRef="CRS_WaitForDecision" targetRef="CRS_CatchRejection"/>
+    <bpmn:sequenceFlow id="CRS_Flow_6" sourceRef="CRS_CatchRejection" targetRef="CRS_DeclinedEnd"/>
+    <bpmn:sequenceFlow id="CRS_Flow_7" sourceRef="CRS_CatchAcceptance" targetRef="Repair_InitialSplit"/>
+
+    <bpmn:sequenceFlow id="Repair_Flow_1" sourceRef="Repair_InitialSplit" targetRef="Repair_Hardware"/>
+    <bpmn:sequenceFlow id="Repair_Flow_2" sourceRef="Repair_InitialSplit" targetRef="Repair_Software"/>
+    <bpmn:sequenceFlow id="Repair_Flow_3" sourceRef="Repair_Hardware" targetRef="Repair_TestAfterHardware"/>
+    <bpmn:sequenceFlow id="Repair_Flow_4" sourceRef="Repair_TestAfterHardware" targetRef="Repair_InitialJoin"/>
+    <bpmn:sequenceFlow id="Repair_Flow_5" sourceRef="Repair_Software" targetRef="Repair_TestAfterSoftware"/>
+    <bpmn:sequenceFlow id="Repair_Flow_6" sourceRef="Repair_TestAfterSoftware" targetRef="Repair_InitialJoin"/>
+    <bpmn:sequenceFlow id="Repair_Flow_7" sourceRef="Repair_InitialJoin" targetRef="Repair_InitialErrorDecision"/>
+    <bpmn:sequenceFlow id="Repair_Flow_8" sourceRef="Repair_InitialErrorDecision" targetRef="Repair_AnotherActivityChoice">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">errorDetected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Repair_Flow_9" sourceRef="Repair_InitialErrorDecision" targetRef="Repair_FinishedEnd">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not errorDetected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Repair_Flow_10" sourceRef="Repair_AnotherActivityChoice" targetRef="Repair_HardwareAgain"/>
+    <bpmn:sequenceFlow id="Repair_Flow_11" sourceRef="Repair_AnotherActivityChoice" targetRef="Repair_SoftwareAgain"/>
+    <bpmn:sequenceFlow id="Repair_Flow_12" sourceRef="Repair_HardwareAgain" targetRef="Repair_TestAfterHardwareAgain"/>
+    <bpmn:sequenceFlow id="Repair_Flow_13" sourceRef="Repair_TestAfterHardwareAgain" targetRef="Repair_AnotherActivityMerge"/>
+    <bpmn:sequenceFlow id="Repair_Flow_14" sourceRef="Repair_SoftwareAgain" targetRef="Repair_TestAfterSoftwareAgain"/>
+    <bpmn:sequenceFlow id="Repair_Flow_15" sourceRef="Repair_TestAfterSoftwareAgain" targetRef="Repair_AnotherActivityMerge"/>
+    <bpmn:sequenceFlow id="Repair_Flow_16" sourceRef="Repair_AnotherActivityMerge" targetRef="Repair_RepeatErrorDecision"/>
+    <bpmn:sequenceFlow id="Repair_Flow_17" sourceRef="Repair_RepeatErrorDecision" targetRef="Repair_AnotherActivityChoice">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">errorDetected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Repair_Flow_18" sourceRef="Repair_RepeatErrorDecision" targetRef="Repair_FinishedEnd">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not errorDetected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_ComputerRepair" name="Computer repair">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_CRS" name="CRS" processRef="Process_CRS"/>
+    <bpmn:messageFlow id="MessageFlow_ComputerIntake" name="Defective computer" sourceRef="Customer_SubmitComputer" targetRef="CRS_Start"/>
+    <bpmn:messageFlow id="MessageFlow_RepairCost" name="Repair cost calculation" sourceRef="CRS_SendCost" targetRef="Customer_ReceiveCost"/>
+    <bpmn:messageFlow id="MessageFlow_AcceptCosts" name="Costs accepted" sourceRef="Customer_AcceptCosts" targetRef="CRS_CatchAcceptance"/>
+    <bpmn:messageFlow id="MessageFlow_RejectCosts" name="Costs rejected" sourceRef="Customer_RejectCosts" targetRef="CRS_CatchRejection"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

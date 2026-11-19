@@ -1,0 +1,312 @@
+{
+ "id": "37",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 45,
+  "T6": 6
+ },
+ "first_pass_error_counts": {
+  "T5": 51,
+  "T6": 10
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines FID-01 (The generated model lacks the decision gateway that routes the quantity to the threshold-specific follow-up actions (M7), although the description states both thresholds and their different actions (S9). The description's ranges are mutually exclusive in the sense that each reading is a separate action, so an exclusive split with range conditions is the correct structure. The gateway is missing fr)",
+   "guideline_id": "LRN-101",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "abstained",
+   "detail": "The remaining label differences are either already covered by learned guidelines or come from the reference, not the description. P1 pairs a generated gateway that reuses the description's wording ('not enough parts') with a reference label 'Terms acceptable?' that the description does not state, so the reference contradicts the text. P4 and P9 are high-similarity paraphrases of the same reorder action. P5 is a task label that carries a parenthetical list, which LRN-073 covers. The one structural gap, the missing second threshold gateway (M7), is already covered by LRN-101 and the previous gui",
+   "guideline_id": null,
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "new guideline (The description explicitly says the actor must find out how much each source can deliver, at what price and in what time before choosing. The generated model goes from the sending task straight to the decision gateway, so the information-gathering step is missing (M1). No documented guideline covers this case. ACT-04 concerns sendTask only, and DATA-02 concerns data associations, which do not defi)",
+   "guideline_id": "LRN-102",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-092 (The generated model uses an intermediate catch event 'First parts arrive' where the reference has manual tasks for the receipt of the first batch, the receipt of the third batch and the start of building (M2, M3, M4, X4). S7 says work starts when the first parts arrive, and the description's random-order batch arrivals call for a receipt task per delivery. The trigger is kept general, so it applie)",
+   "guideline_id": "LRN-092",
+   "ref": "LRN-092",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines PROC-04 (The reference has an exclusive gateway \"Any stock falls?\" before the per-item stock-level gateway, with a flow to it that the generator omitted (M3, F15). The generator instead ended the process at a \"Stock sufficient\" end event (X7), although the description gives no end there; it only describes per-item thresholds (S9) and a zero-stock action (S10). PROC-04 allows multiple end events only for di)",
+   "guideline_id": "LRN-103",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines GW-01 (The reference has exclusive gateways for the stock-threshold decisions (\"Any stock falls?\", \"Stock level of a part?\", \"More parts needed?\", and \"ExclusiveGateway_6\" after the reorder). The generated model instead has the extra task \"Check stock level of each part\" (X6) that performs the check, so the routing decision is missing (M2, M3, M4). The description's conditional thresholds (S9, S10) are d)",
+   "guideline_id": "LRN-104",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-101",
+   "instruction": "When the description compares one measured quantity against several thresholds, and each threshold range leads to a different follow-up action, with the lower range possibly requiring a further action after the higher one: Model an exclusive decision gateway directly after the step that yields the measured quantity, with one labeled outgoing sequence flow per threshold range. Give each flow a condition on the quantity that matches only its range, and route each flow to its own activity named after the action the description gives for that range. Do not omit the gateway or fold the ranges into one generic activity. If the ranges rejoin before a shared next step, join them with an exclusive merge gateway.",
+   "situation": "the description compares one measured quantity against several thresholds, and each threshold range leads to a different follow-up action, with the lower range possibly requiring a further action after the higher one",
+   "source": "learned guideline (refines FID-01)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-102",
+   "instruction": "When the description says an actor sends a request to several external sources and then must find out several attributes of each answer (for example amount, cost and lead time) before a decision chooses among the sources: Model a user task, named with the description's verb phrase for finding out those attributes, placed after the sending step and before the exclusive gateway that selects among the sources. Do not leave the attribute gathering implicit in the sending step or in the gateway condition.",
+   "situation": "the description says an actor sends a request to several external sources and then must find out several attributes of each answer (for example amount, cost and lead time) before a decision chooses among the sources",
+   "source": "learned guideline (new)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-092",
+   "instruction": "When the description says the actor orders an item from an external party, or requests a reply from that party, and the next decision or step can only follow once the item has physically arrived or the reply has come back: Model the order or request as a send activity. Then model the arrival of a physical item as a manual task performed by the actor, and the arrival of a reply or confirmation as a receive task. Place this receipt activity directly after the send and before the gateway or activity that depends on it. Do not connect the send straight to the later decision or step, and do not drop the receipt from the flow.",
+   "situation": "the description says that items ordered from an external party arrive in several separate deliveries in no fixed order, and the actor starts a work step when the first delivery arrives, with later deliveries still to be received",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-103",
+   "instruction": "When the description states that a group of items is first checked as a whole for whether any item is short of a required level, and only afterwards each item is checked individually against several thresholds: Model an exclusive gateway that tests the collective condition (whether any item in the group is short) before the per-item threshold gateway. Route the branch where some item is short to the per-item check. Route the branch where no item is short to the step the description places next, not to an end event, unless the description states that the process ends on that branch. Do not connect the no branch directly to an end event when the description has no stated ending there.",
+   "situation": "the description states that a group of items is first checked as a whole for whether any item is short of a required level, and only afterwards each item is checked individually against several thresholds",
+   "source": "learned guideline (refines PROC-04)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-104",
+   "instruction": "When the description states a check on a measured quantity whose result decides whether the process continues with a further step or takes another action, and the description gives threshold-based or yes/no alternatives for that check: Model the check as an exclusive gateway that follows the step that establishes the value. Put one conditional outgoing flow on the gateway for each alternative the description states, and give each flow a condition that reflects the stated threshold or answer. Do not model the check as a task, because a task performs work but does not route the flow. Where the description states several thresholds, use a separate gateway for each decision point so that every alternative is visible.",
+   "situation": "the description states a check on a measured quantity whose result decides whether the process continues with a further step or takes another action, and the description gives threshold-based or yes/no alternatives for that check",
+   "source": "learned guideline (refines GW-01)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

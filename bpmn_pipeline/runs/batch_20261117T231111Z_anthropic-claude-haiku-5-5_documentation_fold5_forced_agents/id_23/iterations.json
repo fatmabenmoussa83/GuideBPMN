@@ -1,0 +1,886 @@
+{
+ "id": "23",
+ "kept_round": 1,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 44.7,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 45,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 1,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 11,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.086532,
+    "workflow_order_similarity": 0.125,
+    "connection_f1": 0.076923,
+    "collaboration_similarity": 0.111111,
+    "alignment_coverage": 0.125,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.086532,
+    "activity_semantic_similarity": 0.111225,
+    "activity_label_precision": 0.25,
+    "activity_label_recall": 0.142857,
+    "activity_label_f1": 0.181818
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_CreditScoring\" targetNamespace=\"http://example.com/bpmn/credit-scoring\">\n  <bpmn:message id=\"Message_CreditScoreRequest\" name=\"Credit score request\"/>\n  <bpmn:message id=\"Message_ScoringRequest\" name=\"Scoring request\"/>\n  <bpmn:message id=\"Message_ScoringResult\" name=\"Scoring result\"/>\n  <bpmn:message id=\"Message_DelayNotification\" name=\"Scoring delayed\"/>\n  <bpmn:message id=\"Message_ResultDisplay\" name=\"Show scoring result\"/>\n  <bpmn:message id=\"Message_CheckLater\" name=\"Show check again later\"/>\n\n  <bpmn:collaboration id=\"Collaboration_CreditScoring\">\n    <bpmn:participant id=\"Participant_SalesClerk\" name=\"Sales Clerk (Frontend)\"/>\n    <bpmn:participant id=\"Participant_Banking\" name=\"Banking System\" processRef=\"Process_Banking\"/>\n    <bpmn:participant id=\"Participant_Agency\" name=\"Credit Scoring Agency\"/>\n\n    <bpmn:messageFlow id=\"MessageFlow_RequestFromClerk\" name=\"Request credit scoring\" sourceRef=\"Participant_SalesClerk\" targetRef=\"StartEvent_ScoringRequested\" messageRef=\"Message_CreditScoreRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ScoringRequest\" name=\"Send scoring request\" sourceRef=\"SendTask_ScoringRequest\" targetRef=\"Participant_Agency\" messageRef=\"Message_ScoringRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Level1Result\" name=\"Level 1 result\" sourceRef=\"Participant_Agency\" targetRef=\"CatchEvent_Level1Result\" messageRef=\"Message_ScoringResult\"/>\n    <bpmn:messageFlow id=\"MessageFlow_DelayNotice\" name=\"Delay notice\" sourceRef=\"Participant_Agency\" targetRef=\"CatchEvent_DelayNotice\" messageRef=\"Message_DelayNotification\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Level2Result\" name=\"Level 2 result\" sourceRef=\"Participant_Agency\" targetRef=\"CatchEvent_Level2Result\" messageRef=\"Message_ScoringResult\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowResult1\" name=\"Display result\" sourceRef=\"SendTask_PresentResult\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_ResultDisplay\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowCheckLater\" name=\"Display check later\" sourceRef=\"SendTask_ShowCheckLater\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_CheckLater\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowResult2\" name=\"Display result\" sourceRef=\"SendTask_PresentResultLevel2\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_ResultDisplay\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Banking\" name=\"Banking System Credit Scoring\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_ScoringRequested\" name=\"Credit scoring requested\">\n      <bpmn:outgoing>Flow_StartToSend</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_ScoringRequested\" messageRef=\"Message_CreditScoreRequest\"/>\n    </bpmn:startEvent>\n\n    <bpmn:sendTask id=\"SendTask_ScoringRequest\" name=\"Send scoring request to agency\" messageRef=\"Message_ScoringRequest\">\n      <bpmn:incoming>Flow_StartToSend</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendToGateway</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:eventBasedGateway id=\"Gateway_AwaitScoring\" name=\"Await scoring response\">\n      <bpmn:incoming>Flow_SendToGateway</bpmn:incoming>\n      <bpmn:outgoing>Flow_GatewayToLevel1</bpmn:outgoing>\n      <bpmn:outgoing>Flow_GatewayToDelay</bpmn:outgoing>\n    </bpmn:eventBasedGateway>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_Level1Result\" name=\"Level 1 result received\">\n      <bpmn:incoming>Flow_GatewayToLevel1</bpmn:incoming>\n      <bpmn:outgoing>Flow_Level1ToPresent</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_Level1Result\" messageRef=\"Message_ScoringResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_DelayNotice\" name=\"Delay notice received\">\n      <bpmn:incoming>Flow_GatewayToDelay</bpmn:incoming>\n      <bpmn:outgoing>Flow_DelayToCheckLater</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_DelayNotice\" messageRef=\"Message_DelayNotification\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"SendTask_PresentResult\" name=\"Present result to clerk\" messageRef=\"Message_ResultDisplay\">\n      <bpmn:incoming>Flow_Level1ToPresent</bpmn:incoming>\n      <bpmn:outgoing>Flow_PresentToEnd1</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_ResultPresented\" name=\"Result presented (immediate)\">\n      <bpmn:incoming>Flow_PresentToEnd1</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sendTask id=\"SendTask_ShowCheckLater\" name=\"Show message to check again later\" messageRef=\"Message_CheckLater\">\n      <bpmn:incoming>Flow_DelayToCheckLater</bpmn:incoming>\n      <bpmn:outgoing>Flow_CheckLaterToLevel2</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_Level2Result\" name=\"Level 2 result received\">\n      <bpmn:incoming>Flow_CheckLaterToLevel2</bpmn:incoming>\n      <bpmn:outgoing>Flow_Level2ToPresent</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_Level2Result\" messageRef=\"Message_ScoringResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"SendTask_PresentResultLevel2\" name=\"Present result to clerk\" messageRef=\"Message_ResultDisplay\">\n      <bpmn:incoming>Flow_Level2ToPresent</bpmn:incoming>\n      <bpmn:outgoing>Flow_PresentToEnd2</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_ResultPresentedAfterDelay\" name=\"Result presented (after delay)\">\n      <bpmn:incoming>Flow_PresentToEnd2</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToSend\" sourceRef=\"StartEvent_ScoringRequested\" targetRef=\"SendTask_ScoringRequest\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendToGateway\" sourceRef=\"SendTask_ScoringRequest\" targetRef=\"Gateway_AwaitScoring\"/>\n    <bpmn:sequenceFlow id=\"Flow_GatewayToLevel1\" sourceRef=\"Gateway_AwaitScoring\" targetRef=\"CatchEvent_Level1Result\"/>\n    <bpmn:sequenceFlow id=\"Flow_GatewayToDelay\" sourceRef=\"Gateway_AwaitScoring\" targetRef=\"CatchEvent_DelayNotice\"/>\n    <bpmn:sequenceFlow id=\"Flow_Level1ToPresent\" sourceRef=\"CatchEvent_Level1Result\" targetRef=\"SendTask_PresentResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_PresentToEnd1\" sourceRef=\"SendTask_PresentResult\" targetRef=\"EndEvent_ResultPresented\"/>\n    <bpmn:sequenceFlow id=\"Flow_DelayToCheckLater\" sourceRef=\"CatchEvent_DelayNotice\" targetRef=\"SendTask_ShowCheckLater\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckLaterToLevel2\" sourceRef=\"SendTask_ShowCheckLater\" targetRef=\"CatchEvent_Level2Result\"/>\n    <bpmn:sequenceFlow id=\"Flow_Level2ToPresent\" sourceRef=\"CatchEvent_Level2Result\" targetRef=\"SendTask_PresentResultLevel2\"/>\n    <bpmn:sequenceFlow id=\"Flow_PresentToEnd2\" sourceRef=\"SendTask_PresentResultLevel2\" targetRef=\"EndEvent_ResultPresentedAfterDelay\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 838.3,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 64,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.230878,
+    "workflow_order_similarity": 0.257143,
+    "connection_f1": 0.176471,
+    "collaboration_similarity": 0.176471,
+    "alignment_coverage": 0.4,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.230878,
+    "activity_semantic_similarity": 0.440604,
+    "activity_label_precision": 0.555556,
+    "activity_label_recall": 0.714286,
+    "activity_label_f1": 0.625
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_CreditScoring\" targetNamespace=\"http://example.com/bpmn/credit-scoring\">\n  <bpmn:message id=\"Message_CreditScoreRequest\" name=\"Credit score request\"/>\n  <bpmn:message id=\"Message_ScoringRequest\" name=\"Scoring request\"/>\n  <bpmn:message id=\"Message_ScoringResult\" name=\"Scoring result\"/>\n  <bpmn:message id=\"Message_DelayNotification\" name=\"Scoring delayed\"/>\n  <bpmn:message id=\"Message_ResultDisplay\" name=\"Show scoring result\"/>\n  <bpmn:message id=\"Message_CheckLater\" name=\"Show check again later\"/>\n\n  <bpmn:collaboration id=\"Collaboration_CreditScoring\">\n    <bpmn:participant id=\"Participant_SalesClerk\" name=\"Sales Clerk Frontend\"/>\n    <bpmn:participant id=\"Participant_Banking\" name=\"Banking System\" processRef=\"Process_Banking\"/>\n    <bpmn:participant id=\"Participant_Agency\" name=\"Credit Scoring Agency\" processRef=\"Process_Agency\"/>\n\n    <bpmn:messageFlow id=\"MessageFlow_RequestFromClerk\" name=\"Request credit scoring\" sourceRef=\"Participant_SalesClerk\" targetRef=\"StartEvent_ScoringRequested\" messageRef=\"Message_CreditScoreRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ScoringRequest\" name=\"Send scoring request\" sourceRef=\"SendTask_ScoringRequest\" targetRef=\"StartEvent_RequestReceived\" messageRef=\"Message_ScoringRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Level1Result\" name=\"Level 1 result\" sourceRef=\"SendTask_ReturnImmediateResult\" targetRef=\"CatchEvent_Level1Result\" messageRef=\"Message_ScoringResult\"/>\n    <bpmn:messageFlow id=\"MessageFlow_DelayNotice\" name=\"Delay notice\" sourceRef=\"SendTask_NotifyDelay\" targetRef=\"CatchEvent_DelayNotice\" messageRef=\"Message_DelayNotification\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Level2Result\" name=\"Level 2 result\" sourceRef=\"SendTask_ReturnLevel2Result\" targetRef=\"CatchEvent_Level2Result\" messageRef=\"Message_ScoringResult\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowResult1\" name=\"Display result\" sourceRef=\"SendTask_PresentResult\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_ResultDisplay\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowCheckLater\" name=\"Display check later\" sourceRef=\"SendTask_ShowCheckLater\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_CheckLater\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowResult2\" name=\"Display result\" sourceRef=\"SendTask_PresentResultLevel2\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_ResultDisplay\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Banking\" name=\"Banking System Credit Scoring\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_ScoringRequested\" name=\"Credit scoring requested\">\n      <bpmn:outgoing>Flow_StartToSend</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_ScoringRequested\" messageRef=\"Message_CreditScoreRequest\"/>\n    </bpmn:startEvent>\n\n    <bpmn:sendTask id=\"SendTask_ScoringRequest\" name=\"Send scoring request to agency\" messageRef=\"Message_ScoringRequest\">\n      <bpmn:incoming>Flow_StartToSend</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendToGateway</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:eventBasedGateway id=\"Gateway_AwaitAgency\" name=\"Await agency response\">\n      <bpmn:incoming>Flow_SendToGateway</bpmn:incoming>\n      <bpmn:outgoing>Flow_GatewayToLevel1</bpmn:outgoing>\n      <bpmn:outgoing>Flow_GatewayToDelay</bpmn:outgoing>\n    </bpmn:eventBasedGateway>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_Level1Result\" name=\"Level 1 result received\">\n      <bpmn:incoming>Flow_GatewayToLevel1</bpmn:incoming>\n      <bpmn:outgoing>Flow_Level1ToPresent</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_Level1Result\" messageRef=\"Message_ScoringResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_DelayNotice\" name=\"Delay notice received\">\n      <bpmn:incoming>Flow_GatewayToDelay</bpmn:incoming>\n      <bpmn:outgoing>Flow_DelayToCheckLater</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_DelayNotice\" messageRef=\"Message_DelayNotification\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"SendTask_PresentResult\" name=\"Present result to clerk\" messageRef=\"Message_ResultDisplay\">\n      <bpmn:incoming>Flow_Level1ToPresent</bpmn:incoming>\n      <bpmn:outgoing>Flow_PresentToEnd1</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_ResultPresented\" name=\"Result presented immediately\">\n      <bpmn:incoming>Flow_PresentToEnd1</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sendTask id=\"SendTask_ShowCheckLater\" name=\"Show message to check again later\" messageRef=\"Message_CheckLater\">\n      <bpmn:incoming>Flow_DelayToCheckLater</bpmn:incoming>\n      <bpmn:outgoing>Flow_CheckLaterToLevel2</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_Level2Result\" name=\"Level 2 result received\">\n      <bpmn:incoming>Flow_CheckLaterToLevel2</bpmn:incoming>\n      <bpmn:outgoing>Flow_Level2ToPresent</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_Level2Result\" messageRef=\"Message_ScoringResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"SendTask_PresentResultLevel2\" name=\"Present result to clerk\" messageRef=\"Message_ResultDisplay\">\n      <bpmn:incoming>Flow_Level2ToPresent</bpmn:incoming>\n      <bpmn:outgoing>Flow_PresentToEnd2</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_ResultPresentedAfterDelay\" name=\"Result presented after delay\">\n      <bpmn:incoming>Flow_PresentToEnd2</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToSend\" sourceRef=\"StartEvent_ScoringRequested\" targetRef=\"SendTask_ScoringRequest\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendToGateway\" sourceRef=\"SendTask_ScoringRequest\" targetRef=\"Gateway_AwaitAgency\"/>\n    <bpmn:sequenceFlow id=\"Flow_GatewayToLevel1\" sourceRef=\"Gateway_AwaitAgency\" targetRef=\"CatchEvent_Level1Result\"/>\n    <bpmn:sequenceFlow id=\"Flow_GatewayToDelay\" sourceRef=\"Gateway_AwaitAgency\" targetRef=\"CatchEvent_DelayNotice\"/>\n    <bpmn:sequenceFlow id=\"Flow_Level1ToPresent\" sourceRef=\"CatchEvent_Level1Result\" targetRef=\"SendTask_PresentResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_PresentToEnd1\" sourceRef=\"SendTask_PresentResult\" targetRef=\"EndEvent_ResultPresented\"/>\n    <bpmn:sequenceFlow id=\"Flow_DelayToCheckLater\" sourceRef=\"CatchEvent_DelayNotice\" targetRef=\"SendTask_ShowCheckLater\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckLaterToLevel2\" sourceRef=\"SendTask_ShowCheckLater\" targetRef=\"CatchEvent_Level2Result\"/>\n    <bpmn:sequenceFlow id=\"Flow_Level2ToPresent\" sourceRef=\"CatchEvent_Level2Result\" targetRef=\"SendTask_PresentResultLevel2\"/>\n    <bpmn:sequenceFlow id=\"Flow_PresentToEnd2\" sourceRef=\"SendTask_PresentResultLevel2\" targetRef=\"EndEvent_ResultPresentedAfterDelay\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_Agency\" name=\"Credit Scoring Agency Process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_RequestReceived\" name=\"Scoring request received\">\n      <bpmn:outgoing>Flow_AgencyStartToL1</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_RequestReceived\" messageRef=\"Message_ScoringRequest\"/>\n    </bpmn:startEvent>\n\n    <bpmn:task id=\"Task_Level1Scoring\" name=\"Perform level 1 scoring\">\n      <bpmn:incoming>Flow_AgencyStartToL1</bpmn:incoming>\n      <bpmn:outgoing>Flow_L1ToGateway</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ImmediateResult\" name=\"Scoring determined immediately?\" default=\"Flow_NotImmediate\">\n      <bpmn:incoming>Flow_L1ToGateway</bpmn:incoming>\n      <bpmn:outgoing>Flow_Immediate</bpmn:outgoing>\n      <bpmn:outgoing>Flow_NotImmediate</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:sendTask id=\"SendTask_ReturnImmediateResult\" name=\"Return immediate result to banking system\" messageRef=\"Message_ScoringResult\">\n      <bpmn:incoming>Flow_Immediate</bpmn:incoming>\n      <bpmn:outgoing>Flow_ImmediateToEnd</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_ImmediateReturned\" name=\"Immediate result returned\">\n      <bpmn:incoming>Flow_ImmediateToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sendTask id=\"SendTask_NotifyDelay\" name=\"Notify banking system of delay\" messageRef=\"Message_DelayNotification\">\n      <bpmn:incoming>Flow_NotImmediate</bpmn:incoming>\n      <bpmn:outgoing>Flow_DelayToL2</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_Level2Scoring\" name=\"Perform level 2 scoring\">\n      <bpmn:incoming>Flow_DelayToL2</bpmn:incoming>\n      <bpmn:outgoing>Flow_L2ToReturn</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:sendTask id=\"SendTask_ReturnLevel2Result\" name=\"Return level 2 result to banking system\" messageRef=\"Message_ScoringResult\">\n      <bpmn:incoming>Flow_L2ToReturn</bpmn:incoming>\n      <bpmn:outgoing>Flow_ReturnL2ToEnd</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_Level2Returned\" name=\"Level 2 result returned\">\n      <bpmn:incoming>Flow_ReturnL2ToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_AgencyStartToL1\" sourceRef=\"StartEvent_RequestReceived\" targetRef=\"Task_Level1Scoring\"/>\n    <bpmn:sequenceFlow id=\"Flow_L1ToGateway\" sourceRef=\"Task_Level1Scoring\" targetRef=\"Gateway_ImmediateResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_Immediate\" sourceRef=\"Gateway_ImmediateResult\" targetRef=\"SendTask_ReturnImmediateResult\">\n      <bpmn:conditionExpression>Scoring determined immediately</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotImmediate\" sourceRef=\"Gateway_ImmediateResult\" targetRef=\"SendTask_NotifyDelay\"/>\n    <bpmn:sequenceFlow id=\"Flow_ImmediateToEnd\" sourceRef=\"SendTask_ReturnImmediateResult\" targetRef=\"EndEvent_ImmediateReturned\"/>\n    <bpmn:sequenceFlow id=\"Flow_DelayToL2\" sourceRef=\"SendTask_NotifyDelay\" targetRef=\"Task_Level2Scoring\"/>\n    <bpmn:sequenceFlow id=\"Flow_L2ToReturn\" sourceRef=\"Task_Level2Scoring\" targetRef=\"SendTask_ReturnLevel2Result\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReturnL2ToEnd\" sourceRef=\"SendTask_ReturnLevel2Result\" targetRef=\"EndEvent_Level2Returned\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1444.3,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 65,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.288491,
+    "workflow_order_similarity": 0.366667,
+    "connection_f1": 0.171429,
+    "collaboration_similarity": 0.176471,
+    "alignment_coverage": 0.5,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.288491,
+    "activity_semantic_similarity": 0.440604,
+    "activity_label_precision": 0.555556,
+    "activity_label_recall": 0.714286,
+    "activity_label_f1": 0.625
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_CreditScoring\" targetNamespace=\"http://example.com/bpmn/credit-scoring\">\n  <bpmn:message id=\"Message_CreditScoreRequest\" name=\"Credit scoring request\"/>\n  <bpmn:message id=\"Message_ScoringRequest\" name=\"Scoring request\"/>\n  <bpmn:message id=\"Message_ScoringResult\" name=\"Scoring result\"/>\n  <bpmn:message id=\"Message_DelayNotification\" name=\"Scoring delayed\"/>\n  <bpmn:message id=\"Message_ResultDisplay\" name=\"Show scoring result\"/>\n  <bpmn:message id=\"Message_CheckLater\" name=\"Show check again later\"/>\n\n  <bpmn:collaboration id=\"Collaboration_CreditScoring\">\n    <bpmn:participant id=\"Participant_SalesClerk\" name=\"Sales Clerk Frontend\"/>\n    <bpmn:participant id=\"Participant_Banking\" name=\"Banking System\" processRef=\"Process_Banking\"/>\n    <bpmn:participant id=\"Participant_Agency\" name=\"Credit Scoring Agency\" processRef=\"Process_Agency\"/>\n\n    <bpmn:messageFlow id=\"MessageFlow_RequestFromClerk\" name=\"Request credit scoring\" sourceRef=\"Participant_SalesClerk\" targetRef=\"StartEvent_ScoringRequested\" messageRef=\"Message_CreditScoreRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ScoringRequest\" name=\"Send scoring request\" sourceRef=\"SendTask_ScoringRequest\" targetRef=\"StartEvent_RequestReceived\" messageRef=\"Message_ScoringRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ImmediateResult\" name=\"Immediate result\" sourceRef=\"SendTask_ReturnImmediateResult\" targetRef=\"CatchEvent_ImmediateResult\" messageRef=\"Message_ScoringResult\"/>\n    <bpmn:messageFlow id=\"MessageFlow_DelayNotice\" name=\"Delay notice\" sourceRef=\"SendTask_NotifyDelay\" targetRef=\"CatchEvent_DelayNotice\" messageRef=\"Message_DelayNotification\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Level2Result\" name=\"Level 2 result\" sourceRef=\"SendTask_ReturnLevel2Result\" targetRef=\"CatchEvent_Level2Result\" messageRef=\"Message_ScoringResult\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowResult1\" name=\"Display result\" sourceRef=\"SendTask_PresentResult\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_ResultDisplay\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowCheckLater\" name=\"Display check later\" sourceRef=\"SendTask_ShowCheckLater\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_CheckLater\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowResult2\" name=\"Display result\" sourceRef=\"SendTask_PresentResultLevel2\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_ResultDisplay\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Banking\" name=\"Banking System Credit Scoring\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_ScoringRequested\" name=\"Credit scoring requested\">\n      <bpmn:outgoing>Flow_StartToSend</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_ScoringRequested\" messageRef=\"Message_CreditScoreRequest\"/>\n    </bpmn:startEvent>\n\n    <bpmn:sendTask id=\"SendTask_ScoringRequest\" name=\"Send scoring request to agency\" messageRef=\"Message_ScoringRequest\">\n      <bpmn:incoming>Flow_StartToSend</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendToGateway</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:eventBasedGateway id=\"Gateway_AwaitAgency\" name=\"Await agency response\">\n      <bpmn:incoming>Flow_SendToGateway</bpmn:incoming>\n      <bpmn:outgoing>Flow_GatewayToImmediate</bpmn:outgoing>\n      <bpmn:outgoing>Flow_GatewayToDelay</bpmn:outgoing>\n    </bpmn:eventBasedGateway>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_ImmediateResult\" name=\"Immediate result received\">\n      <bpmn:incoming>Flow_GatewayToImmediate</bpmn:incoming>\n      <bpmn:outgoing>Flow_ImmediateToPresent</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_ImmediateResult\" messageRef=\"Message_ScoringResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_DelayNotice\" name=\"Delay notice received\">\n      <bpmn:incoming>Flow_GatewayToDelay</bpmn:incoming>\n      <bpmn:outgoing>Flow_DelayToCheckLater</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_DelayNotice\" messageRef=\"Message_DelayNotification\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"SendTask_PresentResult\" name=\"Present result to clerk\" messageRef=\"Message_ResultDisplay\">\n      <bpmn:incoming>Flow_ImmediateToPresent</bpmn:incoming>\n      <bpmn:outgoing>Flow_PresentToJoin</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:sendTask id=\"SendTask_ShowCheckLater\" name=\"Show message to check again later\" messageRef=\"Message_CheckLater\">\n      <bpmn:incoming>Flow_DelayToCheckLater</bpmn:incoming>\n      <bpmn:outgoing>Flow_CheckLaterToLevel2</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_Level2Result\" name=\"Level 2 result received\">\n      <bpmn:incoming>Flow_CheckLaterToLevel2</bpmn:incoming>\n      <bpmn:outgoing>Flow_Level2ToPresent</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_Level2Result\" messageRef=\"Message_ScoringResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"SendTask_PresentResultLevel2\" name=\"Present result to clerk\" messageRef=\"Message_ResultDisplay\">\n      <bpmn:incoming>Flow_Level2ToPresent</bpmn:incoming>\n      <bpmn:outgoing>Flow_PresentLevel2ToJoin</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ResultJoin\" name=\"Result presented\">\n      <bpmn:incoming>Flow_PresentToJoin</bpmn:incoming>\n      <bpmn:incoming>Flow_PresentLevel2ToJoin</bpmn:incoming>\n      <bpmn:outgoing>Flow_JoinToEnd</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:endEvent id=\"EndEvent_ResultPresented\" name=\"Scoring result presented to clerk\">\n      <bpmn:incoming>Flow_JoinToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToSend\" sourceRef=\"StartEvent_ScoringRequested\" targetRef=\"SendTask_ScoringRequest\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendToGateway\" sourceRef=\"SendTask_ScoringRequest\" targetRef=\"Gateway_AwaitAgency\"/>\n    <bpmn:sequenceFlow id=\"Flow_GatewayToImmediate\" sourceRef=\"Gateway_AwaitAgency\" targetRef=\"CatchEvent_ImmediateResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_GatewayToDelay\" sourceRef=\"Gateway_AwaitAgency\" targetRef=\"CatchEvent_DelayNotice\"/>\n    <bpmn:sequenceFlow id=\"Flow_ImmediateToPresent\" sourceRef=\"CatchEvent_ImmediateResult\" targetRef=\"SendTask_PresentResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_PresentToJoin\" sourceRef=\"SendTask_PresentResult\" targetRef=\"Gateway_ResultJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_DelayToCheckLater\" sourceRef=\"CatchEvent_DelayNotice\" targetRef=\"SendTask_ShowCheckLater\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckLaterToLevel2\" sourceRef=\"SendTask_ShowCheckLater\" targetRef=\"CatchEvent_Level2Result\"/>\n    <bpmn:sequenceFlow id=\"Flow_Level2ToPresent\" sourceRef=\"CatchEvent_Level2Result\" targetRef=\"SendTask_PresentResultLevel2\"/>\n    <bpmn:sequenceFlow id=\"Flow_PresentLevel2ToJoin\" sourceRef=\"SendTask_PresentResultLevel2\" targetRef=\"Gateway_ResultJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_JoinToEnd\" sourceRef=\"Gateway_ResultJoin\" targetRef=\"EndEvent_ResultPresented\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_Agency\" name=\"Credit Scoring Agency Process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_RequestReceived\" name=\"Scoring request received\">\n      <bpmn:outgoing>Flow_AgencyStartToL1</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_RequestReceived\" messageRef=\"Message_ScoringRequest\"/>\n    </bpmn:startEvent>\n\n    <bpmn:task id=\"Task_Level1Scoring\" name=\"Perform level 1 scoring\">\n      <bpmn:incoming>Flow_AgencyStartToL1</bpmn:incoming>\n      <bpmn:outgoing>Flow_L1ToGateway</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ImmediateResult\" name=\"Scoring determined immediately?\" default=\"Flow_NotImmediate\">\n      <bpmn:incoming>Flow_L1ToGateway</bpmn:incoming>\n      <bpmn:outgoing>Flow_Immediate</bpmn:outgoing>\n      <bpmn:outgoing>Flow_NotImmediate</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:sendTask id=\"SendTask_ReturnImmediateResult\" name=\"Return immediate result to banking system\" messageRef=\"Message_ScoringResult\">\n      <bpmn:incoming>Flow_Immediate</bpmn:incoming>\n      <bpmn:outgoing>Flow_ImmediateToEnd</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_ImmediateReturned\" name=\"Immediate result returned\">\n      <bpmn:incoming>Flow_ImmediateToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sendTask id=\"SendTask_NotifyDelay\" name=\"Notify banking system of delay\" messageRef=\"Message_DelayNotification\">\n      <bpmn:incoming>Flow_NotImmediate</bpmn:incoming>\n      <bpmn:outgoing>Flow_DelayToL2</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_Level2Scoring\" name=\"Perform level 2 scoring\">\n      <bpmn:incoming>Flow_DelayToL2</bpmn:incoming>\n      <bpmn:outgoing>Flow_L2ToReturn</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:sendTask id=\"SendTask_ReturnLevel2Result\" name=\"Return level 2 result to banking system\" messageRef=\"Message_ScoringResult\">\n      <bpmn:incoming>Flow_L2ToReturn</bpmn:incoming>\n      <bpmn:outgoing>Flow_ReturnL2ToEnd</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_Level2Returned\" name=\"Level 2 result returned\">\n      <bpmn:incoming>Flow_ReturnL2ToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_AgencyStartToL1\" sourceRef=\"StartEvent_RequestReceived\" targetRef=\"Task_Level1Scoring\"/>\n    <bpmn:sequenceFlow id=\"Flow_L1ToGateway\" sourceRef=\"Task_Level1Scoring\" targetRef=\"Gateway_ImmediateResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_Immediate\" sourceRef=\"Gateway_ImmediateResult\" targetRef=\"SendTask_ReturnImmediateResult\">\n      <bpmn:conditionExpression>Scoring determined immediately</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotImmediate\" sourceRef=\"Gateway_ImmediateResult\" targetRef=\"SendTask_NotifyDelay\"/>\n    <bpmn:sequenceFlow id=\"Flow_ImmediateToEnd\" sourceRef=\"SendTask_ReturnImmediateResult\" targetRef=\"EndEvent_ImmediateReturned\"/>\n    <bpmn:sequenceFlow id=\"Flow_DelayToL2\" sourceRef=\"SendTask_NotifyDelay\" targetRef=\"Task_Level2Scoring\"/>\n    <bpmn:sequenceFlow id=\"Flow_L2ToReturn\" sourceRef=\"Task_Level2Scoring\" targetRef=\"SendTask_ReturnLevel2Result\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReturnL2ToEnd\" sourceRef=\"SendTask_ReturnLevel2Result\" targetRef=\"EndEvent_Level2Returned\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 2709.8,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 65,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.263779,
+    "workflow_order_similarity": 0.311111,
+    "connection_f1": 0.171429,
+    "collaboration_similarity": 0.176471,
+    "alignment_coverage": 0.45,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.263779,
+    "activity_semantic_similarity": 0.440604,
+    "activity_label_precision": 0.555556,
+    "activity_label_recall": 0.714286,
+    "activity_label_f1": 0.625
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_CreditScoring\" targetNamespace=\"http://example.com/bpmn/credit-scoring\">\n  <bpmn:message id=\"Message_CreditScoreRequest\" name=\"Credit score request\"/>\n  <bpmn:message id=\"Message_ScoringRequest\" name=\"Scoring request\"/>\n  <bpmn:message id=\"Message_ScoringResult\" name=\"Scoring result\"/>\n  <bpmn:message id=\"Message_DelayNotification\" name=\"Scoring delayed\"/>\n  <bpmn:message id=\"Message_ResultDisplay\" name=\"Show scoring result\"/>\n  <bpmn:message id=\"Message_CheckLater\" name=\"Show check again later\"/>\n\n  <bpmn:collaboration id=\"Collaboration_CreditScoring\">\n    <bpmn:participant id=\"Participant_SalesClerk\" name=\"Sales Clerk Frontend\"/>\n    <bpmn:participant id=\"Participant_Banking\" name=\"Banking System\" processRef=\"Process_Banking\"/>\n    <bpmn:participant id=\"Participant_Agency\" name=\"Credit Scoring Agency\" processRef=\"Process_Agency\"/>\n\n    <bpmn:messageFlow id=\"MessageFlow_RequestFromClerk\" name=\"Request credit scoring\" sourceRef=\"Participant_SalesClerk\" targetRef=\"StartEvent_ScoringRequested\" messageRef=\"Message_CreditScoreRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ScoringRequest\" name=\"Send scoring request\" sourceRef=\"SendTask_ScoringRequest\" targetRef=\"StartEvent_RequestReceived\" messageRef=\"Message_ScoringRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Level1Result\" name=\"Level 1 result\" sourceRef=\"SendTask_ReturnImmediateResult\" targetRef=\"CatchEvent_Level1Result\" messageRef=\"Message_ScoringResult\"/>\n    <bpmn:messageFlow id=\"MessageFlow_DelayNotice\" name=\"Delay notice\" sourceRef=\"SendTask_NotifyDelay\" targetRef=\"CatchEvent_DelayNotice\" messageRef=\"Message_DelayNotification\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Level2Result\" name=\"Level 2 result\" sourceRef=\"SendTask_ReturnLevel2Result\" targetRef=\"CatchEvent_Level2Result\" messageRef=\"Message_ScoringResult\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowCheckLater\" name=\"Display check later\" sourceRef=\"SendTask_ShowCheckLater\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_CheckLater\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowResult1\" name=\"Display result\" sourceRef=\"SendTask_PresentResult\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_ResultDisplay\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShowResult2\" name=\"Display result\" sourceRef=\"SendTask_PresentResultLevel2\" targetRef=\"Participant_SalesClerk\" messageRef=\"Message_ResultDisplay\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Banking\" name=\"Banking System Credit Scoring\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_ScoringRequested\" name=\"Credit scoring requested\">\n      <bpmn:outgoing>Flow_StartToSend</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_ScoringRequested\" messageRef=\"Message_CreditScoreRequest\"/>\n    </bpmn:startEvent>\n\n    <bpmn:sendTask id=\"SendTask_ScoringRequest\" name=\"Send scoring request to agency\" messageRef=\"Message_ScoringRequest\">\n      <bpmn:incoming>Flow_StartToSend</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendToGateway</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:eventBasedGateway id=\"Gateway_AwaitAgency\" name=\"Await agency response\">\n      <bpmn:incoming>Flow_SendToGateway</bpmn:incoming>\n      <bpmn:outgoing>Flow_GatewayToLevel1</bpmn:outgoing>\n      <bpmn:outgoing>Flow_GatewayToDelay</bpmn:outgoing>\n    </bpmn:eventBasedGateway>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_Level1Result\" name=\"Level 1 result received\">\n      <bpmn:incoming>Flow_GatewayToLevel1</bpmn:incoming>\n      <bpmn:outgoing>Flow_Level1ToPresent</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_Level1Result\" messageRef=\"Message_ScoringResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_DelayNotice\" name=\"Delay notice received\">\n      <bpmn:incoming>Flow_GatewayToDelay</bpmn:incoming>\n      <bpmn:outgoing>Flow_DelayToCheckLater</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_DelayNotice\" messageRef=\"Message_DelayNotification\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"SendTask_PresentResult\" name=\"Present result to clerk\" messageRef=\"Message_ResultDisplay\">\n      <bpmn:incoming>Flow_Level1ToPresent</bpmn:incoming>\n      <bpmn:outgoing>Flow_PresentToMerge1</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:sendTask id=\"SendTask_ShowCheckLater\" name=\"Show message to check again later\" messageRef=\"Message_CheckLater\">\n      <bpmn:incoming>Flow_DelayToCheckLater</bpmn:incoming>\n      <bpmn:outgoing>Flow_CheckLaterToLevel2</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:intermediateCatchEvent id=\"CatchEvent_Level2Result\" name=\"Level 2 result received\">\n      <bpmn:incoming>Flow_CheckLaterToLevel2</bpmn:incoming>\n      <bpmn:outgoing>Flow_Level2ToPresent</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_Level2Result\" messageRef=\"Message_ScoringResult\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:sendTask id=\"SendTask_PresentResultLevel2\" name=\"Present result to clerk\" messageRef=\"Message_ResultDisplay\">\n      <bpmn:incoming>Flow_Level2ToPresent</bpmn:incoming>\n      <bpmn:outgoing>Flow_PresentToMerge2</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ResultMerge\" name=\"Result presented\">\n      <bpmn:incoming>Flow_PresentToMerge1</bpmn:incoming>\n      <bpmn:incoming>Flow_PresentToMerge2</bpmn:incoming>\n      <bpmn:outgoing>Flow_MergeToEnd</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:endEvent id=\"EndEvent_ResultPresented\" name=\"Scoring result presented to clerk\">\n      <bpmn:incoming>Flow_MergeToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToSend\" sourceRef=\"StartEvent_ScoringRequested\" targetRef=\"SendTask_ScoringRequest\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendToGateway\" sourceRef=\"SendTask_ScoringRequest\" targetRef=\"Gateway_AwaitAgency\"/>\n    <bpmn:sequenceFlow id=\"Flow_GatewayToLevel1\" sourceRef=\"Gateway_AwaitAgency\" targetRef=\"CatchEvent_Level1Result\"/>\n    <bpmn:sequenceFlow id=\"Flow_GatewayToDelay\" sourceRef=\"Gateway_AwaitAgency\" targetRef=\"CatchEvent_DelayNotice\"/>\n    <bpmn:sequenceFlow id=\"Flow_Level1ToPresent\" sourceRef=\"CatchEvent_Level1Result\" targetRef=\"SendTask_PresentResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_PresentToMerge1\" sourceRef=\"SendTask_PresentResult\" targetRef=\"Gateway_ResultMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_DelayToCheckLater\" sourceRef=\"CatchEvent_DelayNotice\" targetRef=\"SendTask_ShowCheckLater\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckLaterToLevel2\" sourceRef=\"SendTask_ShowCheckLater\" targetRef=\"CatchEvent_Level2Result\"/>\n    <bpmn:sequenceFlow id=\"Flow_Level2ToPresent\" sourceRef=\"CatchEvent_Level2Result\" targetRef=\"SendTask_PresentResultLevel2\"/>\n    <bpmn:sequenceFlow id=\"Flow_PresentToMerge2\" sourceRef=\"SendTask_PresentResultLevel2\" targetRef=\"Gateway_ResultMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MergeToEnd\" sourceRef=\"Gateway_ResultMerge\" targetRef=\"EndEvent_ResultPresented\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_Agency\" name=\"Credit Scoring Agency Process\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_RequestReceived\" name=\"Scoring request received\">\n      <bpmn:outgoing>Flow_AgencyStartToL1</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_RequestReceived\" messageRef=\"Message_ScoringRequest\"/>\n    </bpmn:startEvent>\n\n    <bpmn:task id=\"Task_Level1Scoring\" name=\"Perform level 1 scoring\">\n      <bpmn:incoming>Flow_AgencyStartToL1</bpmn:incoming>\n      <bpmn:outgoing>Flow_L1ToGateway</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ImmediateResult\" name=\"Scoring determined immediately?\" default=\"Flow_NotImmediate\">\n      <bpmn:incoming>Flow_L1ToGateway</bpmn:incoming>\n      <bpmn:outgoing>Flow_Immediate</bpmn:outgoing>\n      <bpmn:outgoing>Flow_NotImmediate</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:sendTask id=\"SendTask_ReturnImmediateResult\" name=\"Return immediate result to banking system\" messageRef=\"Message_ScoringResult\">\n      <bpmn:incoming>Flow_Immediate</bpmn:incoming>\n      <bpmn:outgoing>Flow_ImmediateToEnd</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_ImmediateReturned\" name=\"Immediate result returned\">\n      <bpmn:incoming>Flow_ImmediateToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sendTask id=\"SendTask_NotifyDelay\" name=\"Notify banking system of delay\" messageRef=\"Message_DelayNotification\">\n      <bpmn:incoming>Flow_NotImmediate</bpmn:incoming>\n      <bpmn:outgoing>Flow_DelayToL2</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_Level2Scoring\" name=\"Perform level 2 scoring\">\n      <bpmn:incoming>Flow_DelayToL2</bpmn:incoming>\n      <bpmn:outgoing>Flow_L2ToReturn</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:sendTask id=\"SendTask_ReturnLevel2Result\" name=\"Return level 2 result to banking system\" messageRef=\"Message_ScoringResult\">\n      <bpmn:incoming>Flow_L2ToReturn</bpmn:incoming>\n      <bpmn:outgoing>Flow_ReturnL2ToEnd</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_Level2Returned\" name=\"Level 2 result returned\">\n      <bpmn:incoming>Flow_ReturnL2ToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_AgencyStartToL1\" sourceRef=\"StartEvent_RequestReceived\" targetRef=\"Task_Level1Scoring\"/>\n    <bpmn:sequenceFlow id=\"Flow_L1ToGateway\" sourceRef=\"Task_Level1Scoring\" targetRef=\"Gateway_ImmediateResult\"/>\n    <bpmn:sequenceFlow id=\"Flow_Immediate\" sourceRef=\"Gateway_ImmediateResult\" targetRef=\"SendTask_ReturnImmediateResult\">\n      <bpmn:conditionExpression>Scoring determined immediately</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotImmediate\" sourceRef=\"Gateway_ImmediateResult\" targetRef=\"SendTask_NotifyDelay\"/>\n    <bpmn:sequenceFlow id=\"Flow_ImmediateToEnd\" sourceRef=\"SendTask_ReturnImmediateResult\" targetRef=\"EndEvent_ImmediateReturned\"/>\n    <bpmn:sequenceFlow id=\"Flow_DelayToL2\" sourceRef=\"SendTask_NotifyDelay\" targetRef=\"Task_Level2Scoring\"/>\n    <bpmn:sequenceFlow id=\"Flow_L2ToReturn\" sourceRef=\"Task_Level2Scoring\" targetRef=\"SendTask_ReturnLevel2Result\"/>\n    <bpmn:sequenceFlow id=\"Flow_ReturnL2ToEnd\" sourceRef=\"SendTask_ReturnLevel2Result\" targetRef=\"EndEvent_Level2Returned\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": true,
+  "failed_levels": [],
+  "metrics": {
+   "semantic_similarity": 0.086532,
+   "activity_semantic_similarity": 0.111225,
+   "activity_label_precision": 0.25,
+   "activity_label_recall": 0.142857,
+   "activity_label_f1": 0.181818,
+   "activity_matched": 1,
+   "activity_reference": 7,
+   "activity_generated": 4,
+   "alignment_coverage": 0.125,
+   "connection_precision": 0.1,
+   "connection_recall": 0.0625,
+   "connection_f1": 0.076923,
+   "connection_tp": 1,
+   "connection_fp": 9,
+   "connection_fn": 15,
+   "workflow_order_similarity": 0.125,
+   "order_consistency": 1.0,
+   "order_coverage": 0.125,
+   "order_tp": 1,
+   "order_fp": 0,
+   "order_fn": 0,
+   "collaboration_similarity": 0.111111,
+   "collaboration_applicable": true,
+   "collaboration_tp": 2,
+   "collaboration_fp": 9,
+   "collaboration_fn": 7,
+   "type_precision_diagnostic": 0.7273,
+   "type_recall_diagnostic": 0.5,
+   "type_f1_diagnostic": 0.5926,
+   "counts": {
+    "gold_nodes": 16,
+    "generated_nodes": 11,
+    "gold_flows": 16,
+    "generated_flows": 10
+   },
+   "collaboration_ignored": false,
+   "semantic_similarity_strict": 0.086532,
+   "activity_semantic_similarity_strict": 0.111225,
+   "alignment_coverage_strict": 0.125,
+   "connection_precision_strict": 0.1,
+   "connection_recall_strict": 0.0625,
+   "connection_f1_strict": 0.076923,
+   "workflow_order_similarity_strict": 0.125,
+   "collaboration_similarity_strict": 0.111111,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T5",
+   "T6",
+   "T7"
+  ],
+  "error_counts": {
+   "T5": 24,
+   "T6": 9,
+   "T7": 16
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-059",
+    "instruction": "When the description says an external participant performs a computation or evaluation step (such as a calculation or assessment) before it replies, and the process sends that participant a request and receives replies or notices back from it: Model the external participant's computation step as a task inside that participant's pool, not as an intermediate catch event in the process pool. Model each request sent to the participant as a message flow from the process pool to the participant's pool, and each reply or notice the participant returns as a message flow from its pool back to the process. Where the description gives alternative paths (for example an immediate reply versus a delayed one), make that decision with an exclusive gateway in the process pool. Use an intermediate catch event in the process only where the process itself is described as waiting for a message, signal, time or condition.",
+    "situation": "the description says an external participant performs a computation or evaluation step (such as a calculation or assessment) before it replies, and the process sends that participant a request and receives replies or notices back from it",
+    "source": "learned guideline (refines ACT-05)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-043",
+    "instruction": "When the description states that a participant itself receives or confirms the result of a step, and a next action follows directly after it, with no stated waiting time and no external message or condition the process waits for: Model that result as a task carried out by the participant, placed in the sequence before the next action. Use an intermediate catch event or an event-based gateway only when the description states that the process waits for an external message, signal, time or condition.",
+    "situation": "the description states that a process is told by an external participant about an interim state (such as a delay) with no stated waiting period, and then the process itself shows or reports that notice to a human actor who is asked to act later",
+    "source": "learned guideline (refines ACT-05)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "EXS-038",
+    "instruction": "When the description has a software front-end, used by a person in one participant's organization, that hands a request to a back-end process of another participant and must receive that process's result back at the front-end: Model the front-end system as its own black-box pool with no internal workflow. Connect the front-end's request to a message start event in the back-end process pool with a message flow. Connect the back-end's final send task to that same front-end pool with a message flow. Do not represent the front-end's exchange with the back-end as a sequence flow, and do not fold the front-end into a lane of the back-end pool or replace it with a generic person pool.",
+    "situation": "the description has a software front-end, used by a person in one participant's organization, that hands a request to a back-end process of another participant and must receive that process's result back at the front-end",
+    "source": "example-specific guideline",
+    "failure_type": "T7"
+   },
+   {
+    "rule_id": "EXS-039",
+    "instruction": "When The description states a decision after a first quick step: one outcome is returned immediately, while the other is a delay that the performing participant reports to another participant before it runs a longer step and then sends the final outcome back to that participant.: Model the decision with an exclusive gateway placed after the quick step, with one branch that sends the immediate outcome to the receiving participant and one branch for the delay. On the delay branch, model the notice of delay as a send task, then model the longer step as a task in the performing participant's pool. Model the sending of the final outcome as its own send task after that longer step, connected by a message flow to the receiving participant. On the receiving side, model the wait for the final outcome as an intermediate catch event after the delay notice. Reunite the branches before the common closing end event, so that every path ends in an end event and no send-back step is dropped.",
+    "situation": "The description states a decision after a first quick step: one outcome is returned immediately, while the other is a delay that the performing participant reports to another participant before it runs a longer step and then sends the final outcome back to that participant.",
+    "source": "example-specific guideline",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "EXS-040",
+    "instruction": "When the description says that a requested evaluation is sometimes completed at once and sometimes only after a slower second evaluation, and the requesting process is told of the slower path before the answer comes back: After the step that sends the request and the first quick evaluation, place an exclusive gateway that separates the immediate-answer case from the slower case. On the immediate branch, send the answer to the requester and go to the end event. On the slower branch, notify the requester of the delay, continue with the slower evaluation, and model the answer's return as a message from the responding party to the requester, received by an intermediate catch event in the requesting process before the answer is handled. Route the handled answer to the same end event as the immediate branch, so that both branches are joined and no branch ends at the delay notice.",
+    "situation": "the description says that a requested evaluation is sometimes completed at once and sometimes only after a slower second evaluation, and the requesting process is told of the slower path before the answer comes back",
+    "source": "example-specific guideline",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "EXS-041",
+    "instruction": "When the description says a process sends a request to another participant, and that participant later sends back a reply, a delay notice, or a final answer that the process waits for through a catch event or a receive step: Model each reply as a message flow from the send task on the replying participant's side to the intermediate catch event or receive task that waits for it on the requesting side. Do not connect the waiting element by a sequence flow from another task of the same pool. Place the sending and waiting elements in different pools so that the message flow is valid.",
+    "situation": "the description says a process sends a request to another participant, and that participant later sends back a reply, a delay notice, or a final answer that the process waits for through a catch event or a receive step",
+    "source": "example-specific guideline",
+    "failure_type": "T7"
+   },
+   {
+    "rule_id": "EXS-042",
+    "instruction": "When the description says an external participant first carries out a step, and the outcome either comes back at once, or, if that step is not finished at once, the participant first sends a postponement notice to the requester, then carries out a further step, and afterwards sends the final outcome back to the requester: In the external participant's pool, model the first step as a task followed by an exclusive gateway with one outgoing flow per outcome. On the at-once branch, send the outcome to the requester with a send task and a message flow. On the postponed branch, send the postponement notice with a send task and a message flow, then a task for the further step, then a send task that returns the final outcome by a message flow. In the requester's pool, after the postponement notice, place an intermediate catch event that waits for the final outcome before the requester continues. Do not end the postponed branch at the notice or at the further step, and do not treat the notice as the end of the wait. Reunite the two outcome branches with an exclusive join where they lead to a common continuation.",
+    "situation": "the description says an external participant first carries out a step, and the outcome either comes back at once, or, if that step is not finished at once, the participant first sends a postponement notice to the requester, then carries out a further step, and afterwards sends the final outcome back to the requester",
+    "source": "example-specific guideline",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "EXS-043",
+    "instruction": "When the description states that an external participant performs a step that takes time (such as an evaluation or computation) and afterwards sends its outcome back to the process, which is waiting for that outcome: Model the external participant's step as a task in that participant's pool. Place a send task in the same pool directly after that task, connected by a sequence flow, and connect the send task to the receiving element in the process pool with a message flow. Do not leave the outcome of the step without a send task, even when the process pool receives the outcome later or through a separate waiting element.",
+    "situation": "the description states that an external participant performs a step that takes time (such as an evaluation or computation) and afterwards sends its outcome back to the process, which is waiting for that outcome",
+    "source": "example-specific guideline",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-060",
+    "instruction": "When the description has an interactive software system, used by a person in one participant's organization, that sends a request to a process run by another participant and must receive that process's outcome back in the system: Model the software system as its own black-box pool with no internal workflow. Connect its request to a message start event in the other participant's process pool with a message flow. Connect that process's final send task back to the same software system pool with a message flow. Do not represent this exchange as a sequence flow, and do not fold the software system into a lane of the other pool or replace it with a generic person pool.",
+    "situation": "The description says an interactive software application used by a person in one participant's organization starts a process run by another participant, and that process sends the application both interim notices (such as a delay) and the final outcome, which the application must show to that person.",
+    "source": "learned guideline (refines COL-01)",
+    "failure_type": "T7"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-059",
+    "LRN-043",
+    "EXS-038"
+   ],
+   "before": {
+    "semantic_similarity": 0.086532,
+    "workflow_order_similarity": 0.125,
+    "connection_f1": 0.076923,
+    "collaboration_similarity": 0.111111,
+    "alignment_coverage": 0.125,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.086532,
+    "activity_semantic_similarity": 0.111225,
+    "activity_label_precision": 0.25,
+    "activity_label_recall": 0.142857,
+    "activity_label_f1": 0.181818
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 24,
+    "T6": 9,
+    "T7": 16
+   },
+   "after": {
+    "semantic_similarity": 0.230878,
+    "workflow_order_similarity": 0.257143,
+    "connection_f1": 0.176471,
+    "alignment_coverage": 0.4
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.144346,
+    "workflow_order_similarity": 0.132143,
+    "connection_f1": 0.099548,
+    "alignment_coverage": 0.275
+   },
+   "mean_change": 0.162759,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 28,
+    "T6": 6,
+    "T7": 14
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.230878,
+    "activity_semantic_similarity": 0.440604,
+    "activity_label_precision": 0.555556,
+    "activity_label_recall": 0.714286,
+    "activity_label_f1": 0.625,
+    "activity_matched": 5,
+    "activity_reference": 7,
+    "activity_generated": 9,
+    "alignment_coverage": 0.4,
+    "connection_precision": 0.166667,
+    "connection_recall": 0.1875,
+    "connection_f1": 0.176471,
+    "connection_tp": 3,
+    "connection_fp": 15,
+    "connection_fn": 13,
+    "workflow_order_similarity": 0.257143,
+    "order_consistency": 0.857143,
+    "order_coverage": 0.3,
+    "order_tp": 6,
+    "order_fp": 0,
+    "order_fn": 1,
+    "collaboration_similarity": 0.176471,
+    "collaboration_applicable": true,
+    "collaboration_tp": 3,
+    "collaboration_fp": 8,
+    "collaboration_fn": 6,
+    "type_precision_diagnostic": 0.65,
+    "type_recall_diagnostic": 0.8125,
+    "type_f1_diagnostic": 0.7222,
+    "counts": {
+     "gold_nodes": 16,
+     "generated_nodes": 20,
+     "gold_flows": 16,
+     "generated_flows": 18
+    },
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.230878,
+    "activity_semantic_similarity_strict": 0.440604,
+    "alignment_coverage_strict": 0.4,
+    "connection_precision_strict": 0.166667,
+    "connection_recall_strict": 0.1875,
+    "connection_f1_strict": 0.176471,
+    "workflow_order_similarity_strict": 0.257143,
+    "collaboration_similarity_strict": 0.176471,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 64,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-043": {
+     "failure_type": "T5",
+     "errors_before": 24,
+     "errors_after": 28,
+     "removed": -4
+    },
+    "LRN-059": {
+     "failure_type": "T5",
+     "errors_before": 24,
+     "errors_after": 28,
+     "removed": -4
+    },
+    "EXS-038": {
+     "failure_type": "T7",
+     "errors_before": 16,
+     "errors_after": 14,
+     "removed": 2
+    }
+   },
+   "confirmed": true,
+   "promoted": [
+    {
+     "specific_id": "EXS-038",
+     "status": "promoted_after_confirmation",
+     "guideline_id": "LRN-060",
+     "trigger": "the description has an interactive software system, used by a person in one participant's organization, that sends a request to a process run by another participant and must receive that process's outcome back in the system",
+     "instruction": "Model the software system as its own black-box pool with no internal workflow. Connect its request to a message start event in the other participant's process pool with a message flow. Connect that process's final send task back to the same software system pool with a message flow. Do not represent this exchange as a sequence flow, and do not fold the software system into a lane of the other pool or replace it with a generic person pool.",
+     "detail": "general form of EXS-038, written after it improved the model of example 23"
+    }
+   ],
+   "detected_after": [
+    "T5",
+    "T6",
+    "T7"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "EXS-039",
+    "EXS-040",
+    "EXS-041"
+   ],
+   "before": {
+    "semantic_similarity": 0.230878,
+    "workflow_order_similarity": 0.257143,
+    "connection_f1": 0.176471,
+    "collaboration_similarity": 0.176471,
+    "alignment_coverage": 0.4,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.230878,
+    "activity_semantic_similarity": 0.440604,
+    "activity_label_precision": 0.555556,
+    "activity_label_recall": 0.714286,
+    "activity_label_f1": 0.625
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 28,
+    "T6": 6,
+    "T7": 14
+   },
+   "reverted": {
+    "draft": 2,
+    "errors": {
+     "T5": 29,
+     "T6": 6,
+     "T7": 14
+    },
+    "errors_before": {
+     "T5": 28,
+     "T6": 6,
+     "T7": 14
+    },
+    "mean_change": 0.065524
+   },
+   "after": {
+    "semantic_similarity": 0.230878,
+    "workflow_order_similarity": 0.257143,
+    "connection_f1": 0.176471,
+    "alignment_coverage": 0.4
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 28,
+    "T6": 6,
+    "T7": 14
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.230878,
+    "activity_semantic_similarity": 0.440604,
+    "activity_label_precision": 0.555556,
+    "activity_label_recall": 0.714286,
+    "activity_label_f1": 0.625,
+    "activity_matched": 5,
+    "activity_reference": 7,
+    "activity_generated": 9,
+    "alignment_coverage": 0.4,
+    "connection_precision": 0.166667,
+    "connection_recall": 0.1875,
+    "connection_f1": 0.176471,
+    "connection_tp": 3,
+    "connection_fp": 15,
+    "connection_fn": 13,
+    "workflow_order_similarity": 0.257143,
+    "order_consistency": 0.857143,
+    "order_coverage": 0.3,
+    "order_tp": 6,
+    "order_fp": 0,
+    "order_fn": 1,
+    "collaboration_similarity": 0.176471,
+    "collaboration_applicable": true,
+    "collaboration_tp": 3,
+    "collaboration_fp": 8,
+    "collaboration_fn": 6,
+    "type_precision_diagnostic": 0.65,
+    "type_recall_diagnostic": 0.8125,
+    "type_f1_diagnostic": 0.7222,
+    "counts": {
+     "gold_nodes": 16,
+     "generated_nodes": 20,
+     "gold_flows": 16,
+     "generated_flows": 18
+    },
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.230878,
+    "activity_semantic_similarity_strict": 0.440604,
+    "alignment_coverage_strict": 0.4,
+    "connection_precision_strict": 0.166667,
+    "connection_recall_strict": 0.1875,
+    "connection_f1_strict": 0.176471,
+    "workflow_order_similarity_strict": 0.257143,
+    "collaboration_similarity_strict": 0.176471,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 64,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "EXS-039": {
+     "failure_type": "T5",
+     "errors_before": 28,
+     "errors_after": 28,
+     "removed": 0
+    },
+    "EXS-040": {
+     "failure_type": "T6",
+     "errors_before": 6,
+     "errors_after": 6,
+     "removed": 0
+    },
+    "EXS-041": {
+     "failure_type": "T7",
+     "errors_before": 14,
+     "errors_after": 14,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6",
+    "T7"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [
+    "EXS-042",
+    "EXS-043",
+    "LRN-060"
+   ],
+   "before": {
+    "semantic_similarity": 0.230878,
+    "workflow_order_similarity": 0.257143,
+    "connection_f1": 0.176471,
+    "collaboration_similarity": 0.176471,
+    "alignment_coverage": 0.4,
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.230878,
+    "activity_semantic_similarity": 0.440604,
+    "activity_label_precision": 0.555556,
+    "activity_label_recall": 0.714286,
+    "activity_label_f1": 0.625
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 28,
+    "T6": 6,
+    "T7": 14
+   },
+   "reverted": {
+    "draft": 3,
+    "errors": {
+     "T5": 29,
+     "T6": 6,
+     "T7": 14
+    },
+    "errors_before": {
+     "T5": 28,
+     "T6": 6,
+     "T7": 14
+    },
+    "mean_change": 0.032957
+   },
+   "after": {
+    "semantic_similarity": 0.230878,
+    "workflow_order_similarity": 0.257143,
+    "connection_f1": 0.176471,
+    "alignment_coverage": 0.4
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 28,
+    "T6": 6,
+    "T7": 14
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.230878,
+    "activity_semantic_similarity": 0.440604,
+    "activity_label_precision": 0.555556,
+    "activity_label_recall": 0.714286,
+    "activity_label_f1": 0.625,
+    "activity_matched": 5,
+    "activity_reference": 7,
+    "activity_generated": 9,
+    "alignment_coverage": 0.4,
+    "connection_precision": 0.166667,
+    "connection_recall": 0.1875,
+    "connection_f1": 0.176471,
+    "connection_tp": 3,
+    "connection_fp": 15,
+    "connection_fn": 13,
+    "workflow_order_similarity": 0.257143,
+    "order_consistency": 0.857143,
+    "order_coverage": 0.3,
+    "order_tp": 6,
+    "order_fp": 0,
+    "order_fn": 1,
+    "collaboration_similarity": 0.176471,
+    "collaboration_applicable": true,
+    "collaboration_tp": 3,
+    "collaboration_fp": 8,
+    "collaboration_fn": 6,
+    "type_precision_diagnostic": 0.65,
+    "type_recall_diagnostic": 0.8125,
+    "type_f1_diagnostic": 0.7222,
+    "counts": {
+     "gold_nodes": 16,
+     "generated_nodes": 20,
+     "gold_flows": 16,
+     "generated_flows": 18
+    },
+    "collaboration_ignored": false,
+    "semantic_similarity_strict": 0.230878,
+    "activity_semantic_similarity_strict": 0.440604,
+    "alignment_coverage_strict": 0.4,
+    "connection_precision_strict": 0.166667,
+    "connection_recall_strict": 0.1875,
+    "connection_f1_strict": 0.176471,
+    "workflow_order_similarity_strict": 0.257143,
+    "collaboration_similarity_strict": 0.176471,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 64,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 20,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 8,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-060": {
+     "failure_type": "T7",
+     "errors_before": 14,
+     "errors_after": 14,
+     "removed": 0
+    },
+    "EXS-042": {
+     "failure_type": "T5",
+     "errors_before": 28,
+     "errors_after": 28,
+     "removed": 0
+    },
+    "EXS-043": {
+     "failure_type": "T6",
+     "errors_before": 6,
+     "errors_after": 6,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6",
+    "T7"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.230878,
+  "activity_semantic_similarity": 0.440604,
+  "activity_label_precision": 0.555556,
+  "activity_label_recall": 0.714286,
+  "activity_label_f1": 0.625,
+  "activity_matched": 5,
+  "activity_reference": 7,
+  "activity_generated": 9,
+  "alignment_coverage": 0.4,
+  "connection_precision": 0.166667,
+  "connection_recall": 0.1875,
+  "connection_f1": 0.176471,
+  "connection_tp": 3,
+  "connection_fp": 15,
+  "connection_fn": 13,
+  "workflow_order_similarity": 0.257143,
+  "order_consistency": 0.857143,
+  "order_coverage": 0.3,
+  "order_tp": 6,
+  "order_fp": 0,
+  "order_fn": 1,
+  "collaboration_similarity": 0.176471,
+  "collaboration_applicable": true,
+  "collaboration_tp": 3,
+  "collaboration_fp": 8,
+  "collaboration_fn": 6,
+  "type_precision_diagnostic": 0.65,
+  "type_recall_diagnostic": 0.8125,
+  "type_f1_diagnostic": 0.7222,
+  "counts": {
+   "gold_nodes": 16,
+   "generated_nodes": 20,
+   "gold_flows": 16,
+   "generated_flows": 18
+  },
+  "collaboration_ignored": false,
+  "semantic_similarity_strict": 0.230878,
+  "activity_semantic_similarity_strict": 0.440604,
+  "alignment_coverage_strict": 0.4,
+  "connection_precision_strict": 0.166667,
+  "connection_recall_strict": 0.1875,
+  "connection_f1_strict": 0.176471,
+  "workflow_order_similarity_strict": 0.257143,
+  "collaboration_similarity_strict": 0.176471,
+  "collaboration_applicable_strict": true
+ }
+}

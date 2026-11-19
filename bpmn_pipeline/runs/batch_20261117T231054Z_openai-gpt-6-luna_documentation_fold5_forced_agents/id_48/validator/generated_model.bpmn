@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  targetNamespace="https://example.org/bpmn/vienna-night-run">
+  <bpmn:process id="Process_ViennaNightRun" name="App For Participating at the Vienna Night Run" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Main">
+      <bpmn:lane id="Lane_Participant" name="Participant">
+        <bpmn:flowNodeRef>StartEvent_WantToParticipate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SelectStartingBlock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterInformation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RunQualification</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Qualification</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Train</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GetStartingNumber</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AssessTravelTime</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TravelOption</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GoFromHome</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_LeaveFromWork</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TravelMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_RaceSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RunNightRun</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DrinkDuringRun</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_RaceJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReceiveFinalTime</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_FinalTimeReceived</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_FitnessGadget" name="Fitness gadget">
+        <bpmn:flowNodeRef>Task_MeasureQualificationTime</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CollectFinalTime</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_WantToParticipate" name="Want to participate in the Vienna Night Run"/>
+    <bpmn:task id="Task_SelectStartingBlock" name="Select a starting block"/>
+    <bpmn:task id="Task_EnterInformation" name="Enter required information in the app"/>
+    <bpmn:task id="Task_RunQualification" name="Run 5 km"/>
+    <bpmn:task id="Task_MeasureQualificationTime" name="Measure 5 km time"/>
+    <bpmn:exclusiveGateway id="Gateway_Qualification" name="Is the time less than 25 minutes?" default="Flow_QualificationFail"/>
+    <bpmn:task id="Task_Train" name="Train"/>
+    <bpmn:task id="Task_GetStartingNumber" name="Get starting number"/>
+    <bpmn:task id="Task_AssessTravelTime" name="Find out how much time is available after work"/>
+    <bpmn:exclusiveGateway id="Gateway_TravelOption" name="Is more than one hour available?" default="Flow_TravelFromWork"/>
+    <bpmn:task id="Task_GoFromHome" name="Go to the Night Run from home"/>
+    <bpmn:task id="Task_LeaveFromWork" name="Leave directly from work for the Night Run"/>
+    <bpmn:exclusiveGateway id="Gateway_TravelMerge" name="Merge travel options"/>
+    <bpmn:parallelGateway id="Gateway_RaceSplit" name="Run and drink at the same time"/>
+    <bpmn:task id="Task_RunNightRun" name="Run at the Night Run"/>
+    <bpmn:task id="Task_DrinkDuringRun" name="Drink during the run"/>
+    <bpmn:parallelGateway id="Gateway_RaceJoin" name="Finish running and drinking"/>
+    <bpmn:task id="Task_CollectFinalTime" name="Collect final running time"/>
+    <bpmn:task id="Task_ReceiveFinalTime" name="Receive final running time"/>
+    <bpmn:endEvent id="EndEvent_FinalTimeReceived" name="Final running time received"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Select" sourceRef="StartEvent_WantToParticipate" targetRef="Task_SelectStartingBlock"/>
+    <bpmn:sequenceFlow id="Flow_Select_Enter" sourceRef="Task_SelectStartingBlock" targetRef="Task_EnterInformation"/>
+    <bpmn:sequenceFlow id="Flow_Enter_Run" sourceRef="Task_EnterInformation" targetRef="Task_RunQualification"/>
+    <bpmn:sequenceFlow id="Flow_Run_Measure" sourceRef="Task_RunQualification" targetRef="Task_MeasureQualificationTime"/>
+    <bpmn:sequenceFlow id="Flow_Measure_Qualification" sourceRef="Task_MeasureQualificationTime" targetRef="Gateway_Qualification"/>
+    <bpmn:sequenceFlow id="Flow_QualificationPass" name="Less than 25 minutes" sourceRef="Gateway_Qualification" targetRef="Task_GetStartingNumber">
+      <bpmn:conditionExpression language="http://www.omg.org/spec/FEEL/20140401">qualificationTime &lt; 25</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_QualificationFail" name="25 minutes or more" sourceRef="Gateway_Qualification" targetRef="Task_Train"/>
+    <bpmn:sequenceFlow id="Flow_Train_Rerun" sourceRef="Task_Train" targetRef="Task_RunQualification"/>
+    <bpmn:sequenceFlow id="Flow_GetNumber_Assess" sourceRef="Task_GetStartingNumber" targetRef="Task_AssessTravelTime"/>
+    <bpmn:sequenceFlow id="Flow_Assess_TravelOption" sourceRef="Task_AssessTravelTime" targetRef="Gateway_TravelOption"/>
+    <bpmn:sequenceFlow id="Flow_TravelFromHome" name="More than one hour available" sourceRef="Gateway_TravelOption" targetRef="Task_GoFromHome">
+      <bpmn:conditionExpression language="http://www.omg.org/spec/FEEL/20140401">availableHours &gt; 1</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_TravelFromWork" name="One hour or less available" sourceRef="Gateway_TravelOption" targetRef="Task_LeaveFromWork"/>
+    <bpmn:sequenceFlow id="Flow_Home_TravelMerge" sourceRef="Task_GoFromHome" targetRef="Gateway_TravelMerge"/>
+    <bpmn:sequenceFlow id="Flow_Work_TravelMerge" sourceRef="Task_LeaveFromWork" targetRef="Gateway_TravelMerge"/>
+    <bpmn:sequenceFlow id="Flow_TravelMerge_RaceSplit" sourceRef="Gateway_TravelMerge" targetRef="Gateway_RaceSplit"/>
+    <bpmn:sequenceFlow id="Flow_RaceSplit_Run" sourceRef="Gateway_RaceSplit" targetRef="Task_RunNightRun"/>
+    <bpmn:sequenceFlow id="Flow_RaceSplit_Drink" sourceRef="Gateway_RaceSplit" targetRef="Task_DrinkDuringRun"/>
+    <bpmn:sequenceFlow id="Flow_Run_RaceJoin" sourceRef="Task_RunNightRun" targetRef="Gateway_RaceJoin"/>
+    <bpmn:sequenceFlow id="Flow_Drink_RaceJoin" sourceRef="Task_DrinkDuringRun" targetRef="Gateway_RaceJoin"/>
+    <bpmn:sequenceFlow id="Flow_RaceJoin_Collect" sourceRef="Gateway_RaceJoin" targetRef="Task_CollectFinalTime"/>
+    <bpmn:sequenceFlow id="Flow_Collect_Receive" sourceRef="Task_CollectFinalTime" targetRef="Task_ReceiveFinalTime"/>
+    <bpmn:sequenceFlow id="Flow_Receive_End" sourceRef="Task_ReceiveFinalTime" targetRef="EndEvent_FinalTimeReceived"/>
+  </bpmn:process>
+</bpmn:definitions>

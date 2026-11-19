@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Restaurant"
+                  targetNamespace="http://example.com/restaurant">
+  <bpmn:message id="Message_GuestOrder" name="Guest order"/>
+  <bpmn:message id="Message_Payment" name="Payment"/>
+  <bpmn:message id="Message_NewMealOrder" name="New meal order"/>
+  <bpmn:message id="Message_MealReady" name="Meal ready"/>
+  <bpmn:message id="Message_Buzzer" name="Buzzer rings"/>
+  <bpmn:message id="Message_GuestAtHatch" name="Guest at service hatch"/>
+  <bpmn:message id="Message_MealHandover" name="Meal handed over"/>
+
+  <bpmn:collaboration id="Collaboration_Restaurant">
+    <bpmn:participant id="Participant_Guest" name="Guest" processRef="Process_Guest"/>
+    <bpmn:participant id="Participant_Restaurant" name="Restaurant" processRef="Process_Restaurant"/>
+    <bpmn:messageFlow id="MessageFlow_GuestOrder" name="Place order" sourceRef="Task_PlaceOrder" targetRef="Start_Order" messageRef="Message_GuestOrder"/>
+    <bpmn:messageFlow id="MessageFlow_Payment" name="Pay for meal" sourceRef="Task_Pay" targetRef="Task_CollectPayment" messageRef="Message_Payment"/>
+    <bpmn:messageFlow id="MessageFlow_NewMealOrder" name="Inform chef of new meal order" sourceRef="Task_InformChef" targetRef="Start_ChefOrder" messageRef="Message_NewMealOrder"/>
+    <bpmn:messageFlow id="MessageFlow_MealReady" name="Inform employee meal is ready" sourceRef="Task_InformEmployee" targetRef="Event_MealReady" messageRef="Message_MealReady"/>
+    <bpmn:messageFlow id="MessageFlow_Buzzer" name="Buzzer rings" sourceRef="Task_SetOffBuzzer" targetRef="Event_BuzzerRings" messageRef="Message_Buzzer"/>
+    <bpmn:messageFlow id="MessageFlow_GuestAtHatch" name="Guest appears at service hatch" sourceRef="Task_ArriveAtHatch" targetRef="Event_GuestAtHatch" messageRef="Message_GuestAtHatch"/>
+    <bpmn:messageFlow id="MessageFlow_MealHandover" name="Hand over meal" sourceRef="Task_HandOverMeal" targetRef="Event_MealHandedOver" messageRef="Message_MealHandover"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Guest" name="Guest meal collection" isExecutable="false">
+    <bpmn:startEvent id="Start_Hungry" name="Feeling hungry"/>
+    <bpmn:task id="Task_ChooseDish" name="Choose a dish from the changing meal range"/>
+    <bpmn:task id="Task_WaitTurn" name="Wait until it is his turn"/>
+    <bpmn:sendTask id="Task_PlaceOrder" name="Place order with employee" messageRef="Message_GuestOrder"/>
+    <bpmn:sendTask id="Task_Pay" name="Pay for meal" messageRef="Message_Payment"/>
+    <bpmn:intermediateCatchEvent id="Event_BuzzerRings" name="Buzzer rings">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Buzzer" messageRef="Message_Buzzer"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_GoToHatch" name="Go to service hatch"/>
+    <bpmn:sendTask id="Task_ArriveAtHatch" name="Appear at service hatch" messageRef="Message_GuestAtHatch"/>
+    <bpmn:intermediateCatchEvent id="Event_MealHandedOver" name="Meal handed over">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_MealHandover" messageRef="Message_MealHandover"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_PickUpMeal" name="Pick up meal"/>
+    <bpmn:task id="Task_EatMeal" name="Eat meal"/>
+    <bpmn:endEvent id="End_Guest" name="Meal eaten"/>
+
+    <bpmn:sequenceFlow id="GuestFlow_1" sourceRef="Start_Hungry" targetRef="Task_ChooseDish"/>
+    <bpmn:sequenceFlow id="GuestFlow_2" sourceRef="Task_ChooseDish" targetRef="Task_WaitTurn"/>
+    <bpmn:sequenceFlow id="GuestFlow_3" sourceRef="Task_WaitTurn" targetRef="Task_PlaceOrder"/>
+    <bpmn:sequenceFlow id="GuestFlow_4" sourceRef="Task_PlaceOrder" targetRef="Task_Pay"/>
+    <bpmn:sequenceFlow id="GuestFlow_5" sourceRef="Task_Pay" targetRef="Event_BuzzerRings"/>
+    <bpmn:sequenceFlow id="GuestFlow_6" sourceRef="Event_BuzzerRings" targetRef="Task_GoToHatch"/>
+    <bpmn:sequenceFlow id="GuestFlow_7" sourceRef="Task_GoToHatch" targetRef="Task_ArriveAtHatch"/>
+    <bpmn:sequenceFlow id="GuestFlow_8" sourceRef="Task_ArriveAtHatch" targetRef="Event_MealHandedOver"/>
+    <bpmn:sequenceFlow id="GuestFlow_9" sourceRef="Event_MealHandedOver" targetRef="Task_PickUpMeal"/>
+    <bpmn:sequenceFlow id="GuestFlow_10" sourceRef="Task_PickUpMeal" targetRef="Task_EatMeal"/>
+    <bpmn:sequenceFlow id="GuestFlow_11" sourceRef="Task_EatMeal" targetRef="End_Guest"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Restaurant" name="Restaurant meal service" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Restaurant">
+      <bpmn:lane id="Lane_Employee" name="Employee">
+        <bpmn:flowNodeRef>Start_Order</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterPOS</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CollectPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SetUpBuzzer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_InformChef</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_MealReady</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SetOffBuzzer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_WaitForGuestOrTimer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_GuestAtHatch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_FiveMinutes</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CallGuest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_HandOverMeal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Employee</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Chef" name="Chef">
+        <bpmn:flowNodeRef>Start_ChefOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PrepareMeal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PlaceMealInHatch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_InformEmployee</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Chef</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Order" name="Guest order received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_GuestOrder" messageRef="Message_GuestOrder"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_EnterPOS" name="Enter order into POS system"/>
+    <bpmn:receiveTask id="Task_CollectPayment" name="Collect payment" messageRef="Message_Payment"/>
+    <bpmn:task id="Task_SetUpBuzzer" name="Set up buzzer and pass it to guest with instructions"/>
+    <bpmn:sendTask id="Task_InformChef" name="Inform chef of new meal order" messageRef="Message_NewMealOrder"/>
+    <bpmn:intermediateCatchEvent id="Event_MealReady" name="Employee informed meal is ready">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_MealReady" messageRef="Message_MealReady"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="Task_SetOffBuzzer" name="Set off guest's buzzer" messageRef="Message_Buzzer"/>
+    <bpmn:eventBasedGateway id="Gateway_WaitForGuestOrTimer" name="Wait for guest or five minutes"/>
+    <bpmn:intermediateCatchEvent id="Event_GuestAtHatch" name="Guest appears at service hatch">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_GuestAtHatch" messageRef="Message_GuestAtHatch"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_FiveMinutes" name="Five minutes pass">
+      <bpmn:timerEventDefinition id="TimerDefinition_FiveMinutes">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_CallGuest" name="Call guest"/>
+    <bpmn:task id="Task_HandOverMeal" name="Hand over meal to guest"/>
+    <bpmn:endEvent id="End_Employee" name="Meal handed over"/>
+
+    <bpmn:startEvent id="Start_ChefOrder" name="New meal order received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_NewMealOrder" messageRef="Message_NewMealOrder"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_PrepareMeal" name="Prepare meal"/>
+    <bpmn:task id="Task_PlaceMealInHatch" name="Place meal in service hatch"/>
+    <bpmn:sendTask id="Task_InformEmployee" name="Inform employee meal is ready" messageRef="Message_MealReady"/>
+    <bpmn:endEvent id="End_Chef" name="Employee informed"/>
+
+    <bpmn:sequenceFlow id="RestaurantFlow_1" sourceRef="Start_Order" targetRef="Task_EnterPOS"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_2" sourceRef="Task_EnterPOS" targetRef="Task_CollectPayment"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_3" sourceRef="Task_CollectPayment" targetRef="Task_SetUpBuzzer"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_4" sourceRef="Task_SetUpBuzzer" targetRef="Task_InformChef"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_5" sourceRef="Task_InformChef" targetRef="Event_MealReady"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_6" sourceRef="Event_MealReady" targetRef="Task_SetOffBuzzer"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_7" sourceRef="Task_SetOffBuzzer" targetRef="Gateway_WaitForGuestOrTimer"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_8" sourceRef="Gateway_WaitForGuestOrTimer" targetRef="Event_GuestAtHatch"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_9" sourceRef="Gateway_WaitForGuestOrTimer" targetRef="Event_FiveMinutes"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_10" sourceRef="Event_GuestAtHatch" targetRef="Task_HandOverMeal"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_11" sourceRef="Event_FiveMinutes" targetRef="Task_CallGuest"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_12" sourceRef="Task_CallGuest" targetRef="Gateway_WaitForGuestOrTimer"/>
+    <bpmn:sequenceFlow id="RestaurantFlow_13" sourceRef="Task_HandOverMeal" targetRef="End_Employee"/>
+
+    <bpmn:sequenceFlow id="ChefFlow_1" sourceRef="Start_ChefOrder" targetRef="Task_PrepareMeal"/>
+    <bpmn:sequenceFlow id="ChefFlow_2" sourceRef="Task_PrepareMeal" targetRef="Task_PlaceMealInHatch"/>
+    <bpmn:sequenceFlow id="ChefFlow_3" sourceRef="Task_PlaceMealInHatch" targetRef="Task_InformEmployee"/>
+    <bpmn:sequenceFlow id="ChefFlow_4" sourceRef="Task_InformEmployee" targetRef="End_Chef"/>
+  </bpmn:process>
+</bpmn:definitions>

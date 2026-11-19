@@ -1,0 +1,776 @@
+{
+ "id": "06",
+ "kept_round": 3,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": false,
+   "failed_levels": [
+    "L1"
+   ],
+   "seconds": 51.9,
+   "validator_levels": {
+    "L1": {
+     "result": false,
+     "correct": 36,
+     "incorrect": 1,
+     "accuracy": 0.973,
+     "incorrect_elements": [
+      {
+       "id": "Flow_Start_GenerateConfirmation",
+       "tag": "sequenceFlow",
+       "line": 76,
+       "reason": null
+      }
+     ]
+    },
+    "L2": {
+     "result": true,
+     "correct": 1,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 10,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.450237,
+    "workflow_order_similarity": 0.334091,
+    "connection_f1": 0.121212,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.35,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.292654,
+    "activity_semantic_similarity": 0.585308,
+    "activity_label_precision": 0.857143,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.705882
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_OrderDelivery\" targetNamespace=\"http://example.com/bpmn/order-delivery\">\n  <bpmn:message id=\"Message_Order\" name=\"Order\"/>\n  <bpmn:message id=\"Message_OrderConfirmation\" name=\"Order confirmation\"/>\n  <bpmn:message id=\"Message_ShipmentHandover\" name=\"Shipment handover\"/>\n  <bpmn:message id=\"Message_TrackingInformation\" name=\"Tracking information\"/>\n\n  <bpmn:collaboration id=\"Collaboration_OrderDelivery\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:participant id=\"Participant_OrderProcess\" name=\"Order delivery process\" processRef=\"Process_OrderDelivery\"/>\n    <bpmn:participant id=\"Participant_LogisticsProvider\" name=\"Logistics provider\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Order\" name=\"Order placed online or by phone\" sourceRef=\"Participant_Customer\" targetRef=\"StartEvent_OrderPlaced\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Confirmation\" name=\"Order confirmation\" sourceRef=\"Task_SendConfirmation\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Handover\" name=\"Shipment handed over\" sourceRef=\"Task_HandOverShipment\" targetRef=\"Participant_LogisticsProvider\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Tracking\" name=\"Tracking information\" sourceRef=\"Task_SendTracking\" targetRef=\"Participant_Customer\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_OrderDelivery\" name=\"Order delivery\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_OrderPlaced\" name=\"Order placed online or by phone\">\n      <bpmn:outgoing>Flow_Start_GenerateConfirmation</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Order\" messageRef=\"Message_Order\"/>\n    </bpmn:startEvent>\n\n    <bpmn:serviceTask id=\"Task_GenerateConfirmation\" name=\"Generate order confirmation\">\n      <bpmn:incoming>Flow_Start_GenerateConfirmation</bpmn:incoming>\n      <bpmn:outgoing>Flow_Generate_SendConfirmation</bpmn:outgoing>\n    </bpmn:serviceTask>\n\n    <bpmn:sendTask id=\"Task_SendConfirmation\" name=\"Send order confirmation\" messageRef=\"Message_OrderConfirmation\">\n      <bpmn:incoming>Flow_Generate_SendConfirmation</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendConfirmation_PickPack</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_PickPack\" name=\"Pick and pack items\">\n      <bpmn:incoming>Flow_SendConfirmation_PickPack</bpmn:incoming>\n      <bpmn:outgoing>Flow_PickPack_GenerateLabel</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:task id=\"Task_GenerateShippingLabel\" name=\"Generate shipping label\">\n      <bpmn:incoming>Flow_PickPack_GenerateLabel</bpmn:incoming>\n      <bpmn:outgoing>Flow_GenerateLabel_HandOver</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:sendTask id=\"Task_HandOverShipment\" name=\"Hand over shipment to logistics provider\" messageRef=\"Message_ShipmentHandover\">\n      <bpmn:incoming>Flow_GenerateLabel_HandOver</bpmn:incoming>\n      <bpmn:outgoing>Flow_HandOver_SendTracking</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:sendTask id=\"Task_SendTracking\" name=\"Send tracking information\" messageRef=\"Message_TrackingInformation\">\n      <bpmn:incoming>Flow_HandOver_SendTracking</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendTracking_Monitor</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_MonitorShipment\" name=\"Monitor shipment\">\n      <bpmn:incoming>Flow_SendTracking_Monitor</bpmn:incoming>\n      <bpmn:incoming>Flow_NotDelivered_Monitor</bpmn:incoming>\n      <bpmn:outgoing>Flow_Monitor_DeliveryDecision</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:exclusiveGateway id=\"Gateway_DeliveryDecision\" name=\"Reached customer's address?\" default=\"Flow_NotDelivered_Monitor\">\n      <bpmn:incoming>Flow_Monitor_DeliveryDecision</bpmn:incoming>\n      <bpmn:outgoing>Flow_Delivered_End</bpmn:outgoing>\n      <bpmn:outgoing>Flow_NotDelivered_Monitor</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:endEvent id=\"EndEvent_Delivered\" name=\"Successfully delivered\">\n      <bpmn:incoming>Flow_Delivered_End</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:textAnnotation id=\"Annotation_PostDelivery\">\n      <bpmn:text>Customer feedback or returns may trigger further actions; those actions are not specified here.</bpmn:text>\n    </bpmn:textAnnotation>\n\n    <bpmn:association id=\"Association_PostDelivery\" sourceRef=\"EndEvent_Delivered\" targetRef=\"Annotation_PostDelivery\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_GenerateConfirmation\" sourceRef=\"StartEvent_OrderPlaced\" targetRef=\"Task_GenerateConfirmation\"/>\n    <bpmn:sequenceFlow id=\"Flow_Generate_SendConfirmation\" sourceRef=\"Task_GenerateConfirmation\" targetRef=\"Task_SendConfirmation\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendConfirmation_PickPack\" sourceRef=\"Task_SendConfirmation\" targetRef=\"Task_PickPack\"/>\n    <bpmn:sequenceFlow id=\"Flow_PickPack_GenerateLabel\" sourceRef=\"Task_PickPack\" targetRef=\"Task_GenerateShippingLabel\"/>\n    <bpmn:sequenceFlow id=\"Flow_GenerateLabel_HandOver\" sourceRef=\"Task_GenerateShippingLabel\" targetRef=\"Task_HandOverShipment\"/>\n    <bpmn:sequenceFlow id=\"Flow_HandOver_SendTracking\" sourceRef=\"Task_HandOverShipment\" targetRef=\"Task_SendTracking\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendTracking_Monitor\" sourceRef=\"Task_SendTracking\" targetRef=\"Task_MonitorShipment\"/>\n    <bpmn:sequenceFlow id=\"Flow_Monitor_DeliveryDecision\" sourceRef=\"Task_MonitorShipment\" targetRef=\"Gateway_DeliveryDecision\"/>\n    <bpmn:sequenceFlow id=\"Flow_Delivered_End\" name=\"Yes\" sourceRef=\"Gateway_DeliveryDecision\" targetRef=\"EndEvent_Delivered\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">shipmentReachedCustomersAddress</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NotDelivered_Monitor\" name=\"Not yet\" sourceRef=\"Gateway_DeliveryDecision\" targetRef=\"Task_MonitorShipment\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 353.4,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 41,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 11,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.46652,
+    "workflow_order_similarity": 0.286364,
+    "connection_f1": 0.060606,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.45,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.311013,
+    "activity_semantic_similarity": 0.653128,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.7,
+    "activity_label_f1": 0.823529
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_OrderDelivery\" targetNamespace=\"http://example.com/bpmn/order-delivery\">\n  <bpmn:message id=\"Message_Order\" name=\"Customer order\"/>\n  <bpmn:message id=\"Message_OrderConfirmation\" name=\"Order confirmation\"/>\n  <bpmn:message id=\"Message_ShipmentHandover\" name=\"Shipment handover\"/>\n  <bpmn:message id=\"Message_TrackingInformation\" name=\"Tracking information\"/>\n\n  <bpmn:collaboration id=\"Collaboration_OrderDelivery\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:participant id=\"Participant_OrderDelivery\" name=\"Order delivery process\" processRef=\"Process_OrderDelivery\"/>\n    <bpmn:participant id=\"Participant_LogisticsProvider\" name=\"Logistics provider\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Order\" name=\"Customer places order online or over the phone\" sourceRef=\"Participant_Customer\" targetRef=\"StartEvent_OrderReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Confirmation\" name=\"Order confirmation to customer\" sourceRef=\"Task_SendConfirmation\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Handover\" name=\"Shipment handed over for delivery\" sourceRef=\"Task_HandOverShipment\" targetRef=\"Participant_LogisticsProvider\"/>\n    <bpmn:messageFlow id=\"MessageFlow_Tracking\" name=\"Tracking information to customer\" sourceRef=\"Task_SendTracking\" targetRef=\"Participant_Customer\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_OrderDelivery\" name=\"Order delivery\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_OrderReceived\" name=\"Customer order received\">\n      <bpmn:outgoing>Flow_Start_ChannelSplit</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_Order\" messageRef=\"Message_Order\"/>\n    </bpmn:startEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ChannelSplit\" name=\"Order channel?\" default=\"Flow_Channel_Phone\">\n      <bpmn:incoming>Flow_Start_ChannelSplit</bpmn:incoming>\n      <bpmn:outgoing>Flow_Channel_Online</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Channel_Phone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ChannelMerge\" name=\"Channel handling converges\">\n      <bpmn:incoming>Flow_Online_Merge</bpmn:incoming>\n      <bpmn:incoming>Flow_Phone_Merge</bpmn:incoming>\n      <bpmn:outgoing>Flow_Merge_GenerateConfirmation</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:serviceTask id=\"Task_GenerateConfirmation\" name=\"Generate order confirmation\">\n      <bpmn:incoming>Flow_Merge_GenerateConfirmation</bpmn:incoming>\n      <bpmn:outgoing>Flow_Generate_SendConfirmation</bpmn:outgoing>\n    </bpmn:serviceTask>\n\n    <bpmn:sendTask id=\"Task_SendConfirmation\" name=\"Send order confirmation to customer\" messageRef=\"Message_OrderConfirmation\">\n      <bpmn:incoming>Flow_Generate_SendConfirmation</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendConfirmation_PickPack</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_PickPack\" name=\"Pick and pack items\">\n      <bpmn:incoming>Flow_SendConfirmation_PickPack</bpmn:incoming>\n      <bpmn:outgoing>Flow_PickPack_GenerateLabel</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:task id=\"Task_GenerateShippingLabel\" name=\"Generate shipping label\">\n      <bpmn:incoming>Flow_PickPack_GenerateLabel</bpmn:incoming>\n      <bpmn:outgoing>Flow_GenerateLabel_HandOver</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:sendTask id=\"Task_HandOverShipment\" name=\"Hand over shipment to logistics provider\" messageRef=\"Message_ShipmentHandover\">\n      <bpmn:incoming>Flow_GenerateLabel_HandOver</bpmn:incoming>\n      <bpmn:outgoing>Flow_HandOver_SendTracking</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:sendTask id=\"Task_SendTracking\" name=\"Send tracking information to customer\" messageRef=\"Message_TrackingInformation\">\n      <bpmn:incoming>Flow_HandOver_SendTracking</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendTracking_Monitor</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_MonitorShipment\" name=\"Monitor shipment until it reaches the customer's address\">\n      <bpmn:incoming>Flow_SendTracking_Monitor</bpmn:incoming>\n      <bpmn:outgoing>Flow_Monitor_EndDelivered</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:endEvent id=\"EndEvent_Delivered\" name=\"Shipment successfully delivered\">\n      <bpmn:incoming>Flow_Monitor_EndDelivered</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_ChannelSplit\" sourceRef=\"StartEvent_OrderReceived\" targetRef=\"Gateway_ChannelSplit\"/>\n    <bpmn:sequenceFlow id=\"Flow_Channel_Online\" name=\"Online platform\" sourceRef=\"Gateway_ChannelSplit\" targetRef=\"Gateway_ChannelMerge\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">orderChannel = 'online'</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Channel_Phone\" name=\"Over the phone\" sourceRef=\"Gateway_ChannelSplit\" targetRef=\"Gateway_ChannelMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Online_Merge\" sourceRef=\"Gateway_ChannelMerge\" targetRef=\"Task_GenerateConfirmation\"/>\n    <bpmn:sequenceFlow id=\"Flow_Phone_Merge\" sourceRef=\"Gateway_ChannelMerge\" targetRef=\"Task_GenerateConfirmation\"/>\n    <bpmn:sequenceFlow id=\"Flow_Merge_GenerateConfirmation\" sourceRef=\"Gateway_ChannelMerge\" targetRef=\"Task_GenerateConfirmation\"/>\n    <bpmn:sequenceFlow id=\"Flow_Generate_SendConfirmation\" sourceRef=\"Task_GenerateConfirmation\" targetRef=\"Task_SendConfirmation\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendConfirmation_PickPack\" sourceRef=\"Task_SendConfirmation\" targetRef=\"Task_PickPack\"/>\n    <bpmn:sequenceFlow id=\"Flow_PickPack_GenerateLabel\" sourceRef=\"Task_PickPack\" targetRef=\"Task_GenerateShippingLabel\"/>\n    <bpmn:sequenceFlow id=\"Flow_GenerateLabel_HandOver\" sourceRef=\"Task_GenerateShippingLabel\" targetRef=\"Task_HandOverShipment\"/>\n    <bpmn:sequenceFlow id=\"Flow_HandOver_SendTracking\" sourceRef=\"Task_HandOverShipment\" targetRef=\"Task_SendTracking\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendTracking_Monitor\" sourceRef=\"Task_SendTracking\" targetRef=\"Task_MonitorShipment\"/>\n    <bpmn:sequenceFlow id=\"Flow_Monitor_EndDelivered\" sourceRef=\"Task_MonitorShipment\" targetRef=\"EndEvent_Delivered\"/>\n\n    <bpmn:textAnnotation id=\"Annotation_PostDelivery\">\n      <bpmn:text>Customer feedback or returns may trigger further actions; those actions are not specified here.</bpmn:text>\n    </bpmn:textAnnotation>\n    <bpmn:association id=\"Association_PostDelivery\" sourceRef=\"EndEvent_Delivered\" targetRef=\"Annotation_PostDelivery\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 655.0,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 47,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 14,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.449844,
+    "workflow_order_similarity": 0.286364,
+    "connection_f1": 0.057143,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.45,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.2879,
+    "activity_semantic_similarity": 0.719751,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.8,
+    "activity_label_f1": 0.888889
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_OrderDelivery\" targetNamespace=\"http://example.com/bpmn/order-delivery\">\n  <bpmn:message id=\"Message_CustomerOrder\" name=\"Customer order\"/>\n  <bpmn:message id=\"Message_OrderConfirmation\" name=\"Order confirmation\"/>\n  <bpmn:message id=\"Message_ShipmentHandover\" name=\"Shipment handover\"/>\n  <bpmn:message id=\"Message_TrackingInformation\" name=\"Tracking information\"/>\n  <bpmn:message id=\"Message_FeedbackOrReturn\" name=\"Customer feedback or return\"/>\n\n  <bpmn:collaboration id=\"Collaboration_OrderDelivery\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:participant id=\"Participant_OrderDelivery\" name=\"Order delivery process\" processRef=\"Process_OrderDelivery\"/>\n    <bpmn:participant id=\"Participant_LogisticsProvider\" name=\"Logistics provider\"/>\n    <bpmn:participant id=\"Participant_PostDeliveryActions\" name=\"Post-delivery actions\" processRef=\"Process_PostDeliveryActions\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CustomerOrder\" name=\"Customer order\" messageRef=\"Message_CustomerOrder\" sourceRef=\"Participant_Customer\" targetRef=\"StartEvent_OrderReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_OrderConfirmation\" name=\"Order confirmation to customer\" messageRef=\"Message_OrderConfirmation\" sourceRef=\"Task_SendConfirmation\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShipmentHandover\" name=\"Shipment handover to logistics provider\" messageRef=\"Message_ShipmentHandover\" sourceRef=\"Task_HandOverShipment\" targetRef=\"Participant_LogisticsProvider\"/>\n    <bpmn:messageFlow id=\"MessageFlow_TrackingInformation\" name=\"Tracking information to customer\" messageRef=\"Message_TrackingInformation\" sourceRef=\"Task_SendTracking\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_FeedbackOrReturn\" name=\"Customer feedback or return after delivery\" messageRef=\"Message_FeedbackOrReturn\" sourceRef=\"Participant_Customer\" targetRef=\"StartEvent_FeedbackOrReturn\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_OrderDelivery\" name=\"Order delivery\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_OrderReceived\" name=\"Customer places an order\">\n      <bpmn:outgoing>Flow_Start_ChannelSplit</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_CustomerOrder\" messageRef=\"Message_CustomerOrder\"/>\n    </bpmn:startEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ChannelSplit\" name=\"Order channel?\" default=\"Flow_Channel_Phone\">\n      <bpmn:incoming>Flow_Start_ChannelSplit</bpmn:incoming>\n      <bpmn:outgoing>Flow_Channel_Online</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Channel_Phone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ChannelMerge\" name=\"Converge order channels\">\n      <bpmn:incoming>Flow_Channel_Online</bpmn:incoming>\n      <bpmn:incoming>Flow_Channel_Phone</bpmn:incoming>\n      <bpmn:outgoing>Flow_Merge_GenerateConfirmation</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:serviceTask id=\"Task_GenerateConfirmation\" name=\"Automatically generate order confirmation\">\n      <bpmn:incoming>Flow_Merge_GenerateConfirmation</bpmn:incoming>\n      <bpmn:outgoing>Flow_Generate_SendConfirmation</bpmn:outgoing>\n    </bpmn:serviceTask>\n\n    <bpmn:sendTask id=\"Task_SendConfirmation\" name=\"Send order confirmation to customer\" messageRef=\"Message_OrderConfirmation\">\n      <bpmn:incoming>Flow_Generate_SendConfirmation</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendConfirmation_PickPack</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_PickPack\" name=\"Warehouse team picks and packs the items\">\n      <bpmn:incoming>Flow_SendConfirmation_PickPack</bpmn:incoming>\n      <bpmn:outgoing>Flow_PickPack_GenerateLabel</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:task id=\"Task_GenerateShippingLabel\" name=\"Generate shipping label\">\n      <bpmn:incoming>Flow_PickPack_GenerateLabel</bpmn:incoming>\n      <bpmn:outgoing>Flow_GenerateLabel_HandOver</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:task id=\"Task_HandOverShipment\" name=\"Hand over shipment to logistics provider\">\n      <bpmn:incoming>Flow_GenerateLabel_HandOver</bpmn:incoming>\n      <bpmn:outgoing>Flow_HandOver_SendTracking</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:sendTask id=\"Task_SendTracking\" name=\"Send tracking information to customer\" messageRef=\"Message_TrackingInformation\">\n      <bpmn:incoming>Flow_HandOver_SendTracking</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendTracking_Monitor</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_MonitorShipment\" name=\"Monitor shipment until it reaches the customer's address\">\n      <bpmn:incoming>Flow_SendTracking_Monitor</bpmn:incoming>\n      <bpmn:outgoing>Flow_Monitor_EndDelivered</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:endEvent id=\"EndEvent_Delivered\" name=\"Shipment successfully delivered\">\n      <bpmn:incoming>Flow_Monitor_EndDelivered</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_ChannelSplit\" sourceRef=\"StartEvent_OrderReceived\" targetRef=\"Gateway_ChannelSplit\"/>\n    <bpmn:sequenceFlow id=\"Flow_Channel_Online\" name=\"Online platform\" sourceRef=\"Gateway_ChannelSplit\" targetRef=\"Gateway_ChannelMerge\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">orderChannel = 'online'</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Channel_Phone\" name=\"Over the phone\" sourceRef=\"Gateway_ChannelSplit\" targetRef=\"Gateway_ChannelMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Merge_GenerateConfirmation\" sourceRef=\"Gateway_ChannelMerge\" targetRef=\"Task_GenerateConfirmation\"/>\n    <bpmn:sequenceFlow id=\"Flow_Generate_SendConfirmation\" sourceRef=\"Task_GenerateConfirmation\" targetRef=\"Task_SendConfirmation\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendConfirmation_PickPack\" sourceRef=\"Task_SendConfirmation\" targetRef=\"Task_PickPack\"/>\n    <bpmn:sequenceFlow id=\"Flow_PickPack_GenerateLabel\" sourceRef=\"Task_PickPack\" targetRef=\"Task_GenerateShippingLabel\"/>\n    <bpmn:sequenceFlow id=\"Flow_GenerateLabel_HandOver\" sourceRef=\"Task_GenerateShippingLabel\" targetRef=\"Task_HandOverShipment\"/>\n    <bpmn:sequenceFlow id=\"Flow_HandOver_SendTracking\" sourceRef=\"Task_HandOverShipment\" targetRef=\"Task_SendTracking\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendTracking_Monitor\" sourceRef=\"Task_SendTracking\" targetRef=\"Task_MonitorShipment\"/>\n    <bpmn:sequenceFlow id=\"Flow_Monitor_EndDelivered\" sourceRef=\"Task_MonitorShipment\" targetRef=\"EndEvent_Delivered\"/>\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_PostDeliveryActions\" name=\"Post-delivery customer feedback or returns\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_FeedbackOrReturn\" name=\"Customer feedback or return received after delivery\">\n      <bpmn:outgoing>Flow_FeedbackOrReturn_TakeAction</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_FeedbackOrReturn\" messageRef=\"Message_FeedbackOrReturn\"/>\n    </bpmn:startEvent>\n\n    <bpmn:task id=\"Task_TakeFurtherAction\" name=\"Take further action on customer feedback or return\">\n      <bpmn:incoming>Flow_FeedbackOrReturn_TakeAction</bpmn:incoming>\n      <bpmn:outgoing>Flow_TakeAction_End</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:endEvent id=\"EndEvent_PostDeliveryAction\" name=\"Further action completed\">\n      <bpmn:incoming>Flow_TakeAction_End</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_FeedbackOrReturn_TakeAction\" sourceRef=\"StartEvent_FeedbackOrReturn\" targetRef=\"Task_TakeFurtherAction\"/>\n    <bpmn:sequenceFlow id=\"Flow_TakeAction_End\" sourceRef=\"Task_TakeFurtherAction\" targetRef=\"EndEvent_PostDeliveryAction\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 955.6,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 39,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 11,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.451407,
+    "workflow_order_similarity": 0.286364,
+    "connection_f1": 0.060606,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.45,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.300938,
+    "activity_semantic_similarity": 0.631969,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.7,
+    "activity_label_f1": 0.823529
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_OrderDelivery\"\n                  targetNamespace=\"http://example.com/bpmn/order-delivery\">\n  <bpmn:message id=\"Message_CustomerOrder\" name=\"Customer order\"/>\n  <bpmn:message id=\"Message_OrderConfirmation\" name=\"Order confirmation\"/>\n  <bpmn:message id=\"Message_ShipmentHandover\" name=\"Shipment handover\"/>\n  <bpmn:message id=\"Message_TrackingInformation\" name=\"Tracking information\"/>\n\n  <bpmn:collaboration id=\"Collaboration_OrderDelivery\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\"/>\n    <bpmn:participant id=\"Participant_OrderDelivery\" name=\"Order delivery process\" processRef=\"Process_OrderDelivery\"/>\n    <bpmn:participant id=\"Participant_LogisticsProvider\" name=\"Logistics provider\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CustomerOrder\" name=\"Customer places an order\" sourceRef=\"Participant_Customer\" targetRef=\"StartEvent_OrderReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_OrderConfirmation\" name=\"Order confirmation to customer\" sourceRef=\"Task_SendConfirmation\" targetRef=\"Participant_Customer\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ShipmentHandover\" name=\"Shipment handed over for delivery\" sourceRef=\"Task_HandOverShipment\" targetRef=\"Participant_LogisticsProvider\"/>\n    <bpmn:messageFlow id=\"MessageFlow_TrackingInformation\" name=\"Tracking information to customer\" sourceRef=\"Task_SendTracking\" targetRef=\"Participant_Customer\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_OrderDelivery\" name=\"Order delivery\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_OrderReceived\" name=\"Customer order received\">\n      <bpmn:outgoing>Flow_Start_ChannelSplit</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_CustomerOrder\" messageRef=\"Message_CustomerOrder\"/>\n    </bpmn:startEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ChannelSplit\" name=\"Order channel?\" default=\"Flow_Channel_Phone\">\n      <bpmn:incoming>Flow_Start_ChannelSplit</bpmn:incoming>\n      <bpmn:outgoing>Flow_Channel_Online</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Channel_Phone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:sequenceFlow id=\"Flow_Channel_Online\" name=\"Online platform\" sourceRef=\"Gateway_ChannelSplit\" targetRef=\"Gateway_ChannelMerge\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">orderChannel = 'online'</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Channel_Phone\" name=\"Over the phone\" sourceRef=\"Gateway_ChannelSplit\" targetRef=\"Gateway_ChannelMerge\"/>\n\n    <bpmn:exclusiveGateway id=\"Gateway_ChannelMerge\" name=\"Order channel handling converges\">\n      <bpmn:incoming>Flow_Channel_Online</bpmn:incoming>\n      <bpmn:incoming>Flow_Channel_Phone</bpmn:incoming>\n      <bpmn:outgoing>Flow_ChannelMerge_GenerateConfirmation</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:serviceTask id=\"Task_GenerateConfirmation\" name=\"Automatically generate order confirmation\">\n      <bpmn:incoming>Flow_ChannelMerge_GenerateConfirmation</bpmn:incoming>\n      <bpmn:outgoing>Flow_Generate_SendConfirmation</bpmn:outgoing>\n    </bpmn:serviceTask>\n\n    <bpmn:sendTask id=\"Task_SendConfirmation\" name=\"Send order confirmation to customer\" messageRef=\"Message_OrderConfirmation\">\n      <bpmn:incoming>Flow_Generate_SendConfirmation</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendConfirmation_PickPack</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_PickPack\" name=\"Warehouse team picks and packs the items\">\n      <bpmn:incoming>Flow_SendConfirmation_PickPack</bpmn:incoming>\n      <bpmn:outgoing>Flow_PickPack_GenerateLabel</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:task id=\"Task_GenerateShippingLabel\" name=\"Generate shipping label\">\n      <bpmn:incoming>Flow_PickPack_GenerateLabel</bpmn:incoming>\n      <bpmn:outgoing>Flow_GenerateLabel_HandOver</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:sendTask id=\"Task_HandOverShipment\" name=\"Hand over order to logistics provider for delivery\" messageRef=\"Message_ShipmentHandover\">\n      <bpmn:incoming>Flow_GenerateLabel_HandOver</bpmn:incoming>\n      <bpmn:outgoing>Flow_HandOver_SendTracking</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:sendTask id=\"Task_SendTracking\" name=\"Send tracking information to customer\" messageRef=\"Message_TrackingInformation\">\n      <bpmn:incoming>Flow_HandOver_SendTracking</bpmn:incoming>\n      <bpmn:outgoing>Flow_SendTracking_Monitor</bpmn:outgoing>\n    </bpmn:sendTask>\n\n    <bpmn:task id=\"Task_MonitorShipment\" name=\"Monitor shipment until it reaches the customer's address\">\n      <bpmn:incoming>Flow_SendTracking_Monitor</bpmn:incoming>\n      <bpmn:outgoing>Flow_Monitor_EndDelivered</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:endEvent id=\"EndEvent_Delivered\" name=\"Shipment successfully delivered\">\n      <bpmn:incoming>Flow_Monitor_EndDelivered</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_ChannelSplit\" sourceRef=\"StartEvent_OrderReceived\" targetRef=\"Gateway_ChannelSplit\"/>\n    <bpmn:sequenceFlow id=\"Flow_ChannelMerge_GenerateConfirmation\" sourceRef=\"Gateway_ChannelMerge\" targetRef=\"Task_GenerateConfirmation\"/>\n    <bpmn:sequenceFlow id=\"Flow_Generate_SendConfirmation\" sourceRef=\"Task_GenerateConfirmation\" targetRef=\"Task_SendConfirmation\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendConfirmation_PickPack\" sourceRef=\"Task_SendConfirmation\" targetRef=\"Task_PickPack\"/>\n    <bpmn:sequenceFlow id=\"Flow_PickPack_GenerateLabel\" sourceRef=\"Task_PickPack\" targetRef=\"Task_GenerateShippingLabel\"/>\n    <bpmn:sequenceFlow id=\"Flow_GenerateLabel_HandOver\" sourceRef=\"Task_GenerateShippingLabel\" targetRef=\"Task_HandOverShipment\"/>\n    <bpmn:sequenceFlow id=\"Flow_HandOver_SendTracking\" sourceRef=\"Task_HandOverShipment\" targetRef=\"Task_SendTracking\"/>\n    <bpmn:sequenceFlow id=\"Flow_SendTracking_Monitor\" sourceRef=\"Task_SendTracking\" targetRef=\"Task_MonitorShipment\"/>\n    <bpmn:sequenceFlow id=\"Flow_Monitor_EndDelivered\" sourceRef=\"Task_MonitorShipment\" targetRef=\"EndEvent_Delivered\"/>\n\n    <bpmn:textAnnotation id=\"Annotation_PostDelivery\">\n      <bpmn:text>Customer feedback or returns may trigger further actions; those actions are not specified here.</bpmn:text>\n    </bpmn:textAnnotation>\n    <bpmn:association id=\"Association_PostDelivery\" sourceRef=\"EndEvent_Delivered\" targetRef=\"Annotation_PostDelivery\"/>\n  </bpmn:process>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": false,
+  "failed_levels": [
+   "L1"
+  ],
+  "metrics": {
+   "semantic_similarity": 0.450237,
+   "activity_semantic_similarity": 0.585308,
+   "activity_label_precision": 0.857143,
+   "activity_label_recall": 0.6,
+   "activity_label_f1": 0.705882,
+   "activity_matched": 6,
+   "activity_reference": 10,
+   "activity_generated": 7,
+   "alignment_coverage": 0.35,
+   "connection_precision": 0.2,
+   "connection_recall": 0.086957,
+   "connection_f1": 0.121212,
+   "connection_tp": 2,
+   "connection_fp": 8,
+   "connection_fn": 21,
+   "workflow_order_similarity": 0.334091,
+   "order_consistency": 0.954545,
+   "order_coverage": 0.35,
+   "order_tp": 21,
+   "order_fp": 1,
+   "order_fn": 0,
+   "collaboration_similarity": null,
+   "collaboration_applicable": false,
+   "collaboration_tp": 0,
+   "collaboration_fp": 0,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 1.0,
+   "type_recall_diagnostic": 0.5,
+   "type_f1_diagnostic": 0.6667,
+   "counts": {
+    "gold_nodes": 20,
+    "generated_nodes": 10,
+    "gold_flows": 23,
+    "generated_flows": 10
+   },
+   "collaboration_ignored": true,
+   "semantic_similarity_strict": 0.292654,
+   "activity_semantic_similarity_strict": 0.585308,
+   "alignment_coverage_strict": 0.35,
+   "connection_precision_strict": 0.2,
+   "connection_recall_strict": 0.086957,
+   "connection_f1_strict": 0.121212,
+   "workflow_order_similarity_strict": 0.334091,
+   "collaboration_similarity_strict": 0.0,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T1",
+   "T5",
+   "T6"
+  ],
+  "error_counts": {
+   "T1": 1,
+   "T5": 29,
+   "T6": 5
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-011",
+    "instruction": "When the description presents activities whose execution order must be represented in BPMN: Represent that order with sequence flows that are direct children of the relevant process or subprocess scope; do not place sequence flows inside activities or other BPMN elements.",
+    "situation": "the description presents activities whose execution order must be represented in BPMN",
+    "source": "learned guideline (refines XML-06)",
+    "failure_type": "T1"
+   },
+   {
+    "rule_id": "LRN-012",
+    "instruction": "When the description presents alternative ways to initiate a process that lead to the same subsequent handling: Represent the alternatives with an exclusive gateway and converge them before the shared handling; do not invent channel-specific work.",
+    "situation": "the description presents alternative ways to initiate a process that lead to the same subsequent handling",
+    "source": "learned guideline (refines GW-01)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-013",
+    "instruction": "When the description explicitly states an activity’s action, object, recipient, or multiple coordinated actions: Preserve those stated details in the BPMN task label rather than omitting or substituting them.",
+    "situation": "the description explicitly states an activity’s action, object, recipient, or multiple coordinated actions",
+    "source": "learned guideline (refines FID-03)",
+    "failure_type": "T6"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-011",
+    "LRN-012",
+    "LRN-013"
+   ],
+   "before": {
+    "semantic_similarity": 0.450237,
+    "workflow_order_similarity": 0.334091,
+    "connection_f1": 0.121212,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.35,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.292654,
+    "activity_semantic_similarity": 0.585308,
+    "activity_label_precision": 0.857143,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.705882
+   },
+   "valid_before": false,
+   "errors_before": {
+    "T1": 1,
+    "T5": 29,
+    "T6": 5
+   },
+   "after": {
+    "semantic_similarity": 0.46652,
+    "workflow_order_similarity": 0.286364,
+    "connection_f1": 0.060606,
+    "alignment_coverage": 0.45
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.016283,
+    "workflow_order_similarity": -0.047727,
+    "connection_f1": -0.060606,
+    "alignment_coverage": 0.1
+   },
+   "mean_change": 0.001988,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 31,
+    "T6": 3
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.46652,
+    "activity_semantic_similarity": 0.653128,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.7,
+    "activity_label_f1": 0.823529,
+    "activity_matched": 7,
+    "activity_reference": 10,
+    "activity_generated": 7,
+    "alignment_coverage": 0.45,
+    "connection_precision": 0.1,
+    "connection_recall": 0.043478,
+    "connection_f1": 0.060606,
+    "connection_tp": 1,
+    "connection_fp": 9,
+    "connection_fn": 22,
+    "workflow_order_similarity": 0.286364,
+    "order_consistency": 0.636364,
+    "order_coverage": 0.45,
+    "order_tp": 28,
+    "order_fp": 8,
+    "order_fn": 8,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 1.0,
+    "type_recall_diagnostic": 0.55,
+    "type_f1_diagnostic": 0.7097,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 11,
+     "gold_flows": 23,
+     "generated_flows": 10
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.311013,
+    "activity_semantic_similarity_strict": 0.653128,
+    "alignment_coverage_strict": 0.45,
+    "connection_precision_strict": 0.1,
+    "connection_recall_strict": 0.043478,
+    "connection_f1_strict": 0.060606,
+    "workflow_order_similarity_strict": 0.286364,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 41,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 11,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-011": {
+     "failure_type": "T1",
+     "errors_before": 1,
+     "errors_after": 0,
+     "removed": 1
+    },
+    "LRN-012": {
+     "failure_type": "T5",
+     "errors_before": 29,
+     "errors_after": 31,
+     "removed": -2
+    },
+    "LRN-013": {
+     "failure_type": "T6",
+     "errors_before": 5,
+     "errors_after": 3,
+     "removed": 2
+    }
+   },
+   "confirmed": true,
+   "promoted": [],
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [],
+   "before": {
+    "semantic_similarity": 0.46652,
+    "workflow_order_similarity": 0.286364,
+    "connection_f1": 0.060606,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.45,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.311013,
+    "activity_semantic_similarity": 0.653128,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.7,
+    "activity_label_f1": 0.823529
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 31,
+    "T6": 3
+   },
+   "reverted": {
+    "draft": 2,
+    "errors": {
+     "T5": 33,
+     "T6": 2
+    },
+    "errors_before": {
+     "T5": 31,
+     "T6": 3
+    },
+    "mean_change": -0.005035
+   },
+   "after": {
+    "semantic_similarity": 0.46652,
+    "workflow_order_similarity": 0.286364,
+    "connection_f1": 0.060606,
+    "alignment_coverage": 0.45
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 31,
+    "T6": 3
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.46652,
+    "activity_semantic_similarity": 0.653128,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.7,
+    "activity_label_f1": 0.823529,
+    "activity_matched": 7,
+    "activity_reference": 10,
+    "activity_generated": 7,
+    "alignment_coverage": 0.45,
+    "connection_precision": 0.1,
+    "connection_recall": 0.043478,
+    "connection_f1": 0.060606,
+    "connection_tp": 1,
+    "connection_fp": 9,
+    "connection_fn": 22,
+    "workflow_order_similarity": 0.286364,
+    "order_consistency": 0.636364,
+    "order_coverage": 0.45,
+    "order_tp": 28,
+    "order_fp": 8,
+    "order_fn": 8,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 1.0,
+    "type_recall_diagnostic": 0.55,
+    "type_f1_diagnostic": 0.7097,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 11,
+     "gold_flows": 23,
+     "generated_flows": 10
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.311013,
+    "activity_semantic_similarity_strict": 0.653128,
+    "alignment_coverage_strict": 0.45,
+    "connection_precision_strict": 0.1,
+    "connection_recall_strict": 0.043478,
+    "connection_f1_strict": 0.060606,
+    "workflow_order_similarity_strict": 0.286364,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 41,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 11,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {},
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [],
+   "before": {
+    "semantic_similarity": 0.46652,
+    "workflow_order_similarity": 0.286364,
+    "connection_f1": 0.060606,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.45,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.311013,
+    "activity_semantic_similarity": 0.653128,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.7,
+    "activity_label_f1": 0.823529
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 31,
+    "T6": 3
+   },
+   "after": {
+    "semantic_similarity": 0.451407,
+    "workflow_order_similarity": 0.286364,
+    "connection_f1": 0.060606,
+    "alignment_coverage": 0.45
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": -0.015113,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": -0.003778,
+   "kept_round": 3,
+   "errors_after": {
+    "T5": 31,
+    "T6": 3
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.451407,
+    "activity_semantic_similarity": 0.631969,
+    "activity_label_precision": 1.0,
+    "activity_label_recall": 0.7,
+    "activity_label_f1": 0.823529,
+    "activity_matched": 7,
+    "activity_reference": 10,
+    "activity_generated": 7,
+    "alignment_coverage": 0.45,
+    "connection_precision": 0.1,
+    "connection_recall": 0.043478,
+    "connection_f1": 0.060606,
+    "connection_tp": 1,
+    "connection_fp": 9,
+    "connection_fn": 22,
+    "workflow_order_similarity": 0.286364,
+    "order_consistency": 0.636364,
+    "order_coverage": 0.45,
+    "order_tp": 28,
+    "order_fp": 8,
+    "order_fn": 8,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 1.0,
+    "type_recall_diagnostic": 0.55,
+    "type_f1_diagnostic": 0.7097,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 11,
+     "gold_flows": 23,
+     "generated_flows": 10
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.300938,
+    "activity_semantic_similarity_strict": 0.631969,
+    "alignment_coverage_strict": 0.45,
+    "connection_precision_strict": 0.1,
+    "connection_recall_strict": 0.043478,
+    "connection_f1_strict": 0.060606,
+    "workflow_order_similarity_strict": 0.286364,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 39,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 2,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 11,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {},
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.451407,
+  "activity_semantic_similarity": 0.631969,
+  "activity_label_precision": 1.0,
+  "activity_label_recall": 0.7,
+  "activity_label_f1": 0.823529,
+  "activity_matched": 7,
+  "activity_reference": 10,
+  "activity_generated": 7,
+  "alignment_coverage": 0.45,
+  "connection_precision": 0.1,
+  "connection_recall": 0.043478,
+  "connection_f1": 0.060606,
+  "connection_tp": 1,
+  "connection_fp": 9,
+  "connection_fn": 22,
+  "workflow_order_similarity": 0.286364,
+  "order_consistency": 0.636364,
+  "order_coverage": 0.45,
+  "order_tp": 28,
+  "order_fp": 8,
+  "order_fn": 8,
+  "collaboration_similarity": null,
+  "collaboration_applicable": false,
+  "collaboration_tp": 0,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 1.0,
+  "type_recall_diagnostic": 0.55,
+  "type_f1_diagnostic": 0.7097,
+  "counts": {
+   "gold_nodes": 20,
+   "generated_nodes": 11,
+   "gold_flows": 23,
+   "generated_flows": 10
+  },
+  "collaboration_ignored": true,
+  "semantic_similarity_strict": 0.300938,
+  "activity_semantic_similarity_strict": 0.631969,
+  "alignment_coverage_strict": 0.45,
+  "connection_precision_strict": 0.1,
+  "connection_recall_strict": 0.043478,
+  "connection_f1_strict": 0.060606,
+  "workflow_order_similarity_strict": 0.286364,
+  "collaboration_similarity_strict": 0.0,
+  "collaboration_applicable_strict": true
+ }
+}

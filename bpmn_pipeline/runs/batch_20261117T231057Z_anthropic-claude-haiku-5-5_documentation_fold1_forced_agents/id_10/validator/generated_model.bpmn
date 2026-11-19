@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_ITSolutionRequest" targetNamespace="http://example.com/bpmn/it-solution-request">
+  <bpmn:message id="Msg_Request" name="IT solution request submitted"/>
+  <bpmn:message id="Msg_Rollout" name="Solution rolled out"/>
+
+  <bpmn:collaboration id="Collab_ITSolutionRequest">
+    <bpmn:participant id="Participant_Requester" name="Requesting employee or department"/>
+    <bpmn:participant id="Participant_IT" name="IT" processRef="Process_IT"/>
+    <bpmn:messageFlow id="MessageFlow_SubmitRequest" name="Request submitted" sourceRef="Participant_Requester" targetRef="StartEvent_RequestReceived"/>
+    <bpmn:messageFlow id="MessageFlow_RolloutSolution" name="Solution rolled out" sourceRef="SendTask_Rollout" targetRef="Participant_Requester"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_IT" name="IT" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_RequestReceived" name="IT solution request received">
+      <bpmn:outgoing>SequenceFlow_IT1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Request" messageRef="Msg_Request"/>
+    </bpmn:startEvent>
+    <bpmn:parallelGateway id="Gateway_Checks_Split" name="Start assessment">
+      <bpmn:incoming>SequenceFlow_IT1</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT2</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_IT3</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_CheckCompatibility" name="Check compatibility">
+      <bpmn:documentation>Checks compatibility with existing systems.</bpmn:documentation>
+      <bpmn:incoming>SequenceFlow_IT2</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_EvaluateCostResources" name="Evaluate cost and resource needs">
+      <bpmn:incoming>SequenceFlow_IT3</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT5</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Gateway_Checks_Join" name="Assessment complete">
+      <bpmn:incoming>SequenceFlow_IT4</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_IT5</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT6</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:exclusiveGateway id="Gateway_Approval_Split" name="Request approved?">
+      <bpmn:incoming>SequenceFlow_IT6</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT7</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_IT8</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Procure" name="Procure tools or licenses">
+      <bpmn:incoming>SequenceFlow_IT7</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT9</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Install" name="Install solution">
+      <bpmn:incoming>SequenceFlow_IT9</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT10</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Test" name="Test solution">
+      <bpmn:documentation>In a controlled environment.</bpmn:documentation>
+      <bpmn:incoming>SequenceFlow_IT10</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT11</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="SendTask_Rollout" name="Roll out solution to requesting department" messageRef="Msg_Rollout">
+      <bpmn:incoming>SequenceFlow_IT11</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT12</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="Gateway_Training_Split" name="Training provided?">
+      <bpmn:incoming>SequenceFlow_IT12</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT13</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_IT14</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Training" name="Provide training">
+      <bpmn:documentation>Training may be provided.</bpmn:documentation>
+      <bpmn:incoming>SequenceFlow_IT13</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT15</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Training_Join" name="Training handled">
+      <bpmn:incoming>SequenceFlow_IT14</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_IT15</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT16</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Support" name="Provide IT support for troubleshooting">
+      <bpmn:documentation>IT support remains available for troubleshooting.</bpmn:documentation>
+      <bpmn:incoming>SequenceFlow_IT16</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_IT17</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_SupportAvailable" name="IT support available">
+      <bpmn:incoming>SequenceFlow_IT17</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_NotApproved" name="Request not approved">
+      <bpmn:incoming>SequenceFlow_IT8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_IT1" sourceRef="StartEvent_RequestReceived" targetRef="Gateway_Checks_Split"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT2" sourceRef="Gateway_Checks_Split" targetRef="Task_CheckCompatibility"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT3" sourceRef="Gateway_Checks_Split" targetRef="Task_EvaluateCostResources"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT4" sourceRef="Task_CheckCompatibility" targetRef="Gateway_Checks_Join"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT5" sourceRef="Task_EvaluateCostResources" targetRef="Gateway_Checks_Join"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT6" sourceRef="Gateway_Checks_Join" targetRef="Gateway_Approval_Split"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT7" name="Approved" sourceRef="Gateway_Approval_Split" targetRef="Task_Procure"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT8" name="Not approved" sourceRef="Gateway_Approval_Split" targetRef="EndEvent_NotApproved"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT9" sourceRef="Task_Procure" targetRef="Task_Install"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT10" sourceRef="Task_Install" targetRef="Task_Test"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT11" sourceRef="Task_Test" targetRef="SendTask_Rollout"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT12" sourceRef="SendTask_Rollout" targetRef="Gateway_Training_Split"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT13" name="Yes" sourceRef="Gateway_Training_Split" targetRef="Task_Training"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT14" name="No" sourceRef="Gateway_Training_Split" targetRef="Gateway_Training_Join"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT15" sourceRef="Task_Training" targetRef="Gateway_Training_Join"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT16" sourceRef="Gateway_Training_Join" targetRef="Task_Support"/>
+    <bpmn:sequenceFlow id="SequenceFlow_IT17" sourceRef="Task_Support" targetRef="EndEvent_SupportAvailable"/>
+  </bpmn:process>
+</bpmn:definitions>

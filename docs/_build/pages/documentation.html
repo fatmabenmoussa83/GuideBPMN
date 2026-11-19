@@ -1,0 +1,104 @@
+<div class="mb-3"><div class="kicker">Resources</div><h1 class="h3 mb-0 text-gray-800 font-weight-bold">Documentation</h1></div>
+<p class="mb-4" style="max-width:62rem">How to install GuideBPMN, test one description from zero, run the study from this site or from the command line, and read the outputs.</p>
+
+<div class="card shadow mb-4 border-left-primary" id="reviewer">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Test one description yourself, from zero, and keep every trace</h6></div>
+  <div class="card-body">
+    <ol class="mb-2">
+      <li><strong>Install</strong> (once): Python 3.10+, <code>pip install -r requirements.txt</code>.</li>
+      <li><strong>Key</strong> of the LLM you will use, as an environment variable in the same terminal: <code>$env:OPENAI_API_KEY="&hellip;"</code> for GPT-6 Luna or <code>$env:ANTHROPIC_API_KEY="&hellip;"</code> for Claude Haiku 5.5. Nothing else reads it; the site never sees it.
+        Without a key, tick <em>Dry run</em> on the Run page: the whole circuit runs with the reference diagram standing in for the generated draft.</li>
+      <li><strong>Start the local API</strong>: <code>.\start_webapi.ps1</code> (it listens on <code>http://127.0.0.1:8765</code>), then open the <a href="run.html">Run</a> page of this site.</li>
+      <li><strong>Pick a description</strong> in &ldquo;Test one description from zero&rdquo;, choose <em>Revised</em> (learning, three next iterations) or <em>First</em> (one pass), the LLM, and press <em>Start</em>.
+        The run starts from an empty <em>trial</em> catalogue of its own; the catalogues of the study are never touched.</li>
+      <li><strong>Follow it</strong>: the row of the description fills in as drafts arrive; click it to see each draft next to the reference, the Structural validator level by level, the scores,
+        every decision of the orchestrator and, for each <code>learn</code>, every tool call of the Retriever and Expert agents with its arguments, its result and the reason the agent gave.</li>
+      <li><strong>Download</strong>: <em>Download this description (zip)</em> gives every file the tool wrote for it (drafts, prompts, validator and similarity results, decisions, the full agent traces, the catalogue of the run), with a README; <em>Download the run (zip)</em> gives the whole run. Both come from the API on your computer.</li>
+    </ol>
+    <p class="small text-muted mb-0">From the command line, the same test is <code>python run_batch.py --arm documentation --ids 07 --next-iterations 3 --force-iterations --promote-confirmed --trial --generator openai:gpt-6-luna --orchestrator openai:gpt-6-luna --retriever openai:gpt-6-luna --expert openai:gpt-6-luna</code>; its files are in <code>bpmn_pipeline/runs/batch_&hellip;_trial/</code>.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Install &amp; start</h6></div>
+  <div class="card-body">
+    <ol class="mb-2">
+      <li>Python 3.10+, then <code>pip install -r requirements.txt</code> (adds FastAPI, LangGraph, sentence-transformers).</li>
+      <li>Keys as environment variables: <code>OPENAI_API_KEY</code> (GPT-6 Luna, or any other OpenAI model) or <code>ANTHROPIC_API_KEY</code> (Claude Haiku 5.5, or any other Anthropic model). Without a key, only dry runs (no LLM call) can start.</li>
+      <li>Start the local API: <code>.\start_webapi.ps1</code>, then open the <a href="run.html">Run</a> page.
+        A second run at the same time needs a second API: <code>.\start_webapi.ps1 -Port 9000</code>, and that address in the launcher.
+        Each learning run has its own catalogue, chosen automatically: <code>guidelines/learned/&lt;generator&gt;/agents/replicates/rN/</code> for Revised run N, <code>&hellip;/agents/folds/fold_k/</code> for Reuse round k and <code>&hellip;/agents/trials/trial_&lt;time&gt;/</code> for a trial on a few descriptions, so catalogues are never mixed.
+        The file used is saved with each run (<code>models.json</code>, <code>learned_catalogue</code>).</li>
+    </ol>
+    <p class="figcap mb-0">A <strong>dry run</strong> exercises the whole circuit with no LLM call: the reference diagram plays the generated draft.
+      After a change to the code, restart the API and refresh the page.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Command line</h6></div>
+  <div class="card-body">
+    <pre class="small mb-2">cd bpmn_pipeline
+python run_batch.py --dry-run                                   # circuit test, no LLM
+python run_batch.py --arm documentation --no-learn --next-iterations 0 --replicate 1          # First, run 1 (also 2, 3)
+python run_batch.py --arm documentation --next-iterations 3 --force-iterations --promote-confirmed --replicate 1   # Revised, run 1 (also 2, 3)
+python run_batch.py --arm documentation --fold 1 --next-iterations 3 --force-iterations --promote-confirmed      # Reuse, training of round 1
+python run_batch.py --arm documentation+learned --fold 1   # Reuse, test of round 1 (confirmed guidelines of the round)
+python run_batch.py --arm documentation --ids 07 --next-iterations 3 --force-iterations --promote-confirmed --trial   # one description from zero, own trial catalogue
+python run_batch.py --redo 06,18 --resume batch_&lt;run&gt;          # run again descriptions that lost a step (first attempt kept in history)
+python run_batch.py --resume batch_&lt;run&gt;                      # continue an interrupted run
+python study_report.py --generator openai:gpt-6-luna   # the study table: First | Revised i1 | i2 | Learned | Reuse
+cd .. ; .\run_kfold.ps1 -Phase first | revised | train | test   # start the runs of a phase, both generators, each in its own window
+.\run_kfold.ps1 -Phase resume                   # after an interruption: continue every unfinished run, redo lost steps</pre>
+    <p class="small mb-0">One model per component, each as <code>provider:model</code>: <code>--generator</code>,
+      <code>--orchestrator</code>, <code>--retriever</code>, <code>--expert</code>.</p>
+    <p class="small mb-0 mt-2"><strong>Next iteration.</strong> After learning, the guidelines learned for a description are sent
+      back to the generator for that same description. The new model is validated and compared again, and the agents learn again from it.
+      With <code>--force-iterations</code> every description does the 3 next iterations while a failure is left. A guideline is marked <em>confirmed</em> when, after it is sent back,
+      the errors of its own type (T1 to T7) decrease. Because this step uses the description's own reference, Revised is reported apart from First, and Reuse is measured on unseen descriptions.</p>
+    <p class="small mb-0 mt-2"><strong>Error-driven guidelines.</strong> The Expert agent classifies each proposal against the closest
+      documentation guidelines and error-driven guidelines: documentation guideline not applied (nothing added), refines a documentation guideline, same as an error-driven guideline
+      (the example is added as support), or new. A guideline still worded in terms of its own process after one rewrite is kept as
+      <em>example-specific</em> (EXS-xxx): it is sent back to its own description only, never given to another description.</p>
+    <p class="small mb-0 mt-2"><strong>Pools.</strong> When the reference has no pool, lane or message flow (49 of the 55 examples), those
+      added by the generator are set aside before the comparison. The scores computed on the model exactly as generated are kept as <code>*_strict</code>.</p>
+    <p class="small mb-0 mt-2"><strong>Budgets.</strong> Three numbers limit the work on one example: next iterations, tool calls and orchestrator decisions. They are set in the launcher or on the command line and saved with the run
+      (<code>models.json</code>, <code>limits</code>). Their meaning and the number of tool calls an example can need are on the
+      <a href="orchestrator.html#budgets">Orchestrator &amp; budgets</a> page.</p>
+    <p class="small mb-0 mt-2"><strong>Equations.</strong> Every score is defined with its equation on the <a href="similarity.html">Similarity evaluator</a> page,
+      the validator precision on the <a href="validator.html#performance">Structural validator</a> page, and the confirmation of a guideline on the <a href="guidelines.html">Guidelines</a> page.</p>
+    <p class="small mb-0 mt-2"><strong>Failure types.</strong> T1&ndash;T4 come from the levels of the Structural validator. T5&ndash;T7 are detected, without any threshold,
+      as soon as the Similarity evaluator finds a difference: a sequence flow missing or additional (T5), an activity without a partner (T6),
+      a pool, lane or message flow missing or additional (T7).</p>
+    <p class="small mb-0 mt-2"><strong>Bonuses and penalties.</strong> Every single error costs one point at the step that finds it and earns one
+      back at the step that shows it gone: each incorrect element of a validator level (T1&ndash;T4) and each
+      difference from the reference (T5&ndash;T7). The orchestrator sees how many errors are still open, per type, and uses it to decide whether to learn and iterate again. Details and equations:
+      <a href="orchestrator.html">Orchestrator &amp; budgets</a>.</p>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Outputs &amp; repository map</h6></div>
+  <div class="card-body">
+    <div class="table-responsive"><table class="table table-sm small mb-2">
+      <tbody>
+        <tr><td><code>bpmn_pipeline/runs/batch_*/report_*.json</code></td><td>aggregate metrics of the first pass: mean, std, min, max, quartiles, precision/recall, validator pass rates</td></tr>
+        <tr><td><code>bpmn_pipeline/runs/batch_*/report_*_after_rule_feedback.json</code></td><td>the same metrics after the next iterations (Revised, Reuse training)</td></tr>
+        <tr><td><code>bpmn_pipeline/runs/batch_*/per_example_*.csv</code></td><td>one row per example, every metric</td></tr>
+        <tr><td><code>bpmn_pipeline/runs/batch_*/id_*/iterations.json</code></td><td>every draft: XML, validator verdict, scores</td></tr>
+        <tr><td><code>bpmn_pipeline/runs/batch_*/id_*/decisions.json</code></td><td>the orchestrator's decisions with their reasons, and the guideline outcomes</td></tr>
+        <tr><td><code>bpmn_pipeline/runs/batch_*/id_*/guideline_learning_history.json</code></td><td>every learn call of the description: for each failure type, every step of the Retriever and Expert agents (tool, arguments, result, reason), their final answers and what the code guards did</td></tr>
+        <tr><td><code>bpmn_pipeline/runs/batch_*/models.json</code></td><td>the settings of the run: version, model of each component, examples, budgets (<code>limits</code>), failure rule</td></tr>
+        <tr><td><code>bpmn_pipeline/runs/batch_*/validator_performance.json</code></td><td>the validator element by element: correct, incorrect and precision per level, first draft and kept draft</td></tr>
+        <tr><td><code>bpmn_pipeline/runs/batch_*/utility_summary.json</code></td><td>bonuses and penalties of the run, by error type and by example</td></tr>
+        <tr><td><code>bpmn_pipeline/runs/batch_*/learned_guidelines_used.json</code></td><td>the catalogue frozen at the start of a run that reuses it</td></tr>
+        <tr><td><code>guidelines/bpmn_documentation_guidelines.json</code></td><td>82 documentation guidelines (read-only)</td></tr>
+        <tr><td><code>guidelines/learned/&lt;generator&gt;/agents/replicates/rN/</code> &middot; <code>agents/folds/fold_k/</code> &middot; <code>agents/trials/trial_*/</code></td><td>the catalogue of Revised run N, of Reuse round k and of each trial, with the descriptions each guideline was learned from and its tests</td></tr>
+        <tr><td><code>bpmn_pipeline/runs/_study_reports/</code></td><td>the study tables written by <code>study_report.py</code> (JSON, CSV, Markdown)</td></tr>
+        <tr><td><code>validator.py</code> &middot; <code>similarity_evaluator/</code></td><td>the Structural validator and the Similarity evaluator used by every setting</td></tr>
+        <tr><td><code>bpmn_pipeline/guideline_agents_tools.py</code> &middot; <code>bpmn_pipeline/guideline_agents.py</code></td><td>the Retriever and Expert agents (ReAct loop, tools) and the evidence records, code guards and catalogue update</td></tr>
+      </tbody>
+    </table></div>
+    <p class="figcap mb-0">The dataset is <code>bpmn_generator_catalogue/dataset.json</code>: 55 descriptions, each with a reference model that passes the validator.</p>
+  </div>
+</div>

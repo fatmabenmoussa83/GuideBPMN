@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Internship"
+                  targetNamespace="http://example.com/bpmn/internship">
+  <bpmn:message id="Message_OfferAcceptance" name="Offer acceptance"/>
+
+  <bpmn:collaboration id="Collaboration_Internship">
+    <bpmn:participant id="Participant_Intern" name="Intern" processRef="Process_Intern"/>
+    <bpmn:participant id="Participant_Company" name="Company" processRef="Process_Company"/>
+    <bpmn:messageFlow id="MessageFlow_OfferAcceptance"
+                      name="Offer acceptance"
+                      sourceRef="Task_AcceptOffer"
+                      targetRef="StartEvent_CompanyAccepted"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Intern" name="Internship" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Intern" name="Start"/>
+    <bpmn:task id="Task_EnterTopicAndAmount" name="Enter topic of interest and desired amount"/>
+    <bpmn:exclusiveGateway id="Gateway_OptionalDetails"
+                           name="Enter experience and hobbies?"
+                           default="Flow_SkipOptionalDetails"/>
+    <bpmn:task id="Task_EnterExperienceAndHobbies" name="Enter experience and hobbies"/>
+    <bpmn:exclusiveGateway id="Gateway_MergeOptionalDetails" name="Continue"/>
+    <bpmn:receiveTask id="Task_ReceiveOffer" name="Wait for an offer to arrive"/>
+    <bpmn:exclusiveGateway id="Gateway_DecideOffer" name="Accept offer?"/>
+    <bpmn:task id="Task_DenyOffer" name="Deny offer"/>
+    <bpmn:sendTask id="Task_AcceptOffer"
+                   name="Accept offer"
+                   messageRef="Message_OfferAcceptance"/>
+    <bpmn:task id="Task_InvalidateOtherOffers" name="All other offers become invalid"/>
+    <bpmn:intermediateCatchEvent id="Event_WeeklyTimer" name="One week passes">
+      <bpmn:timerEventDefinition id="TimerDefinition_OneWeek">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P1W</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_WriteInternUpdate" name="Write weekly internship status update (at least 3)"/>
+    <bpmn:exclusiveGateway id="Gateway_CheckInternshipAndUpdates"
+                           name="Internship finished and at least 3 updates written?"
+                           default="Flow_ToRecommendations"/>
+    <bpmn:sendTask id="Task_SendRecommendationTweets"
+                   name="Recommend company to each friend via Twitter">
+      <bpmn:multiInstanceLoopCharacteristics id="MI_RecommendationTweets" isSequential="false">
+        <bpmn:loopCardinality xsi:type="bpmn:tFormalExpression">numberOfFriends</bpmn:loopCardinality>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_Intern" name="Recommendation tweets sent"/>
+
+    <bpmn:sequenceFlow id="Flow_Intern_1" sourceRef="StartEvent_Intern" targetRef="Task_EnterTopicAndAmount"/>
+    <bpmn:sequenceFlow id="Flow_Intern_2" sourceRef="Task_EnterTopicAndAmount" targetRef="Gateway_OptionalDetails"/>
+    <bpmn:sequenceFlow id="Flow_EnterOptionalDetails"
+                       sourceRef="Gateway_OptionalDetails"
+                       targetRef="Task_EnterExperienceAndHobbies">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">experienceAndHobbiesProvided</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SkipOptionalDetails"
+                       sourceRef="Gateway_OptionalDetails"
+                       targetRef="Gateway_MergeOptionalDetails"/>
+    <bpmn:sequenceFlow id="Flow_OptionalDetailsToMerge"
+                       sourceRef="Task_EnterExperienceAndHobbies"
+                       targetRef="Gateway_MergeOptionalDetails"/>
+    <bpmn:sequenceFlow id="Flow_MergeToReceiveOffer"
+                       sourceRef="Gateway_MergeOptionalDetails"
+                       targetRef="Task_ReceiveOffer"/>
+    <bpmn:sequenceFlow id="Flow_OfferToDecision"
+                       sourceRef="Task_ReceiveOffer"
+                       targetRef="Gateway_DecideOffer"/>
+    <bpmn:sequenceFlow id="Flow_AcceptOffer"
+                       sourceRef="Gateway_DecideOffer"
+                       targetRef="Task_AcceptOffer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">offerAccepted</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_DenyOffer"
+                       sourceRef="Gateway_DecideOffer"
+                       targetRef="Task_DenyOffer"/>
+    <bpmn:sequenceFlow id="Flow_DeniedOfferToNext"
+                       sourceRef="Task_DenyOffer"
+                       targetRef="Task_ReceiveOffer"/>
+    <bpmn:sequenceFlow id="Flow_AcceptedToInvalidation"
+                       sourceRef="Task_AcceptOffer"
+                       targetRef="Task_InvalidateOtherOffers"/>
+    <bpmn:sequenceFlow id="Flow_InvalidationToTimer"
+                       sourceRef="Task_InvalidateOtherOffers"
+                       targetRef="Event_WeeklyTimer"/>
+    <bpmn:sequenceFlow id="Flow_TimerToInternUpdate"
+                       sourceRef="Event_WeeklyTimer"
+                       targetRef="Task_WriteInternUpdate"/>
+    <bpmn:sequenceFlow id="Flow_UpdateToCheck"
+                       sourceRef="Task_WriteInternUpdate"
+                       targetRef="Gateway_CheckInternshipAndUpdates"/>
+    <bpmn:sequenceFlow id="Flow_ContinueWeeklyUpdates"
+                       sourceRef="Gateway_CheckInternshipAndUpdates"
+                       targetRef="Event_WeeklyTimer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">internshipOngoing or statusUpdateCount &lt; 3</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ToRecommendations"
+                       sourceRef="Gateway_CheckInternshipAndUpdates"
+                       targetRef="Task_SendRecommendationTweets"/>
+    <bpmn:sequenceFlow id="Flow_RecommendationsToEnd"
+                       sourceRef="Task_SendRecommendationTweets"
+                       targetRef="EndEvent_Intern"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Company" name="Company status updates" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_CompanyAccepted" name="Offer accepted">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_CompanyAccepted"
+                                   messageRef="Message_OfferAcceptance"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_WriteCompanyUpdates" name="Write 3 status updates about the intern">
+      <bpmn:multiInstanceLoopCharacteristics id="MI_CompanyUpdates" isSequential="true">
+        <bpmn:loopCardinality xsi:type="bpmn:tFormalExpression">3</bpmn:loopCardinality>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_Company" name="Three status updates written"/>
+    <bpmn:sequenceFlow id="Flow_Company_1"
+                       sourceRef="StartEvent_CompanyAccepted"
+                       targetRef="Task_WriteCompanyUpdates"/>
+    <bpmn:sequenceFlow id="Flow_Company_2"
+                       sourceRef="Task_WriteCompanyUpdates"
+                       targetRef="EndEvent_Company"/>
+  </bpmn:process>
+</bpmn:definitions>

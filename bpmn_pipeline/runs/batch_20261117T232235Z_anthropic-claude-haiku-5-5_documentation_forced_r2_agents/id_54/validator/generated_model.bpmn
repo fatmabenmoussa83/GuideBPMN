@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_TransactionDataRequest" targetNamespace="http://example.org/bpmn/transaction-data-request">
+  <bpmn:message id="Message_TransactionDataRequest" name="Transaction data request"/>
+  <bpmn:message id="Message_Answer" name="Answer to request"/>
+
+  <bpmn:collaboration id="Collaboration_DataRequest">
+    <bpmn:participant id="Participant_INQ" name="INQ" processRef="Process_INQ"/>
+    <bpmn:participant id="Participant_IP" name="IP" processRef="Process_IP"/>
+    <bpmn:messageFlow id="MessageFlow_RequestToIP" name="Transaction data request" sourceRef="Task_TransmitRequest" targetRef="StartEvent_RequestReceived"/>
+    <bpmn:messageFlow id="MessageFlow_AnswerToINQ" name="Answer to request" sourceRef="Task_AnswerINQ" targetRef="CatchEvent_AnswerReceived"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_INQ" name="INQ" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_INQ" name="Transaction data needed">
+      <bpmn:outgoing>Flow_INQ_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_TransmitRequest" name="Transmit transaction data request">
+      <bpmn:incoming>Flow_INQ_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_INQ_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="CatchEvent_AnswerReceived" name="Answer received">
+      <bpmn:incoming>Flow_INQ_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_INQ_3</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_AnswerReceived" messageRef="Message_Answer"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="EndEvent_AnswerReceived" name="Request answered">
+      <bpmn:incoming>Flow_INQ_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_INQ_1" sourceRef="StartEvent_INQ" targetRef="Task_TransmitRequest"/>
+    <bpmn:sequenceFlow id="Flow_INQ_2" sourceRef="Task_TransmitRequest" targetRef="CatchEvent_AnswerReceived"/>
+    <bpmn:sequenceFlow id="Flow_INQ_3" sourceRef="CatchEvent_AnswerReceived" targetRef="EndEvent_AnswerReceived"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_IP" name="IP" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_RequestReceived" name="Transaction data request received">
+      <bpmn:outgoing>Flow_IP_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_RequestReceived" messageRef="Message_TransactionDataRequest"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CheckRequest" name="Check request of INQ">
+      <bpmn:incoming>Flow_IP_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_IP_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_AnswerINQ" name="Answer request of INQ">
+      <bpmn:incoming>Flow_IP_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_IP_3</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="Gateway_AnswerOutcome" name="Examination outcome">
+      <bpmn:incoming>Flow_IP_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_IP_4</bpmn:outgoing>
+      <bpmn:outgoing>Flow_IP_5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_DataTransmitted" name="Data transmitted">
+      <bpmn:incoming>Flow_IP_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_RequestRejected" name="Request rejected">
+      <bpmn:incoming>Flow_IP_5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_IP_1" sourceRef="StartEvent_RequestReceived" targetRef="Task_CheckRequest"/>
+    <bpmn:sequenceFlow id="Flow_IP_2" sourceRef="Task_CheckRequest" targetRef="Task_AnswerINQ"/>
+    <bpmn:sequenceFlow id="Flow_IP_3" sourceRef="Task_AnswerINQ" targetRef="Gateway_AnswerOutcome"/>
+    <bpmn:sequenceFlow id="Flow_IP_4" name="Transmission of data" sourceRef="Gateway_AnswerOutcome" targetRef="EndEvent_DataTransmitted"/>
+    <bpmn:sequenceFlow id="Flow_IP_5" name="Rejection" sourceRef="Gateway_AnswerOutcome" targetRef="EndEvent_RequestRejected"/>
+  </bpmn:process>
+</bpmn:definitions>

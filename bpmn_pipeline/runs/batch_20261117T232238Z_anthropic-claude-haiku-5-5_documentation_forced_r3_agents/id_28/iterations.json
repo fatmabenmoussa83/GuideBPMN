@@ -1,0 +1,782 @@
+{
+ "id": "28",
+ "kept_round": 3,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 84.1,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 51,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 17,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.195798,
+    "workflow_order_similarity": 0.231867,
+    "connection_f1": 0.072727,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.344828,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.160198,
+    "activity_semantic_similarity": 0.224921,
+    "activity_label_precision": 0.8,
+    "activity_label_recall": 0.266667,
+    "activity_label_f1": 0.4
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Internship\"\n                  targetNamespace=\"http://example.org/bpmn/internship\">\n\n  <bpmn:message id=\"Msg_Offer\" name=\"Offer\"/>\n  <bpmn:message id=\"Msg_CompanyStatus\" name=\"Company status update\"/>\n  <bpmn:message id=\"Msg_Tweet\" name=\"Recommendation tweet\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Internship\">\n    <bpmn:participant id=\"Participant_Student\" name=\"Student\" processRef=\"Process_Student\"/>\n    <bpmn:participant id=\"Participant_Company\" name=\"Company\"/>\n    <bpmn:participant id=\"Participant_Twitter\" name=\"Friends (via Twitter)\"/>\n\n    <bpmn:messageFlow id=\"MessageFlow_OfferToStudent\" name=\"Offer\" messageRef=\"Msg_Offer\"\n                      sourceRef=\"Participant_Company\" targetRef=\"Event_OfferReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CompanyStatusToStudent\" name=\"Status update about student\"\n                      messageRef=\"Msg_CompanyStatus\"\n                      sourceRef=\"Participant_Company\" targetRef=\"Event_CompanyUpdate\"/>\n    <bpmn:messageFlow id=\"MessageFlow_TweetToFriends\" name=\"Tweet\"\n                      messageRef=\"Msg_Tweet\"\n                      sourceRef=\"Task_SendTweets\" targetRef=\"Participant_Twitter\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Student\" name=\"Student internship process\" isExecutable=\"false\">\n\n    <bpmn:startEvent id=\"StartEvent_Start\" name=\"Search started\">\n      <bpmn:outgoing>Flow_StartToPreferences</bpmn:outgoing>\n    </bpmn:startEvent>\n\n    <bpmn:userTask id=\"Task_EnterPreferences\" name=\"Enter topic, salary, experience and hobbies\">\n      <bpmn:incoming>Flow_StartToPreferences</bpmn:incoming>\n      <bpmn:outgoing>Flow_PreferencesToMerge</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_OfferMerge\" name=\"Offer waiting\">\n      <bpmn:incoming>Flow_PreferencesToMerge</bpmn:incoming>\n      <bpmn:incoming>Flow_DenyToMerge</bpmn:incoming>\n      <bpmn:outgoing>Flow_MergeToOfferEvent</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_OfferReceived\" name=\"Offer received\">\n      <bpmn:incoming>Flow_MergeToOfferEvent</bpmn:incoming>\n      <bpmn:outgoing>Flow_OfferEventToDecide</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_OfferReceived\" messageRef=\"Msg_Offer\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:userTask id=\"Task_DecideOffer\" name=\"Accept or deny offer\">\n      <bpmn:documentation>Accepting an offer makes all other offers invalid.</bpmn:documentation>\n      <bpmn:incoming>Flow_OfferEventToDecide</bpmn:incoming>\n      <bpmn:outgoing>Flow_DecideToDecision</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_OfferDecision\" name=\"Offer accepted?\">\n      <bpmn:incoming>Flow_DecideToDecision</bpmn:incoming>\n      <bpmn:outgoing>Flow_DenyToMerge</bpmn:outgoing>\n      <bpmn:outgoing>Flow_AcceptToStatusSplit</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:parallelGateway id=\"Gateway_StatusSplit\" name=\"Start internship status tracking\">\n      <bpmn:incoming>Flow_AcceptToStatusSplit</bpmn:incoming>\n      <bpmn:outgoing>Flow_SplitToWriteUpdate</bpmn:outgoing>\n      <bpmn:outgoing>Flow_SplitToCompanyUpdate</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:userTask id=\"Task_WriteStatusUpdate\" name=\"Write weekly status update about internship\">\n      <bpmn:incoming>Flow_SplitToWriteUpdate</bpmn:incoming>\n      <bpmn:incoming>Flow_UpdateLoopBack</bpmn:incoming>\n      <bpmn:outgoing>Flow_WriteToUpdateCheck</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_StudentUpdateCheck\" name=\"At least 3 student updates?\">\n      <bpmn:incoming>Flow_WriteToUpdateCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_UpdateLoopBack</bpmn:outgoing>\n      <bpmn:outgoing>Flow_StudentUpdatesDone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_CompanyUpdate\" name=\"Company status update received\">\n      <bpmn:incoming>Flow_SplitToCompanyUpdate</bpmn:incoming>\n      <bpmn:incoming>Flow_CompanyLoopBack</bpmn:incoming>\n      <bpmn:outgoing>Flow_CompanyEventToCheck</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_CompanyUpdate\" messageRef=\"Msg_CompanyStatus\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_CompanyUpdateCheck\" name=\"At least 3 company updates?\">\n      <bpmn:incoming>Flow_CompanyEventToCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_CompanyLoopBack</bpmn:outgoing>\n      <bpmn:outgoing>Flow_CompanyUpdatesDone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:parallelGateway id=\"Gateway_StatusJoin\" name=\"Status tracking complete\">\n      <bpmn:incoming>Flow_StudentUpdatesDone</bpmn:incoming>\n      <bpmn:incoming>Flow_CompanyUpdatesDone</bpmn:incoming>\n      <bpmn:outgoing>Flow_JoinToRecommendCheck</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:exclusiveGateway id=\"Gateway_RecommendCheck\" name=\"Recommend company?\">\n      <bpmn:incoming>Flow_JoinToRecommendCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_RecommendYes</bpmn:outgoing>\n      <bpmn:outgoing>Flow_RecommendNo</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:endEvent id=\"EndEvent_NoRecommendation\" name=\"Internship finished without recommendation\">\n      <bpmn:incoming>Flow_RecommendNo</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:userTask id=\"Task_SelectFriends\" name=\"Select friends to recommend company to\">\n      <bpmn:incoming>Flow_RecommendYes</bpmn:incoming>\n      <bpmn:outgoing>Flow_SelectToTweets</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:sendTask id=\"Task_SendTweets\" name=\"Send tweet to friend\" messageRef=\"Msg_Tweet\">\n      <bpmn:incoming>Flow_SelectToTweets</bpmn:incoming>\n      <bpmn:outgoing>Flow_TweetsToEnd</bpmn:outgoing>\n      <bpmn:multiInstanceLoopCharacteristics isSequential=\"false\"/>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_Recommended\" name=\"Company recommended to friends\">\n      <bpmn:incoming>Flow_TweetsToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToPreferences\" sourceRef=\"StartEvent_Start\" targetRef=\"Task_EnterPreferences\"/>\n    <bpmn:sequenceFlow id=\"Flow_PreferencesToMerge\" sourceRef=\"Task_EnterPreferences\" targetRef=\"Gateway_OfferMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MergeToOfferEvent\" sourceRef=\"Gateway_OfferMerge\" targetRef=\"Event_OfferReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_OfferEventToDecide\" sourceRef=\"Event_OfferReceived\" targetRef=\"Task_DecideOffer\"/>\n    <bpmn:sequenceFlow id=\"Flow_DecideToDecision\" sourceRef=\"Task_DecideOffer\" targetRef=\"Gateway_OfferDecision\"/>\n    <bpmn:sequenceFlow id=\"Flow_DenyToMerge\" name=\"Denied\" sourceRef=\"Gateway_OfferDecision\" targetRef=\"Gateway_OfferMerge\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">offerDenied == true</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_AcceptToStatusSplit\" name=\"Accepted\" sourceRef=\"Gateway_OfferDecision\" targetRef=\"Gateway_StatusSplit\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">offerAccepted == true</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n\n    <bpmn:sequenceFlow id=\"Flow_SplitToWriteUpdate\" sourceRef=\"Gateway_StatusSplit\" targetRef=\"Task_WriteStatusUpdate\"/>\n    <bpmn:sequenceFlow id=\"Flow_WriteToUpdateCheck\" sourceRef=\"Task_WriteStatusUpdate\" targetRef=\"Gateway_StudentUpdateCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_UpdateLoopBack\" name=\"Fewer than 3\" sourceRef=\"Gateway_StudentUpdateCheck\" targetRef=\"Task_WriteStatusUpdate\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">studentUpdateCount &lt; 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_StudentUpdatesDone\" name=\"3 or more\" sourceRef=\"Gateway_StudentUpdateCheck\" targetRef=\"Gateway_StatusJoin\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">studentUpdateCount &gt;= 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n\n    <bpmn:sequenceFlow id=\"Flow_SplitToCompanyUpdate\" sourceRef=\"Gateway_StatusSplit\" targetRef=\"Event_CompanyUpdate\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompanyEventToCheck\" sourceRef=\"Event_CompanyUpdate\" targetRef=\"Gateway_CompanyUpdateCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompanyLoopBack\" name=\"Fewer than 3\" sourceRef=\"Gateway_CompanyUpdateCheck\" targetRef=\"Event_CompanyUpdate\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">companyUpdateCount &lt; 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_CompanyUpdatesDone\" name=\"3 or more\" sourceRef=\"Gateway_CompanyUpdateCheck\" targetRef=\"Gateway_StatusJoin\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">companyUpdateCount &gt;= 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n\n    <bpmn:sequenceFlow id=\"Flow_JoinToRecommendCheck\" sourceRef=\"Gateway_StatusJoin\" targetRef=\"Gateway_RecommendCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_RecommendYes\" name=\"Yes\" sourceRef=\"Gateway_RecommendCheck\" targetRef=\"Task_SelectFriends\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recommend == true</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_RecommendNo\" name=\"No\" sourceRef=\"Gateway_RecommendCheck\" targetRef=\"EndEvent_NoRecommendation\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recommend == false</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SelectToTweets\" sourceRef=\"Task_SelectFriends\" targetRef=\"Task_SendTweets\"/>\n    <bpmn:sequenceFlow id=\"Flow_TweetsToEnd\" sourceRef=\"Task_SendTweets\" targetRef=\"EndEvent_Recommended\"/>\n  </bpmn:process>\n\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 828.9,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 61,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 22,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.376529,
+    "workflow_order_similarity": 0.324779,
+    "connection_f1": 0.1,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.517241,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.308069,
+    "activity_semantic_similarity": 0.550238,
+    "activity_label_precision": 0.9,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.72
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Internship\"\n                  targetNamespace=\"http://example.org/bpmn/internship\">\n\n  <bpmn:message id=\"Msg_Offer\" name=\"Offer\"/>\n  <bpmn:message id=\"Msg_CompanyStatus\" name=\"Company status update\"/>\n  <bpmn:message id=\"Msg_Tweet\" name=\"Recommendation tweet\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Internship\">\n    <bpmn:participant id=\"Participant_Student\" name=\"Student\" processRef=\"Process_Student\"/>\n    <bpmn:participant id=\"Participant_Company\" name=\"Company\"/>\n    <bpmn:participant id=\"Participant_Twitter\" name=\"Friends (via Twitter)\"/>\n\n    <bpmn:messageFlow id=\"MessageFlow_OfferToStudent\" name=\"Offer\" messageRef=\"Msg_Offer\"\n                      sourceRef=\"Participant_Company\" targetRef=\"Event_OfferReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CompanyStatusToStudent\" name=\"Status update about student\"\n                      messageRef=\"Msg_CompanyStatus\"\n                      sourceRef=\"Participant_Company\" targetRef=\"Event_CompanyUpdate\"/>\n    <bpmn:messageFlow id=\"MessageFlow_TweetToFriends\" name=\"Tweet\" messageRef=\"Msg_Tweet\"\n                      sourceRef=\"Task_SendTweets\" targetRef=\"Participant_Twitter\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Student\" name=\"Student internship process\" isExecutable=\"false\">\n\n    <bpmn:startEvent id=\"StartEvent_Start\" name=\"Search started\">\n      <bpmn:outgoing>Flow_StartToTopic</bpmn:outgoing>\n    </bpmn:startEvent>\n\n    <bpmn:userTask id=\"Task_EnterTopic\" name=\"Enter topic of interest\">\n      <bpmn:incoming>Flow_StartToTopic</bpmn:incoming>\n      <bpmn:outgoing>Flow_TopicToSalary</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_EnterSalary\" name=\"Enter desired salary\">\n      <bpmn:incoming>Flow_TopicToSalary</bpmn:incoming>\n      <bpmn:outgoing>Flow_SalaryToExperience</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_EnterExperience\" name=\"Enter experience\">\n      <bpmn:incoming>Flow_SalaryToExperience</bpmn:incoming>\n      <bpmn:outgoing>Flow_ExperienceToHobbies</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_EnterHobbies\" name=\"Enter hobbies\">\n      <bpmn:incoming>Flow_ExperienceToHobbies</bpmn:incoming>\n      <bpmn:outgoing>Flow_HobbiesToMerge</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_OfferMerge\" name=\"Waiting for offers\">\n      <bpmn:incoming>Flow_HobbiesToMerge</bpmn:incoming>\n      <bpmn:incoming>Flow_DenyToMerge</bpmn:incoming>\n      <bpmn:outgoing>Flow_MergeToOfferEvent</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_OfferReceived\" name=\"Offer received\">\n      <bpmn:incoming>Flow_MergeToOfferEvent</bpmn:incoming>\n      <bpmn:outgoing>Flow_OfferEventToChoice</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_OfferReceived\" messageRef=\"Msg_Offer\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_OfferChoice\" name=\"Offer accepted?\">\n      <bpmn:incoming>Flow_OfferEventToChoice</bpmn:incoming>\n      <bpmn:outgoing>Flow_ChoiceToAccept</bpmn:outgoing>\n      <bpmn:outgoing>Flow_ChoiceToDeny</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:userTask id=\"Task_AcceptOffer\" name=\"Accept offer\">\n      <bpmn:incoming>Flow_ChoiceToAccept</bpmn:incoming>\n      <bpmn:outgoing>Flow_AcceptToWithdraw</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:task id=\"Task_WithdrawOtherOffers\" name=\"Withdraw all other offers\">\n      <bpmn:incoming>Flow_AcceptToWithdraw</bpmn:incoming>\n      <bpmn:outgoing>Flow_WithdrawToStatusSplit</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:userTask id=\"Task_DenyOffer\" name=\"Deny offer\">\n      <bpmn:incoming>Flow_ChoiceToDeny</bpmn:incoming>\n      <bpmn:outgoing>Flow_DenyToMerge</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:parallelGateway id=\"Gateway_StatusSplit\" name=\"Start internship status tracking\">\n      <bpmn:incoming>Flow_WithdrawToStatusSplit</bpmn:incoming>\n      <bpmn:outgoing>Flow_SplitToWriteUpdate</bpmn:outgoing>\n      <bpmn:outgoing>Flow_SplitToCompanyUpdate</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:userTask id=\"Task_WriteStatusUpdate\" name=\"Write weekly status update about internship\">\n      <bpmn:incoming>Flow_SplitToWriteUpdate</bpmn:incoming>\n      <bpmn:incoming>Flow_UpdateLoopBack</bpmn:incoming>\n      <bpmn:outgoing>Flow_WriteToUpdateCheck</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_StudentUpdateCheck\" name=\"At least 3 student updates?\">\n      <bpmn:incoming>Flow_WriteToUpdateCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_UpdateLoopBack</bpmn:outgoing>\n      <bpmn:outgoing>Flow_StudentUpdatesDone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_CompanyUpdate\" name=\"Company status update received\">\n      <bpmn:incoming>Flow_SplitToCompanyUpdate</bpmn:incoming>\n      <bpmn:incoming>Flow_CompanyLoopBack</bpmn:incoming>\n      <bpmn:outgoing>Flow_CompanyEventToCheck</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_CompanyUpdate\" messageRef=\"Msg_CompanyStatus\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_CompanyUpdateCheck\" name=\"At least 3 company updates?\">\n      <bpmn:incoming>Flow_CompanyEventToCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_CompanyLoopBack</bpmn:outgoing>\n      <bpmn:outgoing>Flow_CompanyUpdatesDone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:parallelGateway id=\"Gateway_StatusJoin\" name=\"Status tracking complete\">\n      <bpmn:incoming>Flow_StudentUpdatesDone</bpmn:incoming>\n      <bpmn:incoming>Flow_CompanyUpdatesDone</bpmn:incoming>\n      <bpmn:outgoing>Flow_JoinToRecommendCheck</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:exclusiveGateway id=\"Gateway_RecommendCheck\" name=\"Recommend company?\">\n      <bpmn:incoming>Flow_JoinToRecommendCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_RecommendYes</bpmn:outgoing>\n      <bpmn:outgoing>Flow_RecommendNo</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:endEvent id=\"EndEvent_NoRecommendation\" name=\"Internship finished without recommendation\">\n      <bpmn:incoming>Flow_RecommendNo</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:userTask id=\"Task_SelectFriends\" name=\"Select friends to recommend company to\">\n      <bpmn:incoming>Flow_RecommendYes</bpmn:incoming>\n      <bpmn:outgoing>Flow_SelectToTweets</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:sendTask id=\"Task_SendTweets\" name=\"Send tweet to friend\" messageRef=\"Msg_Tweet\">\n      <bpmn:incoming>Flow_SelectToTweets</bpmn:incoming>\n      <bpmn:outgoing>Flow_TweetsToEnd</bpmn:outgoing>\n      <bpmn:multiInstanceLoopCharacteristics isSequential=\"false\"/>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_Recommended\" name=\"Company recommended to friends\">\n      <bpmn:incoming>Flow_TweetsToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToTopic\" sourceRef=\"StartEvent_Start\" targetRef=\"Task_EnterTopic\"/>\n    <bpmn:sequenceFlow id=\"Flow_TopicToSalary\" sourceRef=\"Task_EnterTopic\" targetRef=\"Task_EnterSalary\"/>\n    <bpmn:sequenceFlow id=\"Flow_SalaryToExperience\" sourceRef=\"Task_EnterSalary\" targetRef=\"Task_EnterExperience\"/>\n    <bpmn:sequenceFlow id=\"Flow_ExperienceToHobbies\" sourceRef=\"Task_EnterExperience\" targetRef=\"Task_EnterHobbies\"/>\n    <bpmn:sequenceFlow id=\"Flow_HobbiesToMerge\" sourceRef=\"Task_EnterHobbies\" targetRef=\"Gateway_OfferMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MergeToOfferEvent\" sourceRef=\"Gateway_OfferMerge\" targetRef=\"Event_OfferReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_OfferEventToChoice\" sourceRef=\"Event_OfferReceived\" targetRef=\"Gateway_OfferChoice\"/>\n    <bpmn:sequenceFlow id=\"Flow_ChoiceToAccept\" name=\"Accepted\" sourceRef=\"Gateway_OfferChoice\" targetRef=\"Task_AcceptOffer\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">offerAccepted == true</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ChoiceToDeny\" name=\"Denied\" sourceRef=\"Gateway_OfferChoice\" targetRef=\"Task_DenyOffer\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">offerAccepted == false</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_AcceptToWithdraw\" sourceRef=\"Task_AcceptOffer\" targetRef=\"Task_WithdrawOtherOffers\"/>\n    <bpmn:sequenceFlow id=\"Flow_WithdrawToStatusSplit\" sourceRef=\"Task_WithdrawOtherOffers\" targetRef=\"Gateway_StatusSplit\"/>\n    <bpmn:sequenceFlow id=\"Flow_DenyToMerge\" sourceRef=\"Task_DenyOffer\" targetRef=\"Gateway_OfferMerge\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_SplitToWriteUpdate\" sourceRef=\"Gateway_StatusSplit\" targetRef=\"Task_WriteStatusUpdate\"/>\n    <bpmn:sequenceFlow id=\"Flow_WriteToUpdateCheck\" sourceRef=\"Task_WriteStatusUpdate\" targetRef=\"Gateway_StudentUpdateCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_UpdateLoopBack\" name=\"Fewer than 3\" sourceRef=\"Gateway_StudentUpdateCheck\" targetRef=\"Task_WriteStatusUpdate\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">studentUpdateCount &lt; 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_StudentUpdatesDone\" name=\"3 or more\" sourceRef=\"Gateway_StudentUpdateCheck\" targetRef=\"Gateway_StatusJoin\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">studentUpdateCount &gt;= 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n\n    <bpmn:sequenceFlow id=\"Flow_SplitToCompanyUpdate\" sourceRef=\"Gateway_StatusSplit\" targetRef=\"Event_CompanyUpdate\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompanyEventToCheck\" sourceRef=\"Event_CompanyUpdate\" targetRef=\"Gateway_CompanyUpdateCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompanyLoopBack\" name=\"Fewer than 3\" sourceRef=\"Gateway_CompanyUpdateCheck\" targetRef=\"Event_CompanyUpdate\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">companyUpdateCount &lt; 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_CompanyUpdatesDone\" name=\"3 or more\" sourceRef=\"Gateway_CompanyUpdateCheck\" targetRef=\"Gateway_StatusJoin\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">companyUpdateCount &gt;= 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n\n    <bpmn:sequenceFlow id=\"Flow_JoinToRecommendCheck\" sourceRef=\"Gateway_StatusJoin\" targetRef=\"Gateway_RecommendCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_RecommendYes\" name=\"Yes\" sourceRef=\"Gateway_RecommendCheck\" targetRef=\"Task_SelectFriends\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recommend == true</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_RecommendNo\" name=\"No\" sourceRef=\"Gateway_RecommendCheck\" targetRef=\"EndEvent_NoRecommendation\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recommend == false</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SelectToTweets\" sourceRef=\"Task_SelectFriends\" targetRef=\"Task_SendTweets\"/>\n    <bpmn:sequenceFlow id=\"Flow_TweetsToEnd\" sourceRef=\"Task_SendTweets\" targetRef=\"EndEvent_Recommended\"/>\n  </bpmn:process>\n\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1807.9,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 61,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 22,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.386416,
+    "workflow_order_similarity": 0.324779,
+    "connection_f1": 0.1,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.517241,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.316159,
+    "activity_semantic_similarity": 0.568034,
+    "activity_label_precision": 0.9,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.72
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Internship\"\n                  targetNamespace=\"http://example.org/bpmn/internship\">\n\n  <bpmn:message id=\"Msg_Offer\" name=\"Offer\"/>\n  <bpmn:message id=\"Msg_CompanyStatus\" name=\"Company status update\"/>\n  <bpmn:message id=\"Msg_Tweet\" name=\"Recommendation tweet\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Internship\">\n    <bpmn:participant id=\"Participant_Student\" name=\"Student\" processRef=\"Process_Student\"/>\n    <bpmn:participant id=\"Participant_Company\" name=\"Company\"/>\n    <bpmn:participant id=\"Participant_Twitter\" name=\"Friends (via Twitter)\"/>\n\n    <bpmn:messageFlow id=\"MessageFlow_OfferToStudent\" name=\"Offer\" messageRef=\"Msg_Offer\"\n                      sourceRef=\"Participant_Company\" targetRef=\"Event_OfferReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CompanyStatusToStudent\" name=\"Status update about student\"\n                      messageRef=\"Msg_CompanyStatus\"\n                      sourceRef=\"Participant_Company\" targetRef=\"Event_CompanyUpdate\"/>\n    <bpmn:messageFlow id=\"MessageFlow_TweetToFriends\" name=\"Tweet\" messageRef=\"Msg_Tweet\"\n                      sourceRef=\"Task_SendTweets\" targetRef=\"Participant_Twitter\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Student\" name=\"Student internship process\" isExecutable=\"false\">\n\n    <bpmn:startEvent id=\"StartEvent_Start\" name=\"Search started\">\n      <bpmn:outgoing>Flow_StartToTopic</bpmn:outgoing>\n    </bpmn:startEvent>\n\n    <bpmn:userTask id=\"Task_EnterTopic\" name=\"Enter topic of interest\">\n      <bpmn:incoming>Flow_StartToTopic</bpmn:incoming>\n      <bpmn:outgoing>Flow_TopicToSalary</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_EnterSalary\" name=\"Enter desired salary\">\n      <bpmn:incoming>Flow_TopicToSalary</bpmn:incoming>\n      <bpmn:outgoing>Flow_SalaryToExperience</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_EnterExperience\" name=\"Enter experience\">\n      <bpmn:incoming>Flow_SalaryToExperience</bpmn:incoming>\n      <bpmn:outgoing>Flow_ExperienceToHobbies</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_EnterHobbies\" name=\"Enter hobbies\">\n      <bpmn:incoming>Flow_ExperienceToHobbies</bpmn:incoming>\n      <bpmn:outgoing>Flow_HobbiesToMerge</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_OfferMerge\" name=\"Waiting for offers\">\n      <bpmn:incoming>Flow_HobbiesToMerge</bpmn:incoming>\n      <bpmn:incoming>Flow_DenyToMerge</bpmn:incoming>\n      <bpmn:outgoing>Flow_MergeToOfferEvent</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_OfferReceived\" name=\"Offer received\">\n      <bpmn:incoming>Flow_MergeToOfferEvent</bpmn:incoming>\n      <bpmn:outgoing>Flow_OfferEventToChoice</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_OfferReceived\" messageRef=\"Msg_Offer\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_OfferChoice\" name=\"Offer accepted?\">\n      <bpmn:incoming>Flow_OfferEventToChoice</bpmn:incoming>\n      <bpmn:outgoing>Flow_ChoiceToAccept</bpmn:outgoing>\n      <bpmn:outgoing>Flow_ChoiceToDeny</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:userTask id=\"Task_AcceptOffer\" name=\"Accept offer\">\n      <bpmn:incoming>Flow_ChoiceToAccept</bpmn:incoming>\n      <bpmn:outgoing>Flow_AcceptToInvalidate</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:task id=\"Task_InvalidateOtherOffers\" name=\"Invalidate all other offers\">\n      <bpmn:incoming>Flow_AcceptToInvalidate</bpmn:incoming>\n      <bpmn:outgoing>Flow_InvalidateToStatusSplit</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:userTask id=\"Task_DenyOffer\" name=\"Deny offer\">\n      <bpmn:incoming>Flow_ChoiceToDeny</bpmn:incoming>\n      <bpmn:outgoing>Flow_DenyToMerge</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:parallelGateway id=\"Gateway_StatusSplit\" name=\"Start internship status tracking\">\n      <bpmn:incoming>Flow_InvalidateToStatusSplit</bpmn:incoming>\n      <bpmn:outgoing>Flow_SplitToWriteUpdate</bpmn:outgoing>\n      <bpmn:outgoing>Flow_SplitToCompanyUpdate</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:userTask id=\"Task_WriteStatusUpdate\" name=\"Write weekly status update (at least 3)\">\n      <bpmn:incoming>Flow_SplitToWriteUpdate</bpmn:incoming>\n      <bpmn:incoming>Flow_UpdateLoopBack</bpmn:incoming>\n      <bpmn:outgoing>Flow_WriteToUpdateCheck</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_StudentUpdateCheck\" name=\"At least 3 student updates?\">\n      <bpmn:incoming>Flow_WriteToUpdateCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_UpdateLoopBack</bpmn:outgoing>\n      <bpmn:outgoing>Flow_StudentUpdatesDone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_CompanyUpdate\" name=\"Company status update received\">\n      <bpmn:incoming>Flow_SplitToCompanyUpdate</bpmn:incoming>\n      <bpmn:incoming>Flow_CompanyLoopBack</bpmn:incoming>\n      <bpmn:outgoing>Flow_CompanyEventToCheck</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_CompanyUpdate\" messageRef=\"Msg_CompanyStatus\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_CompanyUpdateCheck\" name=\"At least 3 company updates?\">\n      <bpmn:incoming>Flow_CompanyEventToCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_CompanyLoopBack</bpmn:outgoing>\n      <bpmn:outgoing>Flow_CompanyUpdatesDone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:parallelGateway id=\"Gateway_StatusJoin\" name=\"Status tracking complete\">\n      <bpmn:incoming>Flow_StudentUpdatesDone</bpmn:incoming>\n      <bpmn:incoming>Flow_CompanyUpdatesDone</bpmn:incoming>\n      <bpmn:outgoing>Flow_JoinToRecommendCheck</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:exclusiveGateway id=\"Gateway_RecommendCheck\" name=\"Recommend company?\">\n      <bpmn:incoming>Flow_JoinToRecommendCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_RecommendYes</bpmn:outgoing>\n      <bpmn:outgoing>Flow_RecommendNo</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:endEvent id=\"EndEvent_NoRecommendation\" name=\"Internship finished without recommendation\">\n      <bpmn:incoming>Flow_RecommendNo</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:userTask id=\"Task_SelectFriends\" name=\"Select friends to recommend company to\">\n      <bpmn:incoming>Flow_RecommendYes</bpmn:incoming>\n      <bpmn:outgoing>Flow_SelectToTweets</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:sendTask id=\"Task_SendTweets\" name=\"Send tweet to friend\" messageRef=\"Msg_Tweet\">\n      <bpmn:incoming>Flow_SelectToTweets</bpmn:incoming>\n      <bpmn:outgoing>Flow_TweetsToEnd</bpmn:outgoing>\n      <bpmn:multiInstanceLoopCharacteristics isSequential=\"false\"/>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_Recommended\" name=\"Company recommended to friends\">\n      <bpmn:incoming>Flow_TweetsToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToTopic\" sourceRef=\"StartEvent_Start\" targetRef=\"Task_EnterTopic\"/>\n    <bpmn:sequenceFlow id=\"Flow_TopicToSalary\" sourceRef=\"Task_EnterTopic\" targetRef=\"Task_EnterSalary\"/>\n    <bpmn:sequenceFlow id=\"Flow_SalaryToExperience\" sourceRef=\"Task_EnterSalary\" targetRef=\"Task_EnterExperience\"/>\n    <bpmn:sequenceFlow id=\"Flow_ExperienceToHobbies\" sourceRef=\"Task_EnterExperience\" targetRef=\"Task_EnterHobbies\"/>\n    <bpmn:sequenceFlow id=\"Flow_HobbiesToMerge\" sourceRef=\"Task_EnterHobbies\" targetRef=\"Gateway_OfferMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MergeToOfferEvent\" sourceRef=\"Gateway_OfferMerge\" targetRef=\"Event_OfferReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_OfferEventToChoice\" sourceRef=\"Event_OfferReceived\" targetRef=\"Gateway_OfferChoice\"/>\n    <bpmn:sequenceFlow id=\"Flow_ChoiceToAccept\" name=\"Accepted\" sourceRef=\"Gateway_OfferChoice\" targetRef=\"Task_AcceptOffer\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">offerAccepted == true</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ChoiceToDeny\" name=\"Denied\" sourceRef=\"Gateway_OfferChoice\" targetRef=\"Task_DenyOffer\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">offerAccepted == false</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_AcceptToInvalidate\" sourceRef=\"Task_AcceptOffer\" targetRef=\"Task_InvalidateOtherOffers\"/>\n    <bpmn:sequenceFlow id=\"Flow_InvalidateToStatusSplit\" sourceRef=\"Task_InvalidateOtherOffers\" targetRef=\"Gateway_StatusSplit\"/>\n    <bpmn:sequenceFlow id=\"Flow_DenyToMerge\" sourceRef=\"Task_DenyOffer\" targetRef=\"Gateway_OfferMerge\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_SplitToWriteUpdate\" sourceRef=\"Gateway_StatusSplit\" targetRef=\"Task_WriteStatusUpdate\"/>\n    <bpmn:sequenceFlow id=\"Flow_WriteToUpdateCheck\" sourceRef=\"Task_WriteStatusUpdate\" targetRef=\"Gateway_StudentUpdateCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_UpdateLoopBack\" name=\"Fewer than 3\" sourceRef=\"Gateway_StudentUpdateCheck\" targetRef=\"Task_WriteStatusUpdate\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">studentUpdateCount &lt; 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_StudentUpdatesDone\" name=\"3 or more\" sourceRef=\"Gateway_StudentUpdateCheck\" targetRef=\"Gateway_StatusJoin\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">studentUpdateCount &gt;= 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n\n    <bpmn:sequenceFlow id=\"Flow_SplitToCompanyUpdate\" sourceRef=\"Gateway_StatusSplit\" targetRef=\"Event_CompanyUpdate\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompanyEventToCheck\" sourceRef=\"Event_CompanyUpdate\" targetRef=\"Gateway_CompanyUpdateCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompanyLoopBack\" name=\"Fewer than 3\" sourceRef=\"Gateway_CompanyUpdateCheck\" targetRef=\"Event_CompanyUpdate\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">companyUpdateCount &lt; 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_CompanyUpdatesDone\" name=\"3 or more\" sourceRef=\"Gateway_CompanyUpdateCheck\" targetRef=\"Gateway_StatusJoin\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">companyUpdateCount &gt;= 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n\n    <bpmn:sequenceFlow id=\"Flow_JoinToRecommendCheck\" sourceRef=\"Gateway_StatusJoin\" targetRef=\"Gateway_RecommendCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_RecommendYes\" name=\"Yes\" sourceRef=\"Gateway_RecommendCheck\" targetRef=\"Task_SelectFriends\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recommend == true</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_RecommendNo\" name=\"No\" sourceRef=\"Gateway_RecommendCheck\" targetRef=\"EndEvent_NoRecommendation\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recommend == false</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SelectToTweets\" sourceRef=\"Task_SelectFriends\" targetRef=\"Task_SendTweets\"/>\n    <bpmn:sequenceFlow id=\"Flow_TweetsToEnd\" sourceRef=\"Task_SendTweets\" targetRef=\"EndEvent_Recommended\"/>\n  </bpmn:process>\n\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 2237.0,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 61,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 22,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.382635,
+    "workflow_order_similarity": 0.324779,
+    "connection_f1": 0.1,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.517241,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.313065,
+    "activity_semantic_similarity": 0.561227,
+    "activity_label_precision": 0.9,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.72
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_Internship\"\n                  targetNamespace=\"http://example.org/bpmn/internship\">\n\n  <bpmn:message id=\"Msg_Offer\" name=\"Offer\"/>\n  <bpmn:message id=\"Msg_CompanyStatus\" name=\"Company status update\"/>\n  <bpmn:message id=\"Msg_Tweet\" name=\"Recommendation tweet\"/>\n\n  <bpmn:collaboration id=\"Collaboration_Internship\">\n    <bpmn:participant id=\"Participant_Student\" name=\"Student\" processRef=\"Process_Student\"/>\n    <bpmn:participant id=\"Participant_Company\" name=\"Company\"/>\n    <bpmn:participant id=\"Participant_Twitter\" name=\"Friends (via Twitter)\"/>\n\n    <bpmn:messageFlow id=\"MessageFlow_OfferToStudent\" name=\"Offer\" messageRef=\"Msg_Offer\"\n                      sourceRef=\"Participant_Company\" targetRef=\"Event_OfferReceived\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CompanyStatusToStudent\" name=\"Status update about student\"\n                      messageRef=\"Msg_CompanyStatus\"\n                      sourceRef=\"Participant_Company\" targetRef=\"Event_CompanyUpdate\"/>\n    <bpmn:messageFlow id=\"MessageFlow_TweetToFriends\" name=\"Tweet\" messageRef=\"Msg_Tweet\"\n                      sourceRef=\"Task_SendTweets\" targetRef=\"Participant_Twitter\"/>\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Student\" name=\"Student internship process\" isExecutable=\"false\">\n\n    <bpmn:startEvent id=\"StartEvent_Start\" name=\"Search started\">\n      <bpmn:outgoing>Flow_StartToTopic</bpmn:outgoing>\n    </bpmn:startEvent>\n\n    <bpmn:userTask id=\"Task_EnterTopic\" name=\"Enter topic of interest\">\n      <bpmn:incoming>Flow_StartToTopic</bpmn:incoming>\n      <bpmn:outgoing>Flow_TopicToSalary</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_EnterSalary\" name=\"Enter desired salary\">\n      <bpmn:incoming>Flow_TopicToSalary</bpmn:incoming>\n      <bpmn:outgoing>Flow_SalaryToExperience</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_EnterExperience\" name=\"Enter experience\">\n      <bpmn:incoming>Flow_SalaryToExperience</bpmn:incoming>\n      <bpmn:outgoing>Flow_ExperienceToHobbies</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_EnterHobbies\" name=\"Enter hobbies\">\n      <bpmn:incoming>Flow_ExperienceToHobbies</bpmn:incoming>\n      <bpmn:outgoing>Flow_HobbiesToMerge</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_OfferMerge\" name=\"Waiting for offers\">\n      <bpmn:incoming>Flow_HobbiesToMerge</bpmn:incoming>\n      <bpmn:incoming>Flow_DenyToMerge</bpmn:incoming>\n      <bpmn:outgoing>Flow_MergeToOfferEvent</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_OfferReceived\" name=\"Offer received\">\n      <bpmn:incoming>Flow_MergeToOfferEvent</bpmn:incoming>\n      <bpmn:outgoing>Flow_OfferEventToChoice</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_OfferReceived\" messageRef=\"Msg_Offer\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_OfferChoice\" name=\"Offer accepted?\">\n      <bpmn:incoming>Flow_OfferEventToChoice</bpmn:incoming>\n      <bpmn:outgoing>Flow_ChoiceToAccept</bpmn:outgoing>\n      <bpmn:outgoing>Flow_ChoiceToDeny</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:userTask id=\"Task_AcceptOffer\" name=\"Accept offer\">\n      <bpmn:incoming>Flow_ChoiceToAccept</bpmn:incoming>\n      <bpmn:outgoing>Flow_AcceptToInvalidate</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:task id=\"Task_InvalidateOtherOffers\" name=\"Invalidate all other offers\">\n      <bpmn:incoming>Flow_AcceptToInvalidate</bpmn:incoming>\n      <bpmn:outgoing>Flow_InvalidateToStatusSplit</bpmn:outgoing>\n    </bpmn:task>\n\n    <bpmn:userTask id=\"Task_DenyOffer\" name=\"Deny offer\">\n      <bpmn:incoming>Flow_ChoiceToDeny</bpmn:incoming>\n      <bpmn:outgoing>Flow_DenyToMerge</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:parallelGateway id=\"Gateway_StatusSplit\" name=\"Start internship status tracking\">\n      <bpmn:incoming>Flow_InvalidateToStatusSplit</bpmn:incoming>\n      <bpmn:outgoing>Flow_SplitToWriteUpdate</bpmn:outgoing>\n      <bpmn:outgoing>Flow_SplitToCompanyUpdate</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:userTask id=\"Task_WriteStatusUpdate\" name=\"Write status update about internship (at least 3, every week)\">\n      <bpmn:incoming>Flow_SplitToWriteUpdate</bpmn:incoming>\n      <bpmn:incoming>Flow_UpdateLoopBack</bpmn:incoming>\n      <bpmn:outgoing>Flow_WriteToUpdateCheck</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:exclusiveGateway id=\"Gateway_StudentUpdateCheck\" name=\"At least 3 student updates?\">\n      <bpmn:incoming>Flow_WriteToUpdateCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_UpdateLoopBack</bpmn:outgoing>\n      <bpmn:outgoing>Flow_StudentUpdatesDone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:intermediateCatchEvent id=\"Event_CompanyUpdate\" name=\"Company status update received (3 required)\">\n      <bpmn:incoming>Flow_SplitToCompanyUpdate</bpmn:incoming>\n      <bpmn:incoming>Flow_CompanyLoopBack</bpmn:incoming>\n      <bpmn:outgoing>Flow_CompanyEventToCheck</bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MED_CompanyUpdate\" messageRef=\"Msg_CompanyStatus\"/>\n    </bpmn:intermediateCatchEvent>\n\n    <bpmn:exclusiveGateway id=\"Gateway_CompanyUpdateCheck\" name=\"At least 3 company updates?\">\n      <bpmn:incoming>Flow_CompanyEventToCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_CompanyLoopBack</bpmn:outgoing>\n      <bpmn:outgoing>Flow_CompanyUpdatesDone</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:parallelGateway id=\"Gateway_StatusJoin\" name=\"Status tracking complete\">\n      <bpmn:incoming>Flow_StudentUpdatesDone</bpmn:incoming>\n      <bpmn:incoming>Flow_CompanyUpdatesDone</bpmn:incoming>\n      <bpmn:outgoing>Flow_JoinToRecommendCheck</bpmn:outgoing>\n    </bpmn:parallelGateway>\n\n    <bpmn:exclusiveGateway id=\"Gateway_RecommendCheck\" name=\"Recommend company?\">\n      <bpmn:incoming>Flow_JoinToRecommendCheck</bpmn:incoming>\n      <bpmn:outgoing>Flow_RecommendYes</bpmn:outgoing>\n      <bpmn:outgoing>Flow_RecommendNo</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n\n    <bpmn:endEvent id=\"EndEvent_NoRecommendation\" name=\"Internship finished without recommendation\">\n      <bpmn:incoming>Flow_RecommendNo</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:userTask id=\"Task_SelectFriends\" name=\"Select friends to recommend company to\">\n      <bpmn:incoming>Flow_RecommendYes</bpmn:incoming>\n      <bpmn:outgoing>Flow_SelectToTweets</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:sendTask id=\"Task_SendTweets\" name=\"Send tweet to friend\" messageRef=\"Msg_Tweet\">\n      <bpmn:incoming>Flow_SelectToTweets</bpmn:incoming>\n      <bpmn:outgoing>Flow_TweetsToEnd</bpmn:outgoing>\n      <bpmn:multiInstanceLoopCharacteristics isSequential=\"false\"/>\n    </bpmn:sendTask>\n\n    <bpmn:endEvent id=\"EndEvent_Recommended\" name=\"Company recommended to friends\">\n      <bpmn:incoming>Flow_TweetsToEnd</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_StartToTopic\" sourceRef=\"StartEvent_Start\" targetRef=\"Task_EnterTopic\"/>\n    <bpmn:sequenceFlow id=\"Flow_TopicToSalary\" sourceRef=\"Task_EnterTopic\" targetRef=\"Task_EnterSalary\"/>\n    <bpmn:sequenceFlow id=\"Flow_SalaryToExperience\" sourceRef=\"Task_EnterSalary\" targetRef=\"Task_EnterExperience\"/>\n    <bpmn:sequenceFlow id=\"Flow_ExperienceToHobbies\" sourceRef=\"Task_EnterExperience\" targetRef=\"Task_EnterHobbies\"/>\n    <bpmn:sequenceFlow id=\"Flow_HobbiesToMerge\" sourceRef=\"Task_EnterHobbies\" targetRef=\"Gateway_OfferMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_MergeToOfferEvent\" sourceRef=\"Gateway_OfferMerge\" targetRef=\"Event_OfferReceived\"/>\n    <bpmn:sequenceFlow id=\"Flow_OfferEventToChoice\" sourceRef=\"Event_OfferReceived\" targetRef=\"Gateway_OfferChoice\"/>\n    <bpmn:sequenceFlow id=\"Flow_ChoiceToAccept\" name=\"Accepted\" sourceRef=\"Gateway_OfferChoice\" targetRef=\"Task_AcceptOffer\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">offerAccepted == true</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_ChoiceToDeny\" name=\"Denied\" sourceRef=\"Gateway_OfferChoice\" targetRef=\"Task_DenyOffer\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">offerAccepted == false</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_AcceptToInvalidate\" sourceRef=\"Task_AcceptOffer\" targetRef=\"Task_InvalidateOtherOffers\"/>\n    <bpmn:sequenceFlow id=\"Flow_InvalidateToStatusSplit\" sourceRef=\"Task_InvalidateOtherOffers\" targetRef=\"Gateway_StatusSplit\"/>\n    <bpmn:sequenceFlow id=\"Flow_DenyToMerge\" sourceRef=\"Task_DenyOffer\" targetRef=\"Gateway_OfferMerge\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_SplitToWriteUpdate\" sourceRef=\"Gateway_StatusSplit\" targetRef=\"Task_WriteStatusUpdate\"/>\n    <bpmn:sequenceFlow id=\"Flow_WriteToUpdateCheck\" sourceRef=\"Task_WriteStatusUpdate\" targetRef=\"Gateway_StudentUpdateCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_UpdateLoopBack\" name=\"Fewer than 3\" sourceRef=\"Gateway_StudentUpdateCheck\" targetRef=\"Task_WriteStatusUpdate\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">studentUpdateCount &lt; 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_StudentUpdatesDone\" name=\"3 or more\" sourceRef=\"Gateway_StudentUpdateCheck\" targetRef=\"Gateway_StatusJoin\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">studentUpdateCount &gt;= 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n\n    <bpmn:sequenceFlow id=\"Flow_SplitToCompanyUpdate\" sourceRef=\"Gateway_StatusSplit\" targetRef=\"Event_CompanyUpdate\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompanyEventToCheck\" sourceRef=\"Event_CompanyUpdate\" targetRef=\"Gateway_CompanyUpdateCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_CompanyLoopBack\" name=\"Fewer than 3\" sourceRef=\"Gateway_CompanyUpdateCheck\" targetRef=\"Event_CompanyUpdate\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">companyUpdateCount &lt; 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_CompanyUpdatesDone\" name=\"3 or more\" sourceRef=\"Gateway_CompanyUpdateCheck\" targetRef=\"Gateway_StatusJoin\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">companyUpdateCount &gt;= 3</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n\n    <bpmn:sequenceFlow id=\"Flow_JoinToRecommendCheck\" sourceRef=\"Gateway_StatusJoin\" targetRef=\"Gateway_RecommendCheck\"/>\n    <bpmn:sequenceFlow id=\"Flow_RecommendYes\" name=\"Yes\" sourceRef=\"Gateway_RecommendCheck\" targetRef=\"Task_SelectFriends\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recommend == true</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_RecommendNo\" name=\"No\" sourceRef=\"Gateway_RecommendCheck\" targetRef=\"EndEvent_NoRecommendation\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">recommend == false</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_SelectToTweets\" sourceRef=\"Task_SelectFriends\" targetRef=\"Task_SendTweets\"/>\n    <bpmn:sequenceFlow id=\"Flow_TweetsToEnd\" sourceRef=\"Task_SendTweets\" targetRef=\"EndEvent_Recommended\"/>\n  </bpmn:process>\n\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": true,
+  "failed_levels": [],
+  "metrics": {
+   "semantic_similarity": 0.195798,
+   "activity_semantic_similarity": 0.224921,
+   "activity_label_precision": 0.8,
+   "activity_label_recall": 0.266667,
+   "activity_label_f1": 0.4,
+   "activity_matched": 4,
+   "activity_reference": 15,
+   "activity_generated": 5,
+   "alignment_coverage": 0.344828,
+   "connection_precision": 0.1,
+   "connection_recall": 0.057143,
+   "connection_f1": 0.072727,
+   "connection_tp": 2,
+   "connection_fp": 18,
+   "connection_fn": 33,
+   "workflow_order_similarity": 0.231867,
+   "order_consistency": 0.672414,
+   "order_coverage": 0.344828,
+   "order_tp": 39,
+   "order_fp": 10,
+   "order_fn": 9,
+   "collaboration_similarity": null,
+   "collaboration_applicable": false,
+   "collaboration_tp": 0,
+   "collaboration_fp": 0,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 0.7647,
+   "type_recall_diagnostic": 0.4483,
+   "type_f1_diagnostic": 0.5652,
+   "counts": {
+    "gold_nodes": 29,
+    "generated_nodes": 17,
+    "gold_flows": 35,
+    "generated_flows": 20
+   },
+   "collaboration_ignored": true,
+   "semantic_similarity_strict": 0.160198,
+   "activity_semantic_similarity_strict": 0.224921,
+   "alignment_coverage_strict": 0.344828,
+   "connection_precision_strict": 0.1,
+   "connection_recall_strict": 0.057143,
+   "connection_f1_strict": 0.072727,
+   "workflow_order_similarity_strict": 0.231867,
+   "collaboration_similarity_strict": 0.0,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T5",
+   "T6"
+  ],
+  "error_counts": {
+   "T5": 51,
+   "T6": 12
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-073",
+    "instruction": "When the description states that choosing one of several pending alternatives makes the other pending alternatives no longer available: On the branch where the choice is made, model one task that withdraws the remaining pending alternatives, placed before the process continues. Do not leave this consequence implicit in the choice.",
+    "situation": "the description states that choosing one of several pending alternatives makes the other pending alternatives no longer available",
+    "source": "learned guideline (refines FID-01)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-022",
+    "instruction": "When the description states one sentence or step in which several distinct actions are chained on the same objects, or in which one outcome is delivered through alternative means (for example 'via X or Y'): Model each distinct action and each alternative means as its own task, in the order the description gives. If the description says one alternative is chosen, place the alternative tasks behind a decision gateway; if it does not choose, keep them as separate tasks on their own flow. Do not combine them into one task whose label lists them together.",
+    "situation": "the description states, in one sentence, a user action whose object is a list of several data items, or a choice between alternative actions on the same object",
+    "source": "learned guideline (refines FID-02)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-074",
+    "instruction": "When the description states that several follow-up actions after one activity are carried out in parallel (at the same time), and none of these follow-up actions depends on a condition: Model a parallel gateway that splits into one unconditional outgoing branch per follow-up action, with no decision conditions on those branches. Join the branches with a parallel gateway before any shared continuation, so the continuation waits for all of them.",
+    "situation": "the description states that several follow-up actions after one activity are carried out in parallel (at the same time), and none of these follow-up actions depends on a condition",
+    "source": "learned guideline (refines GW-04)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-075",
+    "instruction": "When the description states an activity whose verb is qualified by a quantity or frequency constraint (for example a minimum count or a repetition per period) that belongs to that same activity: Name the task with the verb the description uses for that act and keep the quantity or frequency wording that constrains it, in the description's language. Do not drop the constraint to shorten the label, and do not replace the stated verb with a synonym that names a different act or outcome, such as a removal verb where the description states a change of state.",
+    "situation": "the description states an activity whose verb is qualified by a quantity or frequency constraint (for example a minimum count or a repetition per period) that belongs to that same activity",
+    "source": "learned guideline (new)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "LRN-076",
+    "instruction": "When the description states that an activity must be repeated with a minimum count within a time period, for example at least N times per period: Name the user task so that it keeps both the minimum count and the period as the description states them, and do not shorten the label to the activity alone.",
+    "situation": "the description states that an activity must be repeated with a minimum count within a time period, for example at least N times per period",
+    "source": "learned guideline (refines FID-03)",
+    "failure_type": "T6"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-073",
+    "LRN-022"
+   ],
+   "before": {
+    "semantic_similarity": 0.195798,
+    "workflow_order_similarity": 0.231867,
+    "connection_f1": 0.072727,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.344828,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.160198,
+    "activity_semantic_similarity": 0.224921,
+    "activity_label_precision": 0.8,
+    "activity_label_recall": 0.266667,
+    "activity_label_f1": 0.4
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 51,
+    "T6": 12
+   },
+   "after": {
+    "semantic_similarity": 0.376529,
+    "workflow_order_similarity": 0.324779,
+    "connection_f1": 0.1,
+    "alignment_coverage": 0.517241
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.180731,
+    "workflow_order_similarity": 0.092912,
+    "connection_f1": 0.027273,
+    "alignment_coverage": 0.172413
+   },
+   "mean_change": 0.118332,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 54,
+    "T6": 7
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.376529,
+    "activity_semantic_similarity": 0.550238,
+    "activity_label_precision": 0.9,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.72,
+    "activity_matched": 9,
+    "activity_reference": 15,
+    "activity_generated": 10,
+    "alignment_coverage": 0.517241,
+    "connection_precision": 0.12,
+    "connection_recall": 0.085714,
+    "connection_f1": 0.1,
+    "connection_tp": 3,
+    "connection_fp": 22,
+    "connection_fn": 32,
+    "workflow_order_similarity": 0.324779,
+    "order_consistency": 0.627907,
+    "order_coverage": 0.517241,
+    "order_tp": 81,
+    "order_fp": 28,
+    "order_fn": 20,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.8182,
+    "type_recall_diagnostic": 0.6207,
+    "type_f1_diagnostic": 0.7059,
+    "counts": {
+     "gold_nodes": 29,
+     "generated_nodes": 22,
+     "gold_flows": 35,
+     "generated_flows": 25
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.308069,
+    "activity_semantic_similarity_strict": 0.550238,
+    "alignment_coverage_strict": 0.517241,
+    "connection_precision_strict": 0.12,
+    "connection_recall_strict": 0.085714,
+    "connection_f1_strict": 0.1,
+    "workflow_order_similarity_strict": 0.324779,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 61,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 22,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-022": {
+     "failure_type": "T6",
+     "errors_before": 12,
+     "errors_after": 7,
+     "removed": 5
+    },
+    "LRN-073": {
+     "failure_type": "T5",
+     "errors_before": 51,
+     "errors_after": 54,
+     "removed": -3
+    }
+   },
+   "confirmed": true,
+   "promoted": [],
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "LRN-074",
+    "LRN-075"
+   ],
+   "before": {
+    "semantic_similarity": 0.376529,
+    "workflow_order_similarity": 0.324779,
+    "connection_f1": 0.1,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.517241,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.308069,
+    "activity_semantic_similarity": 0.550238,
+    "activity_label_precision": 0.9,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.72
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 54,
+    "T6": 7
+   },
+   "after": {
+    "semantic_similarity": 0.386416,
+    "workflow_order_similarity": 0.324779,
+    "connection_f1": 0.1,
+    "alignment_coverage": 0.517241
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.009887,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.002472,
+   "kept_round": 2,
+   "errors_after": {
+    "T5": 54,
+    "T6": 7
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.386416,
+    "activity_semantic_similarity": 0.568034,
+    "activity_label_precision": 0.9,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.72,
+    "activity_matched": 9,
+    "activity_reference": 15,
+    "activity_generated": 10,
+    "alignment_coverage": 0.517241,
+    "connection_precision": 0.12,
+    "connection_recall": 0.085714,
+    "connection_f1": 0.1,
+    "connection_tp": 3,
+    "connection_fp": 22,
+    "connection_fn": 32,
+    "workflow_order_similarity": 0.324779,
+    "order_consistency": 0.627907,
+    "order_coverage": 0.517241,
+    "order_tp": 81,
+    "order_fp": 28,
+    "order_fn": 20,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.8182,
+    "type_recall_diagnostic": 0.6207,
+    "type_f1_diagnostic": 0.7059,
+    "counts": {
+     "gold_nodes": 29,
+     "generated_nodes": 22,
+     "gold_flows": 35,
+     "generated_flows": 25
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.316159,
+    "activity_semantic_similarity_strict": 0.568034,
+    "alignment_coverage_strict": 0.517241,
+    "connection_precision_strict": 0.12,
+    "connection_recall_strict": 0.085714,
+    "connection_f1_strict": 0.1,
+    "workflow_order_similarity_strict": 0.324779,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 61,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 22,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-074": {
+     "failure_type": "T5",
+     "errors_before": 54,
+     "errors_after": 54,
+     "removed": 0
+    },
+    "LRN-075": {
+     "failure_type": "T6",
+     "errors_before": 7,
+     "errors_after": 7,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [
+    "LRN-076"
+   ],
+   "before": {
+    "semantic_similarity": 0.386416,
+    "workflow_order_similarity": 0.324779,
+    "connection_f1": 0.1,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.517241,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.316159,
+    "activity_semantic_similarity": 0.568034,
+    "activity_label_precision": 0.9,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.72
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 54,
+    "T6": 7
+   },
+   "after": {
+    "semantic_similarity": 0.382635,
+    "workflow_order_similarity": 0.324779,
+    "connection_f1": 0.1,
+    "alignment_coverage": 0.517241
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": -0.003781,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": -0.000945,
+   "kept_round": 3,
+   "errors_after": {
+    "T5": 54,
+    "T6": 7
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.382635,
+    "activity_semantic_similarity": 0.561227,
+    "activity_label_precision": 0.9,
+    "activity_label_recall": 0.6,
+    "activity_label_f1": 0.72,
+    "activity_matched": 9,
+    "activity_reference": 15,
+    "activity_generated": 10,
+    "alignment_coverage": 0.517241,
+    "connection_precision": 0.12,
+    "connection_recall": 0.085714,
+    "connection_f1": 0.1,
+    "connection_tp": 3,
+    "connection_fp": 22,
+    "connection_fn": 32,
+    "workflow_order_similarity": 0.324779,
+    "order_consistency": 0.627907,
+    "order_coverage": 0.517241,
+    "order_tp": 81,
+    "order_fp": 28,
+    "order_fn": 20,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.8182,
+    "type_recall_diagnostic": 0.6207,
+    "type_f1_diagnostic": 0.7059,
+    "counts": {
+     "gold_nodes": 29,
+     "generated_nodes": 22,
+     "gold_flows": 35,
+     "generated_flows": 25
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.313065,
+    "activity_semantic_similarity_strict": 0.561227,
+    "alignment_coverage_strict": 0.517241,
+    "connection_precision_strict": 0.12,
+    "connection_recall_strict": 0.085714,
+    "connection_f1_strict": 0.1,
+    "workflow_order_similarity_strict": 0.324779,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 61,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 22,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 3,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-076": {
+     "failure_type": "T6",
+     "errors_before": 7,
+     "errors_after": 7,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.382635,
+  "activity_semantic_similarity": 0.561227,
+  "activity_label_precision": 0.9,
+  "activity_label_recall": 0.6,
+  "activity_label_f1": 0.72,
+  "activity_matched": 9,
+  "activity_reference": 15,
+  "activity_generated": 10,
+  "alignment_coverage": 0.517241,
+  "connection_precision": 0.12,
+  "connection_recall": 0.085714,
+  "connection_f1": 0.1,
+  "connection_tp": 3,
+  "connection_fp": 22,
+  "connection_fn": 32,
+  "workflow_order_similarity": 0.324779,
+  "order_consistency": 0.627907,
+  "order_coverage": 0.517241,
+  "order_tp": 81,
+  "order_fp": 28,
+  "order_fn": 20,
+  "collaboration_similarity": null,
+  "collaboration_applicable": false,
+  "collaboration_tp": 0,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 0.8182,
+  "type_recall_diagnostic": 0.6207,
+  "type_f1_diagnostic": 0.7059,
+  "counts": {
+   "gold_nodes": 29,
+   "generated_nodes": 22,
+   "gold_flows": 35,
+   "generated_flows": 25
+  },
+  "collaboration_ignored": true,
+  "semantic_similarity_strict": 0.313065,
+  "activity_semantic_similarity_strict": 0.561227,
+  "alignment_coverage_strict": 0.517241,
+  "connection_precision_strict": 0.12,
+  "connection_recall_strict": 0.085714,
+  "connection_f1_strict": 0.1,
+  "workflow_order_similarity_strict": 0.324779,
+  "collaboration_similarity_strict": 0.0,
+  "collaboration_applicable_strict": true
+ }
+}

@@ -1,0 +1,759 @@
+{
+ "id": "46",
+ "kept_round": 3,
+ "iterations": [
+  {
+   "round": 0,
+   "kind": "draft",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 67.4,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 67,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 23,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.52014,
+    "workflow_order_similarity": 0.782609,
+    "connection_f1": 0.530612,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.782609,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.38591,
+    "activity_semantic_similarity": 0.831818,
+    "activity_label_precision": 0.909091,
+    "activity_label_recall": 0.909091,
+    "activity_label_f1": 0.909091
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"Definitions_StorageManagement\" targetNamespace=\"http://example.com/bpmn/storage-management\">\n  <bpmn:message id=\"Message_ReorderRequest\" name=\"Reorder request\"/>\n  <bpmn:message id=\"Message_DelayPenaltyDemand\" name=\"Delivery delay penalty demand\"/>\n  <bpmn:message id=\"Message_ProductArrival\" name=\"Product arrival\"/>\n  <bpmn:message id=\"Message_CourierRequest\" name=\"Courier request\"/>\n\n  <bpmn:process id=\"Process_StorageManagement\" name=\"Storage management\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Process\" name=\"Start\"/>\n    <bpmn:task id=\"Task_ReadOrder\" name=\"Read order from automatic order management system\"/>\n    <bpmn:task id=\"Task_CheckStock\" name=\"Check whether product is in stock\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockStatus\" name=\"Product in stock?\"/>\n    <bpmn:task id=\"Task_WithdrawProduct\" name=\"Withdraw product from warehouse\"/>\n    <bpmn:sendTask id=\"Task_ReorderProduct\" name=\"Reorder product from wholesaler\" messageRef=\"Message_ReorderRequest\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_ArrivalOrDelay\" name=\"Wait for product arrival or 10 days\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_ProductArrivesEarly\" name=\"Product arrives within 10 days\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_ProductArrivesEarly\" messageRef=\"Message_ProductArrival\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"Event_10DaysElapsed\" name=\"10 days elapse without arrival\">\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_10Days\">\n        <bpmn:timeDuration xsi:type=\"bpmn:tFormalExpression\">P10D</bpmn:timeDuration>\n      </bpmn:timerEventDefinition>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:serviceTask id=\"Task_DemandDelayPenalty\" name=\"Automatically demand delivery delay penalty\" />\n    <bpmn:intermediateCatchEvent id=\"Event_ProductArrivesLate\" name=\"Product arrives after 10 days\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_ProductArrivesLate\" messageRef=\"Message_ProductArrival\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_ArrivalMerge\" name=\"Arrival path merge\"/>\n    <bpmn:task id=\"Task_RegisterProduct\" name=\"Register product in stock management system\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ProductPathMerge\" name=\"Product processing path merge\"/>\n    <bpmn:task id=\"Task_CheckOrderReady\" name=\"Check whether whole order is ready for shipment\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OrderReady\" name=\"Order ready for shipment?\"/>\n    <bpmn:task id=\"Task_SelectNextProduct\" name=\"Select next product from order\"/>\n    <bpmn:parallelGateway id=\"Gateway_ShipmentSplit\" name=\"Request courier and pack products\"/>\n    <bpmn:sendTask id=\"Task_RequestCourier\" name=\"Request courier\" messageRef=\"Message_CourierRequest\"/>\n    <bpmn:task id=\"Task_PackProducts\" name=\"Pack products\"/>\n    <bpmn:parallelGateway id=\"Gateway_ShipmentJoin\" name=\"Courier requested and products packed\"/>\n    <bpmn:task id=\"Task_ShipProducts\" name=\"Ship products\"/>\n    <bpmn:endEvent id=\"EndEvent_Shipped\" name=\"Order shipped\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Read\" sourceRef=\"StartEvent_Process\" targetRef=\"Task_ReadOrder\"/>\n    <bpmn:sequenceFlow id=\"Flow_Read_CheckStock\" sourceRef=\"Task_ReadOrder\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckStock_Status\" sourceRef=\"Task_CheckStock\" targetRef=\"Gateway_StockStatus\"/>\n    <bpmn:sequenceFlow id=\"Flow_Stock_Withdraw\" name=\"In stock\" sourceRef=\"Gateway_StockStatus\" targetRef=\"Task_WithdrawProduct\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${inStock}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Stock_Reorder\" name=\"Not in stock\" sourceRef=\"Gateway_StockStatus\" targetRef=\"Task_ReorderProduct\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${not inStock}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Withdraw_ProductMerge\" sourceRef=\"Task_WithdrawProduct\" targetRef=\"Gateway_ProductPathMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reorder_Wait\" sourceRef=\"Task_ReorderProduct\" targetRef=\"Gateway_ArrivalOrDelay\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_EarlyArrival\" sourceRef=\"Gateway_ArrivalOrDelay\" targetRef=\"Event_ProductArrivesEarly\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_10Days\" sourceRef=\"Gateway_ArrivalOrDelay\" targetRef=\"Event_10DaysElapsed\"/>\n    <bpmn:sequenceFlow id=\"Flow_EarlyArrival_ArrivalMerge\" sourceRef=\"Event_ProductArrivesEarly\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_10Days_Penalty\" sourceRef=\"Event_10DaysElapsed\" targetRef=\"Task_DemandDelayPenalty\"/>\n    <bpmn:sequenceFlow id=\"Flow_Penalty_LateArrival\" sourceRef=\"Task_DemandDelayPenalty\" targetRef=\"Event_ProductArrivesLate\"/>\n    <bpmn:sequenceFlow id=\"Flow_LateArrival_ArrivalMerge\" sourceRef=\"Event_ProductArrivesLate\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ArrivalMerge_Register\" sourceRef=\"Gateway_ArrivalMerge\" targetRef=\"Task_RegisterProduct\"/>\n    <bpmn:sequenceFlow id=\"Flow_Register_ProductMerge\" sourceRef=\"Task_RegisterProduct\" targetRef=\"Gateway_ProductPathMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ProductMerge_CheckReady\" sourceRef=\"Gateway_ProductPathMerge\" targetRef=\"Task_CheckOrderReady\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckReady_Decision\" sourceRef=\"Task_CheckOrderReady\" targetRef=\"Gateway_OrderReady\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderReady_Shipment\" name=\"Ready for shipment\" sourceRef=\"Gateway_OrderReady\" targetRef=\"Gateway_ShipmentSplit\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${orderReady}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OrderNotReady_NextProduct\" name=\"Not ready for shipment\" sourceRef=\"Gateway_OrderReady\" targetRef=\"Task_SelectNextProduct\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${not orderReady}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_NextProduct_CheckStock\" sourceRef=\"Task_SelectNextProduct\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"Flow_Shipment_RequestCourier\" sourceRef=\"Gateway_ShipmentSplit\" targetRef=\"Task_RequestCourier\"/>\n    <bpmn:sequenceFlow id=\"Flow_Shipment_PackProducts\" sourceRef=\"Gateway_ShipmentSplit\" targetRef=\"Task_PackProducts\"/>\n    <bpmn:sequenceFlow id=\"Flow_RequestCourier_ShipmentJoin\" sourceRef=\"Task_RequestCourier\" targetRef=\"Gateway_ShipmentJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_PackProducts_ShipmentJoin\" sourceRef=\"Task_PackProducts\" targetRef=\"Gateway_ShipmentJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_ShipmentJoin_Ship\" sourceRef=\"Gateway_ShipmentJoin\" targetRef=\"Task_ShipProducts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Ship_End\" sourceRef=\"Task_ShipProducts\" targetRef=\"EndEvent_Shipped\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_StorageManagement\">\n    <bpmn:participant id=\"Participant_StorageManagement\" name=\"Storage management\" processRef=\"Process_StorageManagement\"/>\n    <bpmn:participant id=\"Participant_Wholesaler\" name=\"Wholesaler\"/>\n    <bpmn:participant id=\"Participant_Courier\" name=\"Courier\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ReorderRequest\" name=\"Reorder request\" sourceRef=\"Task_ReorderProduct\" targetRef=\"Participant_Wholesaler\" messageRef=\"Message_ReorderRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_DelayPenaltyDemand\" name=\"Delivery delay penalty demand\" sourceRef=\"Task_DemandDelayPenalty\" targetRef=\"Participant_Wholesaler\" messageRef=\"Message_DelayPenaltyDemand\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ProductArrivalEarly\" name=\"Product arrival\" sourceRef=\"Participant_Wholesaler\" targetRef=\"Event_ProductArrivesEarly\" messageRef=\"Message_ProductArrival\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ProductArrivalLate\" name=\"Product arrival\" sourceRef=\"Participant_Wholesaler\" targetRef=\"Event_ProductArrivesLate\" messageRef=\"Message_ProductArrival\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CourierRequest\" name=\"Courier request\" sourceRef=\"Task_RequestCourier\" targetRef=\"Participant_Courier\" messageRef=\"Message_CourierRequest\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  },
+  {
+   "round": 1,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 571.9,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 60,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 21,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.606711,
+    "workflow_order_similarity": 0.904762,
+    "connection_f1": 0.680851,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.904762,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.455033,
+    "activity_semantic_similarity": 0.827988,
+    "activity_label_precision": 0.909091,
+    "activity_label_recall": 0.909091,
+    "activity_label_f1": 0.909091
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_StorageManagement\"\n                  targetNamespace=\"http://example.com/bpmn/storage-management\">\n  <bpmn:message id=\"Message_ReorderRequest\" name=\"Reorder request\"/>\n  <bpmn:message id=\"Message_DelayPenaltyDemand\" name=\"Delivery delay penalty demand\"/>\n  <bpmn:message id=\"Message_ProductArrival\" name=\"Product arrival\"/>\n  <bpmn:message id=\"Message_CourierRequest\" name=\"Courier request\"/>\n\n  <bpmn:process id=\"Process_StorageManagement\" name=\"Storage management\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Process\" name=\"Start\"/>\n    <bpmn:task id=\"Task_ReadOrder\" name=\"Read order from automatic order management system\"/>\n    <bpmn:task id=\"Task_CheckStock\" name=\"Check whether current product is in stock\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockStatus\" name=\"Product in stock?\" default=\"Flow_Stock_Reorder\"/>\n    <bpmn:task id=\"Task_WithdrawProduct\" name=\"Withdraw product from warehouse\"/>\n    <bpmn:sendTask id=\"Task_ReorderProduct\" name=\"Reorder product from wholesaler\" messageRef=\"Message_ReorderRequest\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_ProductArrival\" name=\"Product arrives\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_ProductArrival\" messageRef=\"Message_ProductArrival\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_WaitExceeded\" name=\"Wait exceeded 10 days?\" default=\"Flow_WaitNotExceeded\"/>\n    <bpmn:serviceTask id=\"Task_DemandDelayPenalty\" name=\"Automatically demand delivery delay penalty\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_PenaltyMerge\" name=\"Penalty outcome merge\"/>\n    <bpmn:task id=\"Task_RegisterProduct\" name=\"Register product in stock management system\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ProductPathMerge\" name=\"Product processing path merge\"/>\n    <bpmn:task id=\"Task_CheckOrderReady\" name=\"Check whether whole order is ready for shipment\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OrderReady\" name=\"Order ready for shipment?\" default=\"Flow_OrderNotReady_NextProduct\"/>\n    <bpmn:task id=\"Task_SelectNextProduct\" name=\"Select next product from order\"/>\n    <bpmn:parallelGateway id=\"Gateway_ShipmentSplit\" name=\"Request courier and pack products\"/>\n    <bpmn:sendTask id=\"Task_RequestCourier\" name=\"Request courier\" messageRef=\"Message_CourierRequest\"/>\n    <bpmn:task id=\"Task_PackProducts\" name=\"Pack products\"/>\n    <bpmn:parallelGateway id=\"Gateway_ShipmentJoin\" name=\"Courier requested and products packed\"/>\n    <bpmn:task id=\"Task_ShipProducts\" name=\"Ship products\"/>\n    <bpmn:endEvent id=\"EndEvent_Shipped\" name=\"Order shipped\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Read\" sourceRef=\"StartEvent_Process\" targetRef=\"Task_ReadOrder\"/>\n    <bpmn:sequenceFlow id=\"Flow_Read_CheckStock\" sourceRef=\"Task_ReadOrder\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckStock_Status\" sourceRef=\"Task_CheckStock\" targetRef=\"Gateway_StockStatus\"/>\n    <bpmn:sequenceFlow id=\"Flow_Stock_Withdraw\" name=\"In stock\" sourceRef=\"Gateway_StockStatus\" targetRef=\"Task_WithdrawProduct\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${inStock}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Stock_Reorder\" name=\"Not in stock\" sourceRef=\"Gateway_StockStatus\" targetRef=\"Task_ReorderProduct\"/>\n    <bpmn:sequenceFlow id=\"Flow_Withdraw_ProductMerge\" sourceRef=\"Task_WithdrawProduct\" targetRef=\"Gateway_ProductPathMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reorder_Arrival\" sourceRef=\"Task_ReorderProduct\" targetRef=\"Event_ProductArrival\"/>\n    <bpmn:sequenceFlow id=\"Flow_Arrival_WaitExceeded\" sourceRef=\"Event_ProductArrival\" targetRef=\"Gateway_WaitExceeded\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitExceeded_Penalty\" name=\"More than 10 days\" sourceRef=\"Gateway_WaitExceeded\" targetRef=\"Task_DemandDelayPenalty\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${waitedMoreThan10Days}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_WaitNotExceeded\" name=\"10 days or less\" sourceRef=\"Gateway_WaitExceeded\" targetRef=\"Gateway_PenaltyMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Penalty_Merge\" sourceRef=\"Task_DemandDelayPenalty\" targetRef=\"Gateway_PenaltyMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_PenaltyMerge_Register\" sourceRef=\"Gateway_PenaltyMerge\" targetRef=\"Task_RegisterProduct\"/>\n    <bpmn:sequenceFlow id=\"Flow_Register_ProductMerge\" sourceRef=\"Task_RegisterProduct\" targetRef=\"Gateway_ProductPathMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ProductMerge_CheckReady\" sourceRef=\"Gateway_ProductPathMerge\" targetRef=\"Task_CheckOrderReady\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckReady_Decision\" sourceRef=\"Task_CheckOrderReady\" targetRef=\"Gateway_OrderReady\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderReady_Shipment\" name=\"Ready for shipment\" sourceRef=\"Gateway_OrderReady\" targetRef=\"Gateway_ShipmentSplit\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${orderReady}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OrderNotReady_NextProduct\" name=\"Not ready for shipment\" sourceRef=\"Gateway_OrderReady\" targetRef=\"Task_SelectNextProduct\"/>\n    <bpmn:sequenceFlow id=\"Flow_NextProduct_CheckStock\" sourceRef=\"Task_SelectNextProduct\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"Flow_Shipment_RequestCourier\" sourceRef=\"Gateway_ShipmentSplit\" targetRef=\"Task_RequestCourier\"/>\n    <bpmn:sequenceFlow id=\"Flow_Shipment_PackProducts\" sourceRef=\"Gateway_ShipmentSplit\" targetRef=\"Task_PackProducts\"/>\n    <bpmn:sequenceFlow id=\"Flow_RequestCourier_ShipmentJoin\" sourceRef=\"Task_RequestCourier\" targetRef=\"Gateway_ShipmentJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_PackProducts_ShipmentJoin\" sourceRef=\"Task_PackProducts\" targetRef=\"Gateway_ShipmentJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_ShipmentJoin_Ship\" sourceRef=\"Gateway_ShipmentJoin\" targetRef=\"Task_ShipProducts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Ship_End\" sourceRef=\"Task_ShipProducts\" targetRef=\"EndEvent_Shipped\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_StorageManagement\">\n    <bpmn:participant id=\"Participant_StorageManagement\" name=\"Storage management\" processRef=\"Process_StorageManagement\"/>\n    <bpmn:participant id=\"Participant_Wholesaler\" name=\"Wholesaler\"/>\n    <bpmn:participant id=\"Participant_Courier\" name=\"Courier\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ReorderRequest\" name=\"Reorder request\" sourceRef=\"Task_ReorderProduct\" targetRef=\"Participant_Wholesaler\" messageRef=\"Message_ReorderRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_DelayPenaltyDemand\" name=\"Delivery delay penalty demand\" sourceRef=\"Task_DemandDelayPenalty\" targetRef=\"Participant_Wholesaler\" messageRef=\"Message_DelayPenaltyDemand\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ProductArrival\" name=\"Product arrival\" sourceRef=\"Participant_Wholesaler\" targetRef=\"Event_ProductArrival\" messageRef=\"Message_ProductArrival\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CourierRequest\" name=\"Courier request\" sourceRef=\"Task_RequestCourier\" targetRef=\"Participant_Courier\" messageRef=\"Message_CourierRequest\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  },
+  {
+   "round": 2,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1101.4,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 67,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 23,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 5,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.521005,
+    "workflow_order_similarity": 0.782609,
+    "connection_f1": 0.530612,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.782609,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.386552,
+    "activity_semantic_similarity": 0.833627,
+    "activity_label_precision": 0.909091,
+    "activity_label_recall": 0.909091,
+    "activity_label_f1": 0.909091
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_StorageManagement\"\n                  targetNamespace=\"http://example.com/bpmn/storage-management\">\n  <bpmn:message id=\"Message_ReorderRequest\" name=\"Reorder request\"/>\n  <bpmn:message id=\"Message_DelayPenaltyDemand\" name=\"Delivery delay penalty demand\"/>\n  <bpmn:message id=\"Message_ProductArrival\" name=\"Product arrival\"/>\n  <bpmn:message id=\"Message_CourierRequest\" name=\"Courier request\"/>\n\n  <bpmn:process id=\"Process_StorageManagement\" name=\"Storage management\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Process\" name=\"Start\"/>\n    <bpmn:task id=\"Task_ReadOrder\" name=\"Read order from automatic order management system\"/>\n    <bpmn:task id=\"Task_CheckStock\" name=\"Check whether current product is in stock\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockStatus\" name=\"Product in stock?\" default=\"Flow_Stock_Reorder\"/>\n    <bpmn:task id=\"Task_WithdrawProduct\" name=\"Withdraw product from warehouse\"/>\n    <bpmn:sendTask id=\"Task_ReorderProduct\" name=\"Reorder product from wholesaler\" messageRef=\"Message_ReorderRequest\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_ArrivalOrTenDays\" name=\"Wait for product arrival or 10 days\" eventGatewayType=\"Exclusive\" instantiate=\"false\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_ProductArrival_Early\" name=\"Product arrives within 10 days\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_ProductArrival_Early\" messageRef=\"Message_ProductArrival\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"Event_TenDaysElapsed\" name=\"10 days elapse before arrival\">\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_TenDays\">\n        <bpmn:timeDuration xsi:type=\"bpmn:tFormalExpression\">P10D</bpmn:timeDuration>\n      </bpmn:timerEventDefinition>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:sendTask id=\"Task_DemandDelayPenalty\" name=\"Automatically demand delivery delay penalty from wholesaler\" messageRef=\"Message_DelayPenaltyDemand\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_ProductArrival_AfterDelay\" name=\"Product arrives after 10 days\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_ProductArrival_AfterDelay\" messageRef=\"Message_ProductArrival\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_ArrivalMerge\" name=\"Arrival path merge\"/>\n    <bpmn:task id=\"Task_RegisterProduct\" name=\"Register product in stock management system\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ProductPathMerge\" name=\"Product processing path merge\"/>\n    <bpmn:task id=\"Task_CheckOrderReady\" name=\"Check whether the whole order is ready for shipment\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OrderReady\" name=\"Order ready for shipment?\" default=\"Flow_OrderNotReady_NextProduct\"/>\n    <bpmn:task id=\"Task_SelectNextProduct\" name=\"Select next product from the order\"/>\n    <bpmn:parallelGateway id=\"Gateway_ShipmentSplit\" name=\"Request courier and pack products\"/>\n    <bpmn:sendTask id=\"Task_RequestCourier\" name=\"Request courier\" messageRef=\"Message_CourierRequest\"/>\n    <bpmn:task id=\"Task_PackProducts\" name=\"Pack products\"/>\n    <bpmn:parallelGateway id=\"Gateway_ShipmentJoin\" name=\"Courier requested and products packed\"/>\n    <bpmn:task id=\"Task_ShipProducts\" name=\"Ship products\"/>\n    <bpmn:endEvent id=\"EndEvent_Shipped\" name=\"Order shipped\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Read\" sourceRef=\"StartEvent_Process\" targetRef=\"Task_ReadOrder\"/>\n    <bpmn:sequenceFlow id=\"Flow_Read_CheckStock\" sourceRef=\"Task_ReadOrder\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckStock_Status\" sourceRef=\"Task_CheckStock\" targetRef=\"Gateway_StockStatus\"/>\n    <bpmn:sequenceFlow id=\"Flow_Stock_Withdraw\" name=\"In stock\" sourceRef=\"Gateway_StockStatus\" targetRef=\"Task_WithdrawProduct\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${inStock}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Stock_Reorder\" name=\"Not in stock\" sourceRef=\"Gateway_StockStatus\" targetRef=\"Task_ReorderProduct\"/>\n    <bpmn:sequenceFlow id=\"Flow_Withdraw_ProductMerge\" sourceRef=\"Task_WithdrawProduct\" targetRef=\"Gateway_ProductPathMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reorder_Wait\" sourceRef=\"Task_ReorderProduct\" targetRef=\"Gateway_ArrivalOrTenDays\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_ArrivalEarly\" sourceRef=\"Gateway_ArrivalOrTenDays\" targetRef=\"Event_ProductArrival_Early\"/>\n    <bpmn:sequenceFlow id=\"Flow_Wait_TenDays\" sourceRef=\"Gateway_ArrivalOrTenDays\" targetRef=\"Event_TenDaysElapsed\"/>\n    <bpmn:sequenceFlow id=\"Flow_ArrivalEarly_Merge\" sourceRef=\"Event_ProductArrival_Early\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_TenDays_Penalty\" sourceRef=\"Event_TenDaysElapsed\" targetRef=\"Task_DemandDelayPenalty\"/>\n    <bpmn:sequenceFlow id=\"Flow_Penalty_Arrival\" sourceRef=\"Task_DemandDelayPenalty\" targetRef=\"Event_ProductArrival_AfterDelay\"/>\n    <bpmn:sequenceFlow id=\"Flow_ArrivalAfterDelay_Merge\" sourceRef=\"Event_ProductArrival_AfterDelay\" targetRef=\"Gateway_ArrivalMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ArrivalMerge_Register\" sourceRef=\"Gateway_ArrivalMerge\" targetRef=\"Task_RegisterProduct\"/>\n    <bpmn:sequenceFlow id=\"Flow_Register_ProductMerge\" sourceRef=\"Task_RegisterProduct\" targetRef=\"Gateway_ProductPathMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ProductMerge_CheckReady\" sourceRef=\"Gateway_ProductPathMerge\" targetRef=\"Task_CheckOrderReady\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckReady_Decision\" sourceRef=\"Task_CheckOrderReady\" targetRef=\"Gateway_OrderReady\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderReady_Shipment\" name=\"Ready for shipment\" sourceRef=\"Gateway_OrderReady\" targetRef=\"Gateway_ShipmentSplit\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${orderReady}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OrderNotReady_NextProduct\" name=\"Not ready for shipment\" sourceRef=\"Gateway_OrderReady\" targetRef=\"Task_SelectNextProduct\"/>\n    <bpmn:sequenceFlow id=\"Flow_NextProduct_CheckStock\" sourceRef=\"Task_SelectNextProduct\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"Flow_Shipment_RequestCourier\" sourceRef=\"Gateway_ShipmentSplit\" targetRef=\"Task_RequestCourier\"/>\n    <bpmn:sequenceFlow id=\"Flow_Shipment_PackProducts\" sourceRef=\"Gateway_ShipmentSplit\" targetRef=\"Task_PackProducts\"/>\n    <bpmn:sequenceFlow id=\"Flow_RequestCourier_ShipmentJoin\" sourceRef=\"Task_RequestCourier\" targetRef=\"Gateway_ShipmentJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_PackProducts_ShipmentJoin\" sourceRef=\"Task_PackProducts\" targetRef=\"Gateway_ShipmentJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_ShipmentJoin_Ship\" sourceRef=\"Gateway_ShipmentJoin\" targetRef=\"Task_ShipProducts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Ship_End\" sourceRef=\"Task_ShipProducts\" targetRef=\"EndEvent_Shipped\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_StorageManagement\">\n    <bpmn:participant id=\"Participant_StorageManagement\" name=\"Storage management\" processRef=\"Process_StorageManagement\"/>\n    <bpmn:participant id=\"Participant_Wholesaler\" name=\"Wholesaler\"/>\n    <bpmn:participant id=\"Participant_Courier\" name=\"Courier\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ReorderRequest\" name=\"Reorder request\" sourceRef=\"Task_ReorderProduct\" targetRef=\"Participant_Wholesaler\" messageRef=\"Message_ReorderRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_DelayPenaltyDemand\" name=\"Delivery delay penalty demand\" sourceRef=\"Task_DemandDelayPenalty\" targetRef=\"Participant_Wholesaler\" messageRef=\"Message_DelayPenaltyDemand\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ProductArrival_Early\" name=\"Product arrival\" sourceRef=\"Participant_Wholesaler\" targetRef=\"Event_ProductArrival_Early\" messageRef=\"Message_ProductArrival\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ProductArrival_AfterDelay\" name=\"Product arrival\" sourceRef=\"Participant_Wholesaler\" targetRef=\"Event_ProductArrival_AfterDelay\" messageRef=\"Message_ProductArrival\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CourierRequest\" name=\"Courier request\" sourceRef=\"Task_RequestCourier\" targetRef=\"Participant_Courier\" messageRef=\"Message_CourierRequest\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  },
+  {
+   "round": 3,
+   "kind": "rule_feedback",
+   "valid": true,
+   "failed_levels": [],
+   "seconds": 1506.8,
+   "validator_levels": {
+    "L1": {
+     "result": true,
+     "correct": 60,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 21,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "metrics": {
+    "semantic_similarity": 0.609536,
+    "workflow_order_similarity": 0.904762,
+    "connection_f1": 0.680851,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.904762,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.457152,
+    "activity_semantic_similarity": 0.833381,
+    "activity_label_precision": 0.909091,
+    "activity_label_recall": 0.909091,
+    "activity_label_f1": 0.909091
+   },
+   "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                  id=\"Definitions_StorageManagement\"\n                  targetNamespace=\"http://example.com/bpmn/storage-management\">\n  <bpmn:message id=\"Message_ReorderRequest\" name=\"Reorder request\"/>\n  <bpmn:message id=\"Message_DelayPenaltyDemand\" name=\"Delivery delay penalty demand\"/>\n  <bpmn:message id=\"Message_ProductArrival\" name=\"Product arrival\"/>\n  <bpmn:message id=\"Message_CourierRequest\" name=\"Courier request\"/>\n\n  <bpmn:process id=\"Process_StorageManagement\" name=\"Storage management\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Process\" name=\"Start\"/>\n    <bpmn:task id=\"Task_ReadOrder\" name=\"Read order from automatic order management system\"/>\n    <bpmn:task id=\"Task_CheckStock\" name=\"Check whether current product is in stock\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_StockStatus\" name=\"Product in stock?\" default=\"Flow_Stock_Reorder\"/>\n    <bpmn:task id=\"Task_WithdrawProduct\" name=\"Withdraw product from warehouse\"/>\n    <bpmn:sendTask id=\"Task_ReorderProduct\" name=\"Reorder product from wholesaler\" messageRef=\"Message_ReorderRequest\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_ProductArrival\" name=\"Product arrives\">\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_ProductArrival\" messageRef=\"Message_ProductArrival\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:exclusiveGateway id=\"Gateway_WaitExceeded\" name=\"Wait exceeded 10 days?\" default=\"Flow_WaitNotExceeded\"/>\n    <bpmn:sendTask id=\"Task_DemandDelayPenalty\" name=\"Automatically demand delivery delay penalty from wholesaler\" messageRef=\"Message_DelayPenaltyDemand\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_PenaltyMerge\" name=\"Penalty decision merge\"/>\n    <bpmn:task id=\"Task_RegisterProduct\" name=\"Register product in stock management system\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_ProductPathMerge\" name=\"Product processing path merge\"/>\n    <bpmn:task id=\"Task_CheckOrderReady\" name=\"Check whether whole order is ready for shipment\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_OrderReady\" name=\"Order ready for shipment?\" default=\"Flow_OrderNotReady_NextProduct\"/>\n    <bpmn:task id=\"Task_SelectNextProduct\" name=\"Select next product from order\"/>\n    <bpmn:parallelGateway id=\"Gateway_ShipmentSplit\" name=\"Request courier and pack products\"/>\n    <bpmn:sendTask id=\"Task_RequestCourier\" name=\"Request courier\" messageRef=\"Message_CourierRequest\"/>\n    <bpmn:task id=\"Task_PackProducts\" name=\"Pack products\"/>\n    <bpmn:parallelGateway id=\"Gateway_ShipmentJoin\" name=\"Courier requested and products packed\"/>\n    <bpmn:task id=\"Task_ShipProducts\" name=\"Ship products\"/>\n    <bpmn:endEvent id=\"EndEvent_Shipped\" name=\"Order shipped\"/>\n\n    <bpmn:sequenceFlow id=\"Flow_Start_Read\" sourceRef=\"StartEvent_Process\" targetRef=\"Task_ReadOrder\"/>\n    <bpmn:sequenceFlow id=\"Flow_Read_CheckStock\" sourceRef=\"Task_ReadOrder\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckStock_Status\" sourceRef=\"Task_CheckStock\" targetRef=\"Gateway_StockStatus\"/>\n    <bpmn:sequenceFlow id=\"Flow_Stock_Withdraw\" name=\"In stock\" sourceRef=\"Gateway_StockStatus\" targetRef=\"Task_WithdrawProduct\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${inStock}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_Stock_Reorder\" name=\"Not in stock\" sourceRef=\"Gateway_StockStatus\" targetRef=\"Task_ReorderProduct\"/>\n    <bpmn:sequenceFlow id=\"Flow_Withdraw_ProductMerge\" sourceRef=\"Task_WithdrawProduct\" targetRef=\"Gateway_ProductPathMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Reorder_Arrival\" sourceRef=\"Task_ReorderProduct\" targetRef=\"Event_ProductArrival\"/>\n    <bpmn:sequenceFlow id=\"Flow_Arrival_WaitExceeded\" sourceRef=\"Event_ProductArrival\" targetRef=\"Gateway_WaitExceeded\"/>\n    <bpmn:sequenceFlow id=\"Flow_WaitExceeded_Penalty\" name=\"More than 10 days\" sourceRef=\"Gateway_WaitExceeded\" targetRef=\"Task_DemandDelayPenalty\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${waitedMoreThan10Days}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_WaitNotExceeded\" name=\"10 days or less\" sourceRef=\"Gateway_WaitExceeded\" targetRef=\"Gateway_PenaltyMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_Penalty_Merge\" sourceRef=\"Task_DemandDelayPenalty\" targetRef=\"Gateway_PenaltyMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_PenaltyMerge_Register\" sourceRef=\"Gateway_PenaltyMerge\" targetRef=\"Task_RegisterProduct\"/>\n    <bpmn:sequenceFlow id=\"Flow_Register_ProductMerge\" sourceRef=\"Task_RegisterProduct\" targetRef=\"Gateway_ProductPathMerge\"/>\n    <bpmn:sequenceFlow id=\"Flow_ProductMerge_CheckReady\" sourceRef=\"Gateway_ProductPathMerge\" targetRef=\"Task_CheckOrderReady\"/>\n    <bpmn:sequenceFlow id=\"Flow_CheckReady_Decision\" sourceRef=\"Task_CheckOrderReady\" targetRef=\"Gateway_OrderReady\"/>\n    <bpmn:sequenceFlow id=\"Flow_OrderReady_Shipment\" name=\"Ready for shipment\" sourceRef=\"Gateway_OrderReady\" targetRef=\"Gateway_ShipmentSplit\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${orderReady}</bpmn:conditionExpression>\n    </bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_OrderNotReady_NextProduct\" name=\"Not ready for shipment\" sourceRef=\"Gateway_OrderReady\" targetRef=\"Task_SelectNextProduct\"/>\n    <bpmn:sequenceFlow id=\"Flow_NextProduct_CheckStock\" sourceRef=\"Task_SelectNextProduct\" targetRef=\"Task_CheckStock\"/>\n    <bpmn:sequenceFlow id=\"Flow_Shipment_RequestCourier\" sourceRef=\"Gateway_ShipmentSplit\" targetRef=\"Task_RequestCourier\"/>\n    <bpmn:sequenceFlow id=\"Flow_Shipment_PackProducts\" sourceRef=\"Gateway_ShipmentSplit\" targetRef=\"Task_PackProducts\"/>\n    <bpmn:sequenceFlow id=\"Flow_RequestCourier_ShipmentJoin\" sourceRef=\"Task_RequestCourier\" targetRef=\"Gateway_ShipmentJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_PackProducts_ShipmentJoin\" sourceRef=\"Task_PackProducts\" targetRef=\"Gateway_ShipmentJoin\"/>\n    <bpmn:sequenceFlow id=\"Flow_ShipmentJoin_Ship\" sourceRef=\"Gateway_ShipmentJoin\" targetRef=\"Task_ShipProducts\"/>\n    <bpmn:sequenceFlow id=\"Flow_Ship_End\" sourceRef=\"Task_ShipProducts\" targetRef=\"EndEvent_Shipped\"/>\n  </bpmn:process>\n\n  <bpmn:collaboration id=\"Collaboration_StorageManagement\">\n    <bpmn:participant id=\"Participant_StorageManagement\" name=\"Storage management\" processRef=\"Process_StorageManagement\"/>\n    <bpmn:participant id=\"Participant_Wholesaler\" name=\"Wholesaler\"/>\n    <bpmn:participant id=\"Participant_Courier\" name=\"Courier\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ReorderRequest\" name=\"Reorder request\" sourceRef=\"Task_ReorderProduct\" targetRef=\"Participant_Wholesaler\" messageRef=\"Message_ReorderRequest\"/>\n    <bpmn:messageFlow id=\"MessageFlow_DelayPenaltyDemand\" name=\"Delivery delay penalty demand\" sourceRef=\"Task_DemandDelayPenalty\" targetRef=\"Participant_Wholesaler\" messageRef=\"Message_DelayPenaltyDemand\"/>\n    <bpmn:messageFlow id=\"MessageFlow_ProductArrival\" name=\"Product arrival\" sourceRef=\"Participant_Wholesaler\" targetRef=\"Event_ProductArrival\" messageRef=\"Message_ProductArrival\"/>\n    <bpmn:messageFlow id=\"MessageFlow_CourierRequest\" name=\"Courier request\" sourceRef=\"Task_RequestCourier\" targetRef=\"Participant_Courier\" messageRef=\"Message_CourierRequest\"/>\n  </bpmn:collaboration>\n</bpmn:definitions>"
+  }
+ ],
+ "first_pass": {
+  "kept_round": 0,
+  "valid": true,
+  "failed_levels": [],
+  "metrics": {
+   "semantic_similarity": 0.52014,
+   "activity_semantic_similarity": 0.831818,
+   "activity_label_precision": 0.909091,
+   "activity_label_recall": 0.909091,
+   "activity_label_f1": 0.909091,
+   "activity_matched": 10,
+   "activity_reference": 11,
+   "activity_generated": 11,
+   "alignment_coverage": 0.782609,
+   "connection_precision": 0.5,
+   "connection_recall": 0.565217,
+   "connection_f1": 0.530612,
+   "connection_tp": 13,
+   "connection_fp": 13,
+   "connection_fn": 10,
+   "workflow_order_similarity": 0.782609,
+   "order_consistency": 1.0,
+   "order_coverage": 0.782609,
+   "order_tp": 197,
+   "order_fp": 0,
+   "order_fn": 0,
+   "collaboration_similarity": null,
+   "collaboration_applicable": false,
+   "collaboration_tp": 0,
+   "collaboration_fp": 0,
+   "collaboration_fn": 0,
+   "type_precision_diagnostic": 0.8261,
+   "type_recall_diagnostic": 0.95,
+   "type_f1_diagnostic": 0.8837,
+   "counts": {
+    "gold_nodes": 20,
+    "generated_nodes": 23,
+    "gold_flows": 23,
+    "generated_flows": 26
+   },
+   "collaboration_ignored": true,
+   "semantic_similarity_strict": 0.38591,
+   "activity_semantic_similarity_strict": 0.831818,
+   "alignment_coverage_strict": 0.782609,
+   "connection_precision_strict": 0.5,
+   "connection_recall_strict": 0.565217,
+   "connection_f1_strict": 0.530612,
+   "workflow_order_similarity_strict": 0.782609,
+   "collaboration_similarity_strict": 0.0,
+   "collaboration_applicable_strict": true
+  },
+  "detected": [
+   "T5",
+   "T6"
+  ],
+  "error_counts": {
+   "T5": 23,
+   "T6": 2
+  }
+ },
+ "rule_feedback": {
+  "round": 1,
+  "rules": [
+   {
+    "rule_id": "LRN-085",
+    "instruction": "When the description says the process must wait for an occurrence and makes a subsequent action depend on whether the wait exceeded a stated duration: Model the wait for the occurrence with an intermediate catch event, then use an exclusive gateway to evaluate the elapsed-time condition and route the qualifying branch to the action.",
+    "situation": "the description says the process must wait for an occurrence and makes a subsequent action depend on whether the wait exceeded a stated duration",
+    "source": "learned guideline (refines EVT-03)",
+    "failure_type": "T5"
+   },
+   {
+    "rule_id": "LRN-009",
+    "instruction": "When the description says that the process waits for a stated time or period to end before continuing: Model the wait as an intermediate catch timer event, then connect it to the subsequent activity rather than representing the passage of time as a task.",
+    "situation": "the description says that subsequent work depends on an expected external object becoming available",
+    "source": "learned guideline (refines EVT-13)",
+    "failure_type": "T6"
+   },
+   {
+    "rule_id": "EVT-03",
+    "instruction": "Use an intermediate catch event when flow waits for a trigger and an intermediate throw event when flow emits or raises a result.",
+    "situation": "the description says that an external occurrence or item is expected after an action and the process continues after it occurs",
+    "source": "documentation rule not applied",
+    "failure_type": "T5"
+   }
+  ]
+ },
+ "next_iterations": [
+  {
+   "iteration": 1,
+   "round": 1,
+   "sent": [
+    "LRN-085"
+   ],
+   "before": {
+    "semantic_similarity": 0.52014,
+    "workflow_order_similarity": 0.782609,
+    "connection_f1": 0.530612,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.782609,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.38591,
+    "activity_semantic_similarity": 0.831818,
+    "activity_label_precision": 0.909091,
+    "activity_label_recall": 0.909091,
+    "activity_label_f1": 0.909091
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 23,
+    "T6": 2
+   },
+   "after": {
+    "semantic_similarity": 0.606711,
+    "workflow_order_similarity": 0.904762,
+    "connection_f1": 0.680851,
+    "alignment_coverage": 0.904762
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.086571,
+    "workflow_order_similarity": 0.122153,
+    "connection_f1": 0.150239,
+    "alignment_coverage": 0.122153
+   },
+   "mean_change": 0.120279,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 15,
+    "T6": 2
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.606711,
+    "activity_semantic_similarity": 0.827988,
+    "activity_label_precision": 0.909091,
+    "activity_label_recall": 0.909091,
+    "activity_label_f1": 0.909091,
+    "activity_matched": 10,
+    "activity_reference": 11,
+    "activity_generated": 11,
+    "alignment_coverage": 0.904762,
+    "connection_precision": 0.666667,
+    "connection_recall": 0.695652,
+    "connection_f1": 0.680851,
+    "connection_tp": 16,
+    "connection_fp": 8,
+    "connection_fn": 7,
+    "workflow_order_similarity": 0.904762,
+    "order_consistency": 1.0,
+    "order_coverage": 0.904762,
+    "order_tp": 225,
+    "order_fp": 0,
+    "order_fn": 0,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.9524,
+    "type_recall_diagnostic": 1.0,
+    "type_f1_diagnostic": 0.9756,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 21,
+     "gold_flows": 23,
+     "generated_flows": 24
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.455033,
+    "activity_semantic_similarity_strict": 0.827988,
+    "alignment_coverage_strict": 0.904762,
+    "connection_precision_strict": 0.666667,
+    "connection_recall_strict": 0.695652,
+    "connection_f1_strict": 0.680851,
+    "workflow_order_similarity_strict": 0.904762,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 60,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 21,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-085": {
+     "failure_type": "T5",
+     "errors_before": 23,
+     "errors_after": 15,
+     "removed": 8
+    }
+   },
+   "confirmed": true,
+   "promoted": [],
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 2,
+   "round": 2,
+   "sent": [
+    "LRN-009"
+   ],
+   "before": {
+    "semantic_similarity": 0.606711,
+    "workflow_order_similarity": 0.904762,
+    "connection_f1": 0.680851,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.904762,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.455033,
+    "activity_semantic_similarity": 0.827988,
+    "activity_label_precision": 0.909091,
+    "activity_label_recall": 0.909091,
+    "activity_label_f1": 0.909091
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 15,
+    "T6": 2
+   },
+   "reverted": {
+    "draft": 2,
+    "errors": {
+     "T5": 23,
+     "T6": 2
+    },
+    "errors_before": {
+     "T5": 15,
+     "T6": 2
+    },
+    "mean_change": -0.120063
+   },
+   "after": {
+    "semantic_similarity": 0.606711,
+    "workflow_order_similarity": 0.904762,
+    "connection_f1": 0.680851,
+    "alignment_coverage": 0.904762
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.0,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.0,
+   "kept_round": 1,
+   "errors_after": {
+    "T5": 15,
+    "T6": 2
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.606711,
+    "activity_semantic_similarity": 0.827988,
+    "activity_label_precision": 0.909091,
+    "activity_label_recall": 0.909091,
+    "activity_label_f1": 0.909091,
+    "activity_matched": 10,
+    "activity_reference": 11,
+    "activity_generated": 11,
+    "alignment_coverage": 0.904762,
+    "connection_precision": 0.666667,
+    "connection_recall": 0.695652,
+    "connection_f1": 0.680851,
+    "connection_tp": 16,
+    "connection_fp": 8,
+    "connection_fn": 7,
+    "workflow_order_similarity": 0.904762,
+    "order_consistency": 1.0,
+    "order_coverage": 0.904762,
+    "order_tp": 225,
+    "order_fp": 0,
+    "order_fn": 0,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.9524,
+    "type_recall_diagnostic": 1.0,
+    "type_f1_diagnostic": 0.9756,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 21,
+     "gold_flows": 23,
+     "generated_flows": 24
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.455033,
+    "activity_semantic_similarity_strict": 0.827988,
+    "alignment_coverage_strict": 0.904762,
+    "connection_precision_strict": 0.666667,
+    "connection_recall_strict": 0.695652,
+    "connection_f1_strict": 0.680851,
+    "workflow_order_similarity_strict": 0.904762,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 60,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 21,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {
+    "LRN-009": {
+     "failure_type": "T5",
+     "errors_before": 15,
+     "errors_after": 15,
+     "removed": 0
+    }
+   },
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  },
+  {
+   "iteration": 3,
+   "round": 3,
+   "sent": [
+    "EVT-03"
+   ],
+   "before": {
+    "semantic_similarity": 0.606711,
+    "workflow_order_similarity": 0.904762,
+    "connection_f1": 0.680851,
+    "collaboration_similarity": null,
+    "alignment_coverage": 0.904762,
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.455033,
+    "activity_semantic_similarity": 0.827988,
+    "activity_label_precision": 0.909091,
+    "activity_label_recall": 0.909091,
+    "activity_label_f1": 0.909091
+   },
+   "valid_before": true,
+   "errors_before": {
+    "T5": 15,
+    "T6": 2
+   },
+   "after": {
+    "semantic_similarity": 0.609536,
+    "workflow_order_similarity": 0.904762,
+    "connection_f1": 0.680851,
+    "alignment_coverage": 0.904762
+   },
+   "valid_after": true,
+   "changes": {
+    "semantic_similarity": 0.002825,
+    "workflow_order_similarity": 0.0,
+    "connection_f1": 0.0,
+    "alignment_coverage": 0.0
+   },
+   "mean_change": 0.000706,
+   "kept_round": 3,
+   "errors_after": {
+    "T5": 15,
+    "T6": 2
+   },
+   "metrics_after": {
+    "semantic_similarity": 0.609536,
+    "activity_semantic_similarity": 0.833381,
+    "activity_label_precision": 0.909091,
+    "activity_label_recall": 0.909091,
+    "activity_label_f1": 0.909091,
+    "activity_matched": 10,
+    "activity_reference": 11,
+    "activity_generated": 11,
+    "alignment_coverage": 0.904762,
+    "connection_precision": 0.666667,
+    "connection_recall": 0.695652,
+    "connection_f1": 0.680851,
+    "connection_tp": 16,
+    "connection_fp": 8,
+    "connection_fn": 7,
+    "workflow_order_similarity": 0.904762,
+    "order_consistency": 1.0,
+    "order_coverage": 0.904762,
+    "order_tp": 225,
+    "order_fp": 0,
+    "order_fn": 0,
+    "collaboration_similarity": null,
+    "collaboration_applicable": false,
+    "collaboration_tp": 0,
+    "collaboration_fp": 0,
+    "collaboration_fn": 0,
+    "type_precision_diagnostic": 0.9524,
+    "type_recall_diagnostic": 1.0,
+    "type_f1_diagnostic": 0.9756,
+    "counts": {
+     "gold_nodes": 20,
+     "generated_nodes": 21,
+     "gold_flows": 23,
+     "generated_flows": 24
+    },
+    "collaboration_ignored": true,
+    "semantic_similarity_strict": 0.457152,
+    "activity_semantic_similarity_strict": 0.833381,
+    "alignment_coverage_strict": 0.904762,
+    "connection_precision_strict": 0.666667,
+    "connection_recall_strict": 0.695652,
+    "connection_f1_strict": 0.680851,
+    "workflow_order_similarity_strict": 0.904762,
+    "collaboration_similarity_strict": 0.0,
+    "collaboration_applicable_strict": true
+   },
+   "validator_levels_after": {
+    "L1": {
+     "result": true,
+     "correct": 60,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L2": {
+     "result": true,
+     "correct": 7,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L3": {
+     "result": true,
+     "correct": 21,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    },
+    "L4": {
+     "result": true,
+     "correct": 4,
+     "incorrect": 0,
+     "accuracy": 1.0,
+     "incorrect_elements": []
+    }
+   },
+   "valid_kept": true,
+   "failed_levels_kept": [],
+   "type_results": {},
+   "confirmed": false,
+   "detected_after": [
+    "T5",
+    "T6"
+   ]
+  }
+ ],
+ "final_metrics": {
+  "semantic_similarity": 0.609536,
+  "activity_semantic_similarity": 0.833381,
+  "activity_label_precision": 0.909091,
+  "activity_label_recall": 0.909091,
+  "activity_label_f1": 0.909091,
+  "activity_matched": 10,
+  "activity_reference": 11,
+  "activity_generated": 11,
+  "alignment_coverage": 0.904762,
+  "connection_precision": 0.666667,
+  "connection_recall": 0.695652,
+  "connection_f1": 0.680851,
+  "connection_tp": 16,
+  "connection_fp": 8,
+  "connection_fn": 7,
+  "workflow_order_similarity": 0.904762,
+  "order_consistency": 1.0,
+  "order_coverage": 0.904762,
+  "order_tp": 225,
+  "order_fp": 0,
+  "order_fn": 0,
+  "collaboration_similarity": null,
+  "collaboration_applicable": false,
+  "collaboration_tp": 0,
+  "collaboration_fp": 0,
+  "collaboration_fn": 0,
+  "type_precision_diagnostic": 0.9524,
+  "type_recall_diagnostic": 1.0,
+  "type_f1_diagnostic": 0.9756,
+  "counts": {
+   "gold_nodes": 20,
+   "generated_nodes": 21,
+   "gold_flows": 23,
+   "generated_flows": 24
+  },
+  "collaboration_ignored": true,
+  "semantic_similarity_strict": 0.457152,
+  "activity_semantic_similarity_strict": 0.833381,
+  "alignment_coverage_strict": 0.904762,
+  "connection_precision_strict": 0.666667,
+  "connection_recall_strict": 0.695652,
+  "connection_f1_strict": 0.680851,
+  "workflow_order_similarity_strict": 0.904762,
+  "collaboration_similarity_strict": 0.0,
+  "collaboration_applicable_strict": true
+ }
+}

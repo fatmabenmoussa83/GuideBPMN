@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Chainsaw" targetNamespace="http://example.com/bpmn/chainsaw">
+  <bpmn:message id="Msg_Properties" name="Chainsaw properties"/>
+  <bpmn:message id="Msg_Update" name="Production update"/>
+  <bpmn:message id="Msg_FirstSaw" name="First chainsaw"/>
+  <bpmn:message id="Msg_Feedback" name="Customer feedback"/>
+  <bpmn:collaboration id="Collaboration_Chainsaw">
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_Producer" name="Chainsaw producer" processRef="Process_Producer"/>
+    <bpmn:messageFlow id="MF_Properties" name="Chainsaw properties" sourceRef="Participant_Customer" targetRef="StartEvent_Order"/>
+    <bpmn:messageFlow id="MF_Update" name="Production update" sourceRef="SendTask_Update" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MF_FirstSaw" name="First chainsaw" sourceRef="SendTask_FirstSaw" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MF_Feedback" name="Customer feedback" sourceRef="Participant_Customer" targetRef="Event_Feedback"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Producer" name="Chainsaw production" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Order" name="Chainsaw properties received">
+      <bpmn:messageEventDefinition id="MED_Properties" messageRef="Msg_Properties"/>
+    </bpmn:startEvent>
+    <bpmn:parallelGateway id="Gateway_Production_Split" name="Start production"/>
+    <bpmn:task id="Task_OrderParts" name="Order parts from various online sources"/>
+    <bpmn:intermediateCatchEvent id="Event_PartsArrived" name="Parts arrived">
+      <bpmn:messageEventDefinition id="MED_PartsArrived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Task_InspectParts" name="Inspect all parts manually"/>
+    <bpmn:manualTask id="Task_AssembleSaw" name="Assemble first chainsaw"/>
+    <bpmn:sendTask id="SendTask_FirstSaw" name="Send first chainsaw to customer" messageRef="Msg_FirstSaw"/>
+    <bpmn:intermediateCatchEvent id="Event_Feedback" name="Customer feedback received">
+      <bpmn:messageEventDefinition id="MED_Feedback" messageRef="Msg_Feedback"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_Liked" name="Customer likes first chainsaw?"/>
+    <bpmn:task id="Task_ProduceRest" name="Produce rest of the order"/>
+    <bpmn:endEvent id="EndEvent_OrderCompleted" name="Order completed"/>
+    <bpmn:endEvent id="EndEvent_NotLiked" name="Rest of order not produced"/>
+    <bpmn:sendTask id="SendTask_Update" name="Send production update to customer" messageRef="Msg_Update"/>
+    <bpmn:exclusiveGateway id="Gateway_UpdateLoop" name="Production still running?"/>
+    <bpmn:endEvent id="EndEvent_UpdatesEnded" name="Production updates ended"/>
+
+    <bpmn:sequenceFlow id="Flow_Start" sourceRef="StartEvent_Order" targetRef="Gateway_Production_Split"/>
+    <bpmn:sequenceFlow id="Flow_OrderBranch" sourceRef="Gateway_Production_Split" targetRef="Task_OrderParts"/>
+    <bpmn:sequenceFlow id="Flow_UpdateBranch" sourceRef="Gateway_Production_Split" targetRef="SendTask_Update"/>
+    <bpmn:sequenceFlow id="Flow_Ordered" sourceRef="Task_OrderParts" targetRef="Event_PartsArrived"/>
+    <bpmn:sequenceFlow id="Flow_Arrived" sourceRef="Event_PartsArrived" targetRef="Task_InspectParts"/>
+    <bpmn:sequenceFlow id="Flow_Inspected" sourceRef="Task_InspectParts" targetRef="Task_AssembleSaw"/>
+    <bpmn:sequenceFlow id="Flow_Assembled" sourceRef="Task_AssembleSaw" targetRef="SendTask_FirstSaw"/>
+    <bpmn:sequenceFlow id="Flow_FirstSawSent" sourceRef="SendTask_FirstSaw" targetRef="Event_Feedback"/>
+    <bpmn:sequenceFlow id="Flow_Feedback" sourceRef="Event_Feedback" targetRef="Gateway_Liked"/>
+    <bpmn:sequenceFlow id="Flow_Liked" name="Yes" sourceRef="Gateway_Liked" targetRef="Task_ProduceRest"/>
+    <bpmn:sequenceFlow id="Flow_NotLiked" name="No" sourceRef="Gateway_Liked" targetRef="EndEvent_NotLiked"/>
+    <bpmn:sequenceFlow id="Flow_RestProduced" sourceRef="Task_ProduceRest" targetRef="EndEvent_OrderCompleted"/>
+    <bpmn:sequenceFlow id="Flow_UpdateSent" sourceRef="SendTask_Update" targetRef="Gateway_UpdateLoop"/>
+    <bpmn:sequenceFlow id="Flow_UpdateRepeat" name="Yes" sourceRef="Gateway_UpdateLoop" targetRef="SendTask_Update"/>
+    <bpmn:sequenceFlow id="Flow_UpdateStop" name="No" sourceRef="Gateway_UpdateLoop" targetRef="EndEvent_UpdatesEnded"/>
+  </bpmn:process>
+</bpmn:definitions>

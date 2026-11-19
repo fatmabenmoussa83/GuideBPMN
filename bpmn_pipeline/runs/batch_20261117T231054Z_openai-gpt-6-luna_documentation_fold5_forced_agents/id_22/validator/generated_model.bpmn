@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/recourse">
+  <bpmn:message id="Message_RecourseInformation" name="Information about possible recourse"/>
+  <bpmn:message id="Message_PaymentRequest" name="Request for payment"/>
+  <bpmn:message id="Message_Payment" name="Payment"/>
+  <bpmn:message id="Message_Disagreement" name="Disagreement"/>
+  <bpmn:message id="Message_CaseReferral" name="Case referral to collection agency"/>
+
+  <bpmn:process id="Process_Recourse" name="Handle possible recourse" isExecutable="false">
+    <bpmn:startEvent id="Start_InformationReceived" name="Information about possible recourse received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_RecourseInformation" messageRef="Message_RecourseInformation"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CheckCase" name="Check case"/>
+    <bpmn:exclusiveGateway id="Gateway_RecoursePossible" name="Is recourse possible?" default="Flow_RecourseNo"/>
+    <bpmn:sendTask id="Task_SendPaymentRequest" name="Send request for payment" messageRef="Message_PaymentRequest"/>
+    <bpmn:task id="Task_MakeReminder" name="Make reminder"/>
+    <bpmn:eventBasedGateway id="Gateway_WaitForOutcome" name="Wait for payment, disagreement, or deadline" gatewayDirection="Diverging"/>
+
+    <bpmn:intermediateCatchEvent id="Event_PaymentReceived" name="Money received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Payment" messageRef="Message_Payment"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_MakeBooking" name="Make booking"/>
+    <bpmn:task id="Task_CloseAfterPayment" name="Close case"/>
+    <bpmn:endEvent id="End_PaidCaseClosed" name="Case closed after payment"/>
+
+    <bpmn:intermediateCatchEvent id="Event_DisagreementReceived" name="Disagreement received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Disagreement" messageRef="Message_Disagreement"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_CheckReasoning" name="Check reasoning"/>
+    <bpmn:exclusiveGateway id="Gateway_ReasoningCorrect" name="Is the reasoning correct?" default="Flow_ReasoningWrong"/>
+    <bpmn:task id="Task_CloseAfterCorrectReasoning" name="Close case"/>
+    <bpmn:endEvent id="End_CorrectReasoningCaseClosed" name="Case closed after correct reasoning"/>
+
+    <bpmn:intermediateCatchEvent id="Event_DeadlineReached" name="Deadline for disagreement reached without payment">
+      <bpmn:timerEventDefinition id="TimerEventDefinition_Deadline"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="Task_ForwardCase" name="Forward case to collection agency" messageRef="Message_CaseReferral"/>
+    <bpmn:endEvent id="End_CaseForwarded" name="Case forwarded to collection agency"/>
+
+    <bpmn:task id="Task_CloseWhenRecourseNotPossible" name="Close case"/>
+    <bpmn:endEvent id="End_RecourseNotPossible" name="Case closed: recourse not possible"/>
+
+    <bpmn:sequenceFlow id="Flow_StartToCheck" sourceRef="Start_InformationReceived" targetRef="Task_CheckCase"/>
+    <bpmn:sequenceFlow id="Flow_CheckToDecision" sourceRef="Task_CheckCase" targetRef="Gateway_RecoursePossible"/>
+    <bpmn:sequenceFlow id="Flow_RecourseYes" sourceRef="Gateway_RecoursePossible" targetRef="Task_SendPaymentRequest">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${recoursePossible}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_RecourseNo" sourceRef="Gateway_RecoursePossible" targetRef="Task_CloseWhenRecourseNotPossible"/>
+    <bpmn:sequenceFlow id="Flow_CloseNotPossibleToEnd" sourceRef="Task_CloseWhenRecourseNotPossible" targetRef="End_RecourseNotPossible"/>
+
+    <bpmn:sequenceFlow id="Flow_RequestToReminder" sourceRef="Task_SendPaymentRequest" targetRef="Task_MakeReminder"/>
+    <bpmn:sequenceFlow id="Flow_ReminderToWait" sourceRef="Task_MakeReminder" targetRef="Gateway_WaitForOutcome"/>
+    <bpmn:sequenceFlow id="Flow_WaitForPayment" sourceRef="Gateway_WaitForOutcome" targetRef="Event_PaymentReceived"/>
+    <bpmn:sequenceFlow id="Flow_PaymentToBooking" sourceRef="Event_PaymentReceived" targetRef="Task_MakeBooking"/>
+    <bpmn:sequenceFlow id="Flow_BookingToClose" sourceRef="Task_MakeBooking" targetRef="Task_CloseAfterPayment"/>
+    <bpmn:sequenceFlow id="Flow_ClosePaidToEnd" sourceRef="Task_CloseAfterPayment" targetRef="End_PaidCaseClosed"/>
+
+    <bpmn:sequenceFlow id="Flow_WaitForDisagreement" sourceRef="Gateway_WaitForOutcome" targetRef="Event_DisagreementReceived"/>
+    <bpmn:sequenceFlow id="Flow_DisagreementToReasoning" sourceRef="Event_DisagreementReceived" targetRef="Task_CheckReasoning"/>
+    <bpmn:sequenceFlow id="Flow_ReasoningToDecision" sourceRef="Task_CheckReasoning" targetRef="Gateway_ReasoningCorrect"/>
+    <bpmn:sequenceFlow id="Flow_ReasoningCorrect" sourceRef="Gateway_ReasoningCorrect" targetRef="Task_CloseAfterCorrectReasoning">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${reasoningCorrect}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_CloseCorrectReasoningToEnd" sourceRef="Task_CloseAfterCorrectReasoning" targetRef="End_CorrectReasoningCaseClosed"/>
+    <bpmn:sequenceFlow id="Flow_ReasoningWrong" sourceRef="Gateway_ReasoningCorrect" targetRef="Task_ForwardCase"/>
+
+    <bpmn:sequenceFlow id="Flow_WaitForDeadline" sourceRef="Gateway_WaitForOutcome" targetRef="Event_DeadlineReached"/>
+    <bpmn:sequenceFlow id="Flow_DeadlineToForward" sourceRef="Event_DeadlineReached" targetRef="Task_ForwardCase"/>
+    <bpmn:sequenceFlow id="Flow_ForwardToEnd" sourceRef="Task_ForwardCase" targetRef="End_CaseForwarded"/>
+  </bpmn:process>
+</bpmn:definitions>

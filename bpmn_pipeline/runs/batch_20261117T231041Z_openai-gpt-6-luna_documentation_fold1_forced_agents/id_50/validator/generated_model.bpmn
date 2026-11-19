@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" targetNamespace="http://example.com/claims">
+  <bpmn:process id="Process_ClaimHandling" name="Claim handling" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_ClaimHandling">
+      <bpmn:lane id="Lane_ClaimsOfficer" name="Claims officer">
+        <bpmn:flowNodeRef>StartEvent_ClaimRegistered</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ExamineClaim</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_WriteRecommendation</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_SeniorClaimsOfficer" name="Senior claims officer">
+        <bpmn:flowNodeRef>Task_CheckRecommendation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ClaimStatus</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_ClaimHandling" name="Claim handling">
+        <bpmn:flowNodeRef>Task_ProceedClaimHandling</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ContinuationReached</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_ClaimRegistered" name="Claim registered">
+      <bpmn:outgoing>Flow_ClaimRegistered_Examine</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_ExamineClaim" name="Examine claim">
+      <bpmn:incoming>Flow_ClaimRegistered_Examine</bpmn:incoming>
+      <bpmn:outgoing>Flow_Examine_WriteRecommendation</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_WriteRecommendation" name="Write settlement recommendation">
+      <bpmn:incoming>Flow_Examine_WriteRecommendation</bpmn:incoming>
+      <bpmn:incoming>Flow_NotOK_RepeatRecommendation</bpmn:incoming>
+      <bpmn:outgoing>Flow_Write_CheckRecommendation</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CheckRecommendation" name="Check settlement recommendation">
+      <bpmn:incoming>Flow_Write_CheckRecommendation</bpmn:incoming>
+      <bpmn:outgoing>Flow_Check_ClaimStatus</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_ClaimStatus" name="Claim marked OK?" gatewayDirection="Diverging">
+      <bpmn:incoming>Flow_Check_ClaimStatus</bpmn:incoming>
+      <bpmn:outgoing>Flow_OK_Proceed</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotOK_RepeatRecommendation</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ProceedClaimHandling" name="Proceed with claim handling">
+      <bpmn:incoming>Flow_OK_Proceed</bpmn:incoming>
+      <bpmn:outgoing>Flow_Proceed_ContinuationReached</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_ContinuationReached" name="Continuation reached">
+      <bpmn:incoming>Flow_Proceed_ContinuationReached</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_ClaimRegistered_Examine" sourceRef="StartEvent_ClaimRegistered" targetRef="Task_ExamineClaim"/>
+    <bpmn:sequenceFlow id="Flow_Examine_WriteRecommendation" sourceRef="Task_ExamineClaim" targetRef="Task_WriteRecommendation"/>
+    <bpmn:sequenceFlow id="Flow_Write_CheckRecommendation" sourceRef="Task_WriteRecommendation" targetRef="Task_CheckRecommendation"/>
+    <bpmn:sequenceFlow id="Flow_Check_ClaimStatus" sourceRef="Task_CheckRecommendation" targetRef="Gateway_ClaimStatus"/>
+    <bpmn:sequenceFlow id="Flow_OK_Proceed" name="OK" sourceRef="Gateway_ClaimStatus" targetRef="Task_ProceedClaimHandling">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">claimStatus = 'OK'</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotOK_RepeatRecommendation" name="Not OK — return to claims officer" sourceRef="Gateway_ClaimStatus" targetRef="Task_WriteRecommendation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">claimStatus = 'Not OK'</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Proceed_ContinuationReached" sourceRef="Task_ProceedClaimHandling" targetRef="EndEvent_ContinuationReached"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_OEE"
+                  targetNamespace="http://example.org/bpmn/oee">
+
+  <bpmn:message id="Msg_StopCommand" name="Stop machine"/>
+  <bpmn:message id="Msg_EngineerEmail" name="OEE alert email"/>
+  <bpmn:message id="Msg_MachineDisconnected" name="Machine disconnected"/>
+
+  <bpmn:collaboration id="Collaboration_OEE">
+    <bpmn:participant id="Participant_OEE" name="OEE Process" processRef="Process_OEE"/>
+    <bpmn:participant id="Participant_Machine" name="Machine"/>
+    <bpmn:participant id="Participant_Engineer" name="Engineer"/>
+
+    <bpmn:messageFlow id="MessageFlow_StopCommand" name="Stop machine" sourceRef="SendTask_StopMachine" targetRef="Participant_Machine" messageRef="Msg_StopCommand"/>
+    <bpmn:messageFlow id="MessageFlow_EngineerEmail" name="OEE alert email" sourceRef="SendTask_EmailEngineer" targetRef="Participant_Engineer" messageRef="Msg_EngineerEmail"/>
+    <bpmn:messageFlow id="MessageFlow_MachineDisconnected" name="Machine disconnected" sourceRef="Participant_Machine" targetRef="StartEvent_MachineDisconnected" messageRef="Msg_MachineDisconnected"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_OEE" name="OEE" isExecutable="false">
+
+    <bpmn:startEvent id="StartEvent_Measure" name="Start measuring">
+      <bpmn:outgoing>Flow_Start_ToMerge</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:exclusiveGateway id="Gateway_Cycle_Merge" name="Measurement cycle">
+      <bpmn:incoming>Flow_Start_ToMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_Restart_ToMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_OEE_OK_ToMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_Merge_ToConnCheck</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:exclusiveGateway id="Gateway_Connected_Split" name="Machine connected?" default="Flow_Connected_No">
+      <bpmn:incoming>Flow_Merge_ToConnCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_Connected_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Connected_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="EndEvent_ProcessStopped" name="Process stopped">
+      <bpmn:incoming>Flow_Connected_No</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:parallelGateway id="Gateway_Retrieve_Fork" name="Collect measurement data">
+      <bpmn:incoming>Flow_Connected_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Fork_ToAvail</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Fork_ToPerf</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Fork_ToQuality</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:serviceTask id="ServiceTask_RetrieveAvailability" name="Retrieve availability data">
+      <bpmn:incoming>Flow_Fork_ToAvail</bpmn:incoming>
+      <bpmn:outgoing>Flow_Avail_ToJoin</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="ServiceTask_RetrievePerformance" name="Retrieve performance data">
+      <bpmn:incoming>Flow_Fork_ToPerf</bpmn:incoming>
+      <bpmn:outgoing>Flow_Perf_ToJoin</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="ServiceTask_RetrieveQuality" name="Retrieve quality data">
+      <bpmn:incoming>Flow_Fork_ToQuality</bpmn:incoming>
+      <bpmn:outgoing>Flow_Quality_ToJoin</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:parallelGateway id="Gateway_Retrieve_Join" name="Data collected">
+      <bpmn:incoming>Flow_Avail_ToJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_Perf_ToJoin</bpmn:incoming>
+      <bpmn:incoming>Flow_Quality_ToJoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_Join_ToCalculate</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:task id="Task_CalculateOEE" name="Calculate OEE">
+      <bpmn:incoming>Flow_Join_ToCalculate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Calculate_ToSplit</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_OEE_Split" name="OEE below threshold?" default="Flow_OEE_OK_ToMerge">
+      <bpmn:incoming>Flow_Calculate_ToSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_OEE_OK_ToMerge</bpmn:outgoing>
+      <bpmn:outgoing>Flow_OEE_Below</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sendTask id="SendTask_StopMachine" name="Stop machine" messageRef="Msg_StopCommand">
+      <bpmn:incoming>Flow_OEE_Below</bpmn:incoming>
+      <bpmn:outgoing>Flow_Stop_ToEmail</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:sendTask id="SendTask_EmailEngineer" name="Send email to engineer" messageRef="Msg_EngineerEmail">
+      <bpmn:incoming>Flow_Stop_ToEmail</bpmn:incoming>
+      <bpmn:outgoing>Flow_Email_ToRestart</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:manualTask id="ManualTask_RestartMachine" name="Restart machine">
+      <bpmn:incoming>Flow_Email_ToRestart</bpmn:incoming>
+      <bpmn:outgoing>Flow_Restart_ToMerge</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:sequenceFlow id="Flow_Start_ToMerge" sourceRef="StartEvent_Measure" targetRef="Gateway_Cycle_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Merge_ToConnCheck" sourceRef="Gateway_Cycle_Merge" targetRef="Gateway_Connected_Split"/>
+    <bpmn:sequenceFlow id="Flow_Connected_Yes" name="Connected" sourceRef="Gateway_Connected_Split" targetRef="Gateway_Retrieve_Fork">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${machineConnected == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Connected_No" name="Not connected" sourceRef="Gateway_Connected_Split" targetRef="EndEvent_ProcessStopped"/>
+    <bpmn:sequenceFlow id="Flow_Fork_ToAvail" sourceRef="Gateway_Retrieve_Fork" targetRef="ServiceTask_RetrieveAvailability"/>
+    <bpmn:sequenceFlow id="Flow_Fork_ToPerf" sourceRef="Gateway_Retrieve_Fork" targetRef="ServiceTask_RetrievePerformance"/>
+    <bpmn:sequenceFlow id="Flow_Fork_ToQuality" sourceRef="Gateway_Retrieve_Fork" targetRef="ServiceTask_RetrieveQuality"/>
+    <bpmn:sequenceFlow id="Flow_Avail_ToJoin" sourceRef="ServiceTask_RetrieveAvailability" targetRef="Gateway_Retrieve_Join"/>
+    <bpmn:sequenceFlow id="Flow_Perf_ToJoin" sourceRef="ServiceTask_RetrievePerformance" targetRef="Gateway_Retrieve_Join"/>
+    <bpmn:sequenceFlow id="Flow_Quality_ToJoin" sourceRef="ServiceTask_RetrieveQuality" targetRef="Gateway_Retrieve_Join"/>
+    <bpmn:sequenceFlow id="Flow_Join_ToCalculate" sourceRef="Gateway_Retrieve_Join" targetRef="Task_CalculateOEE"/>
+    <bpmn:sequenceFlow id="Flow_Calculate_ToSplit" sourceRef="Task_CalculateOEE" targetRef="Gateway_OEE_Split"/>
+    <bpmn:sequenceFlow id="Flow_OEE_OK_ToMerge" name="OEE acceptable" sourceRef="Gateway_OEE_Split" targetRef="Gateway_Cycle_Merge"/>
+    <bpmn:sequenceFlow id="Flow_OEE_Below" name="OEE below threshold" sourceRef="Gateway_OEE_Split" targetRef="SendTask_StopMachine">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${oee &lt; oeeThreshold}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Stop_ToEmail" sourceRef="SendTask_StopMachine" targetRef="SendTask_EmailEngineer"/>
+    <bpmn:sequenceFlow id="Flow_Email_ToRestart" sourceRef="SendTask_EmailEngineer" targetRef="ManualTask_RestartMachine"/>
+    <bpmn:sequenceFlow id="Flow_Restart_ToMerge" sourceRef="ManualTask_RestartMachine" targetRef="Gateway_Cycle_Merge"/>
+
+    <bpmn:subProcess id="SubProcess_MachineDisconnected" name="Machine disconnected" triggeredByEvent="true">
+      <bpmn:startEvent id="StartEvent_MachineDisconnected" name="Machine disconnected" isInterrupting="true">
+        <bpmn:outgoing>Flow_Disconnected_ToEnd</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="MED_MachineDisconnected" messageRef="Msg_MachineDisconnected"/>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="EndEvent_ProcessTerminated" name="Process terminated">
+        <bpmn:incoming>Flow_Disconnected_ToEnd</bpmn:incoming>
+        <bpmn:terminateEventDefinition id="TED_ProcessTerminated"/>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_Disconnected_ToEnd" sourceRef="StartEvent_MachineDisconnected" targetRef="EndEvent_ProcessTerminated"/>
+    </bpmn:subProcess>
+
+  </bpmn:process>
+
+</bpmn:definitions>

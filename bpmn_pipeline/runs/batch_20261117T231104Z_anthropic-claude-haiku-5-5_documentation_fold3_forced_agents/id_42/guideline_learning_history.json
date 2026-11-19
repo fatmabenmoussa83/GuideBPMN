@@ -1,0 +1,2081 @@
+{
+ "example_id": "42",
+ "learn_calls": [
+  {
+   "call": 1,
+   "after_iteration": 0,
+   "outcomes": [
+    {
+     "failure_type": "T5",
+     "example_id": "42",
+     "learning_mode": "tools",
+     "retrieved": [],
+     "retriever_reason": "",
+     "status": "no_evidence_selected",
+     "agent_trace": {
+      "retriever": [
+       {
+        "step": 1,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "missing_element"
+        },
+        "reason": "Start by inspecting the 6 missing reference elements, which are the core of the structural divergence.",
+        "result": [
+         {
+          "id": "M1",
+          "text": "reference exclusiveGateway \"Submit a rating?\" has no counterpart in the generated model (after userTask \"Confirm fridge is working again\"; before sendTask \"Rate service facility\")"
+         },
+         {
+          "id": "M2",
+          "text": "reference exclusiveGateway \"ExclusiveGateway_3\" has no counterpart in the generated model (after task \"Select local service facility\", exclusiveGateway \"Fridge repaired?\"; before task \"Make appointment\")"
+         },
+         {
+          "id": "M3",
+          "text": "reference parallelGateway \"ParallelGateway_1\" has no counterpart in the generated model (after startEvent \"Fridge makes strange noises\"; before task \"Describe symptoms\", sendTask \"Send symptoms and fridge type\")"
+         },
+         {
+          "id": "M4",
+          "text": "reference parallelGateway \"ParallelGateway_2\" has no counterpart in the generated model (after sendTask \"Send symptoms and fridge type\", task \"Describe symptoms\"; before sendTask \"Notify customer fridge is repaired\")"
+         },
+         {
+          "id": "M5",
+          "text": "reference endEvent \"Repair process over\" has no counterpart in the generated model (after sendTask \"Rate service facility\")"
+         },
+         {
+          "id": "M6",
+          "text": "reference intermediateCatchEvent \"Wait until service facility arrives\" has no counterpart in the generated model (after task \"Make appointment\"; before task \"Repair fridge\")"
+         }
+        ]
+       },
+       {
+        "step": 2,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "description"
+        },
+        "reason": "The missing gateways and events need the reference description sentences that state what the model should contain at each point, so I need the description records next.",
+        "result": [
+         {
+          "id": "S1",
+          "text": "Title: Service for Your Fridge Your fridge produces strange noises."
+         },
+         {
+          "id": "S2",
+          "text": "You describe the symptoms, and send them together with the type of fridge to the central fridge service center."
+         },
+         {
+          "id": "S3",
+          "text": "They select a local service facility (which all have their own way of interacting with customers)."
+         },
+         {
+          "id": "S4",
+          "text": "The service facility makes an appointment."
+         },
+         {
+          "id": "S5",
+          "text": "They arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts."
+         },
+         {
+          "id": "S6",
+          "text": "After your fridge is repaired, you have to confirm that it is OK again."
+         },
+         {
+          "id": "S7",
+          "text": "You can rate the service facility."
+         }
+        ]
+       },
+       {
+        "step": 3,
+        "tool": "find_counterparts",
+        "args": {
+         "record_id": "M6"
+        },
+        "reason": "M6 (the wait event for the service facility arrival) is the missing element most tied to the description of random arrival and possible return visits (S4, S5). I need to see whether the generated model models it under a different element type or name before I select the evidence.",
+        "result": [
+         {
+          "id": "X5",
+          "text": "generated sendTask \"Forward service request to facility\" has no counterpart in the reference"
+         }
+        ]
+       }
+      ],
+      "expert": []
+     }
+    },
+    {
+     "failure_type": "T6",
+     "example_id": "42",
+     "learning_mode": "tools",
+     "retrieved": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "M6",
+      "X5",
+      "X11"
+     ],
+     "retriever_reason": "tool_calls_left is 0, so no further tool calls are possible. The T6 failure is a label-level semantic divergence: six reference activities/gateways have no counterpart in the generated model. The selected description sentences (S1-S7) state what the model should contain, covering the symptom submission, facility selection, appointment, random arrival with possible incomplete repair, confirmation, and rating. The missing-element records M1, M2, M3, M4 and M6 are the reference gateways and the wai",
+     "added_counterparts": [
+      "X5",
+      "X11"
+     ],
+     "first_wording": {
+      "trigger": "the description states that an activity carried out during an external party's visit can end without completing the work, because something needed is missing, and that the process must return to an earlier step to schedule and repeat the visit",
+      "instruction": "After the activity that ends the visit, model an exclusive gateway with two outgoing branches: one for the work being completed, which continues the sequence, and one for the work being left unfinished, which sends the flow back to the earlier scheduling task so that the visit is repeated. Do not model the return as a plain sequence flow without a decision point."
+     },
+     "words_to_avoid": [
+      "because"
+     ],
+     "candidate": {
+      "decision": "propose",
+      "trigger": "the description states that after an activity is confirmed, an actor may optionally perform a further action, and the flow may also continue without that action",
+      "instruction": "After the confirmation activity, model an exclusive gateway whose question is built from the optional action the description names. Give one outgoing flow to a bpmn:task for that optional action, performed by the actor it names, and the other outgoing flow directly to the merge point, bypassing the task. Join the two branches with an exclusive gateway before the next step. Do not model the optional action as an intermediate catch event or as a wait for a message, since the actor performs it rather than the process waiting for something to arrive.",
+      "category": "Gateways, branches and joins",
+      "cited": [
+       "S6",
+       "S7",
+       "M1",
+       "X11"
+      ],
+      "reason": "The description says the customer can rate the facility after confirmation, which is an optional step. The reference models it as an exclusive decision with a bypass, and the generated model omits the decision and models the rating as a waiting catch event, which is a different element type for an action the actor performs. The documented guidelines (ACT-07, GW-06) cover unconditional flows and inclusive splits but not an optional action with a bypass, and LRN-044 covers postponement rather than an optional follow-up, so the guideline is new. It is not in conflict with any documented guideline",
+      "relation_answered": {
+       "relation": "new",
+       "rule_id": null
+      }
+     },
+     "relation_judgement": {
+      "relation": "new",
+      "rule_id": null,
+      "reason": "The description says the customer can rate the facility after confirmation, which is an optional step. The reference models it as an exclusive decision with a bypass, and the generated model omits the decision and models the rating as a waiting catch event, which is a different element type for an action the actor performs. The documented guidelines (ACT-07, GW-06) cover unconditional flows and in"
+     },
+     "rules_shown": [
+      "ACT-07",
+      "PROC-04",
+      "SUB-06",
+      "FID-02",
+      "GW-06",
+      "FID-04"
+     ],
+     "learned_shown": [
+      "LRN-031",
+      "LRN-067",
+      "LRN-044",
+      "LRN-035"
+     ],
+     "status": "promoted",
+     "relation": {
+      "type": "new",
+      "ref": null
+     },
+     "judged_by": "expert",
+     "detail": "new guideline (The description says the customer can rate the facility after confirmation, which is an optional step. The reference models it as an exclusive decision with a bypass, and the generated model omits the decision and models the rating as a waiting catch event, which is a different element type for an action the actor performs. The documented guidelines (ACT-07, GW-06) cover unconditional flows and in)",
+     "generalization": {
+      "status": "not_generalized",
+      "with": "EXS-039",
+      "reason": "The two guidelines address different situations. The first concerns an optional action that an actor may perform after a confirmation, with a bypass path to a merge point. The second concerns a quick determination step that either returns an immediate outcome or signals a delay and starts a longer f"
+     },
+     "guideline_id": "LRN-098",
+     "specific_wording_id": "EXS-103",
+     "agent_trace": {
+      "retriever": [
+       {
+        "step": 1,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "missing_element"
+        },
+        "reason": "T6 is a label divergence, so first I need the reference elements that have no generated counterpart. Those are the core evidence.",
+        "result": [
+         {
+          "id": "M1",
+          "text": "reference exclusiveGateway \"Submit a rating?\" has no counterpart in the generated model (after userTask \"Confirm fridge is working again\"; before sendTask \"Rate service facility\")"
+         },
+         {
+          "id": "M2",
+          "text": "reference exclusiveGateway \"ExclusiveGateway_3\" has no counterpart in the generated model (after task \"Select local service facility\", exclusiveGateway \"Fridge repaired?\"; before task \"Make appointment\")"
+         },
+         {
+          "id": "M3",
+          "text": "reference parallelGateway \"ParallelGateway_1\" has no counterpart in the generated model (after startEvent \"Fridge makes strange noises\"; before task \"Describe symptoms\", sendTask \"Send symptoms and fridge type\")"
+         },
+         {
+          "id": "M4",
+          "text": "reference parallelGateway \"ParallelGateway_2\" has no counterpart in the generated model (after sendTask \"Send symptoms and fridge type\", task \"Describe symptoms\"; before sendTask \"Notify customer fridge is repaired\")"
+         },
+         {
+          "id": "M5",
+          "text": "reference endEvent \"Repair process over\" has no counterpart in the generated model (after sendTask \"Rate service facility\")"
+         },
+         {
+          "id": "M6",
+          "text": "reference intermediateCatchEvent \"Wait until service facility arrives\" has no counterpart in the generated model (after task \"Make appointment\"; before task \"Repair fridge\")"
+         }
+        ]
+       },
+       {
+        "step": 2,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "description"
+        },
+        "reason": "The missing-element records alone do not say what the reference model should contain at each point. The description sentences state the intended process, so I need them to judge which missing gateways and events matter.",
+        "result": [
+         {
+          "id": "S1",
+          "text": "Title: Service for Your Fridge Your fridge produces strange noises."
+         },
+         {
+          "id": "S2",
+          "text": "You describe the symptoms, and send them together with the type of fridge to the central fridge service center."
+         },
+         {
+          "id": "S3",
+          "text": "They select a local service facility (which all have their own way of interacting with customers)."
+         },
+         {
+          "id": "S4",
+          "text": "The service facility makes an appointment."
+         },
+         {
+          "id": "S5",
+          "text": "They arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts."
+         },
+         {
+          "id": "S6",
+          "text": "After your fridge is repaired, you have to confirm that it is OK again."
+         },
+         {
+          "id": "S7",
+          "text": "You can rate the service facility."
+         }
+        ]
+       },
+       {
+        "step": 3,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "label_pair"
+        },
+        "reason": "The failure is a label-level semantic divergence, and no label_pair records have been inspected yet. Listing them shows which reference and generated labels disagree.",
+        "result": [
+         {
+          "id": "P1",
+          "text": "exclusiveGateway: generated \"Fridge repaired?\" matched to reference \"Additional parts needed?\" (label similarity 0.537)"
+         },
+         {
+          "id": "P2",
+          "text": "manualTask: generated \"Send symptoms and fridge type\" matched to reference \"Collect fridge type data\" (label similarity 0.753)"
+         },
+         {
+          "id": "P3",
+          "text": "serviceTask: generated \"Make appointment\" matched to reference \"Schedule an appointment for fridge repair\" (label similarity 0.785)"
+         },
+         {
+          "id": "P4",
+          "text": "userTask: generated \"Notify customer fridge is repaired\" matched to reference \"Send a report to the fridge service center\" (label similarity 0.818)"
+         },
+         {
+          "id": "P5",
+          "text": "manualTask: generated \"Confirm fridge is working again\" matched to reference \"Confirm that fridge is okay\" (label similarity 0.888)"
+         },
+         {
+          "id": "P6",
+          "text": "manualTask: generated \"Repair fridge\" matched to reference \"Repair the fridge\" (label similarity 0.976)"
+         },
+         {
+          "id": "P7",
+          "text": "userTask: generated \"Describe symptoms\" matched to reference \"Describe the symptoms\" (label similarity 0.981)"
+         }
+        ]
+       },
+       {
+        "step": 4,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "extra_element"
+        },
+        "reason": "I need the ids of the generated elements with no reference counterpart. Some of them may be the same steps as the missing reference elements, modeled under different labels, so I'll check them before choosing the final set.",
+        "result": [
+         {
+          "id": "X1",
+          "text": "generated intermediateCatchEvent \"Appointment proposed\" has no counterpart in the reference"
+         },
+         {
+          "id": "X2",
+          "text": "generated intermediateCatchEvent \"Fridge repaired\" has no counterpart in the reference"
+         },
+         {
+          "id": "X3",
+          "text": "generated endEvent \"Service completed\" has no counterpart in the reference"
+         },
+         {
+          "id": "X4",
+          "text": "generated startEvent \"Symptoms received\" has no counterpart in the reference"
+         },
+         {
+          "id": "X5",
+          "text": "generated sendTask \"Forward service request to facility\" has no counterpart in the reference"
+         },
+         {
+          "id": "X6",
+          "text": "generated endEvent \"Facility selected\" has no counterpart in the reference"
+         },
+         {
+          "id": "X7",
+          "text": "generated startEvent \"Service request received\" has no counterpart in the reference"
+         },
+         {
+          "id": "X8",
+          "text": "generated sendTask \"Send appointment to customer\" has no counterpart in the reference"
+         },
+         {
+          "id": "X9",
+          "text": "generated task \"Arrive at customer at random time\" has no counterpart in the reference"
+         },
+         {
+          "id": "X10",
+          "text": "generated task \"Leave without repair (additional parts needed)\" has no counterpart in the reference"
+         },
+         {
+          "id": "X11",
+          "text": "generated intermediateCatchEvent \"Service rating received\" has no counterpart in the reference"
+         },
+         {
+          "id": "X12",
+          "text": "generated endEvent \"Service job closed\" has no counterpart in the reference"
+         }
+        ]
+       }
+      ],
+      "expert": [
+       {
+        "tools_used": [
+         "read_description",
+         "find_closest_documented_guidelines",
+         "find_closest_learned_guidelines",
+         "find_closest_documented_guidelines"
+        ],
+        "trace": [
+         {
+          "step": 1,
+          "tool": "read_description",
+          "args": {},
+          "reason": "Verify what the process description states about the rating and gateway choices before deciding on a guideline.",
+          "result": {
+           "process_description": "Title: Service for Your Fridge\n\nYour fridge produces strange noises.\nYou describe the symptoms, and send them together with the type of fridge to the central fridge service center.\nThey select a local service facility (which all have their own way of interacting with customers).\nThe service facility makes an appointment.\nThey arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts.\nAfter your fridge is repaired, you have to confirm that it is OK again.\nYou can rate the service facility."
+          }
+         },
+         {
+          "step": 2,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description states that the process must wait for an external party to arrive at an unspecified time before the next activity can start; model an intermediate catch event that waits for that arrival before the subsequent activity"
+          },
+          "reason": "Check whether documented guidelines already cover waiting for an external arrival (M6) before choosing relation.",
+          "result": [
+           {
+            "id": "EVT-03",
+            "category": "Events",
+            "rule": "Use an intermediate catch event when flow waits for a trigger and an intermediate throw event when flow emits or raises a result."
+           },
+           {
+            "id": "EVT-13",
+            "category": "Events",
+            "rule": "Respect event positions: a none intermediate event is catch-only in normal flow and never on a boundary; link events are intermediate-only, thrown and caught in pairs at the same process level, and a catching link has no incoming sequence flow; terminate is an end event only."
+           },
+           {
+            "id": "ACT-01",
+            "category": "Activities and task types",
+            "rule": "Use bpmn:task for atomic work when the execution mode is unspecified. A task contains no internal flow."
+           },
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "PROC-04",
+            "category": "Processes and scopes",
+            "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+           },
+           {
+            "id": "SUB-02",
+            "category": "Subprocesses, calls and repetition",
+            "rule": "Use bpmn:callActivity only to invoke a separately defined reusable process or global task; make calledElement resolvable in the intended model context."
+           }
+          ]
+         },
+         {
+          "step": 3,
+          "tool": "find_closest_learned_guidelines",
+          "args": {
+           "text": "the description states that an external party arrives at an unspecified time before the next activity can start; model an intermediate catch event that waits for that arrival before the subsequent activity"
+          },
+          "reason": "Check whether an error-driven guideline already covers waiting for an external arrival before the next activity.",
+          "result": [
+           {
+            "id": "LRN-087",
+            "rule": "When the description says physical goods from an outside source arrive, and the participant then starts working with the arrived goods; the arrival is something the participant takes in, not a notification, timer, or condition: Model the receipt of the physical goods as a manual task performed by that participant, placed in the sequence before the activity that works with the goods. Do not model the arrival as an intermediate catch event. Reserve intermediate catch events for waits on messages, signals, timers, or conditions."
+           },
+           {
+            "id": "LRN-069",
+            "rule": "When the description says that after a step the process must wait for a stated duration or until other parties reply, and a later decision or step depends on the outcome of that wait: Model the wait as an intermediate catch event on the sequence flow directly after the step that starts the wait and before the gateway or task that uses its outcome. Label the event with the stated duration or the condition being waited for. Do not drop the wait or fold it into the preceding task."
+           },
+           {
+            "id": "LRN-019",
+            "rule": "When the description states that a participant performs a step itself, such as choosing among options or supplying information, and no external occurrence (a message, signal, timer or condition) is described as the thing the process waits for: Model that step as a task performed by the participant, placed in the sequence where the description places it. Do not model it as an intermediate catch event, because a catch event represents waiting for an occurrence that happens outside the performed work. Reserve intermediate catch events and event-based gateways for waits on messages, signals, timers or conditions."
+           },
+           {
+            "id": "LRN-096",
+            "rule": "When the description states that an occurrence arising outside the currently running activity changes what happens next, either by continuing an earlier activity or by ending the process, and that occurrence does not itself begin the described process: Model the occurrence as an intermediate catch event, not as a start event or an embedded subprocess. Place it where the description puts it in the flow, or as a boundary event on the ongoing activity when the description says that activity is interrupted. If the description says an earlier activity continues, connect the catch event's outgoing flow to that activity. If it says the process ends, connect the flow to an end event. Model every stated follow-up step as its own task or gateway in the sequence."
+           }
+          ]
+         },
+         {
+          "step": 4,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description states that after a visit the work either completes or is left unfinished because a needed part is missing, and the process must come back later; model an exclusive gateway that splits into completed and not completed outcomes, with the not completed branch returning to the earlier waiting step"
+          },
+          "reason": "Check whether a documented guideline already covers the outcome decision after the facility visit (M2, ExclusiveGateway_3), which the generated model lacks.",
+          "result": [
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "PROC-04",
+            "category": "Processes and scopes",
+            "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+           },
+           {
+            "id": "FID-02",
+            "category": "Faithfulness and modeling decisions",
+            "rule": "Do not merge separately described actions into one task or split one stated action without a process reason. Preserve described dependencies."
+           },
+           {
+            "id": "PROC-05",
+            "category": "Processes and scopes",
+            "rule": "Give every process and every expanded subProcess its own explicit start event and end event. A trigger that occurs after the main flow (for example later feedback or a return) is joined to the main flow by a gateway, or modeled as an event subprocess or a separate process."
+           },
+           {
+            "id": "FLOW-06",
+            "category": "Sequence flows and conditions",
+            "rule": "Trace every split to continuations or endings. Add a join only when paths reunite and choose matching waiting semantics."
+           },
+           {
+            "id": "SUB-03",
+            "category": "Subprocesses, calls and repetition",
+            "rule": "An ordinary embedded subprocess participates in normal sequence flow and may contain its own starts, ends, activities, gateways and flows."
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tools_used": [
+         "find_closest_documented_guidelines",
+         "find_closest_learned_guidelines"
+        ],
+        "trace": [
+         {
+          "step": 1,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description states that after an activity the customer can optionally perform a further step, such as rating, so the flow may either continue to that step or skip it; model an exclusive decision with a branch that bypasses the optional step"
+          },
+          "reason": "M1 and M2 are missing decision gateways for optional steps; I need to check whether a documented guideline already covers optional follow-up steps before proposing one.",
+          "result": [
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "PROC-04",
+            "category": "Processes and scopes",
+            "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+           },
+           {
+            "id": "SUB-06",
+            "category": "Subprocesses, calls and repetition",
+            "rule": "Use transaction, ad-hoc or compensation behavior only when its specific semantics are explicitly described."
+           },
+           {
+            "id": "FID-02",
+            "category": "Faithfulness and modeling decisions",
+            "rule": "Do not merge separately described actions into one task or split one stated action without a process reason. Preserve described dependencies."
+           },
+           {
+            "id": "GW-06",
+            "category": "Gateways, branches and joins",
+            "rule": "Use an inclusive split when one or more conditions can be true; use an inclusive join to synchronize only activated reachable branches."
+           },
+           {
+            "id": "FID-04",
+            "category": "Faithfulness and modeling decisions",
+            "rule": "When the description does not justify a specialized construct, use the simplest compatible BPMN construct and do not guess missing semantics."
+           }
+          ]
+         },
+         {
+          "step": 2,
+          "tool": "find_closest_learned_guidelines",
+          "args": {
+           "text": "the description states that after the work is confirmed, the customer can optionally submit a rating of the service provider; model an exclusive decision after the confirmation activity, with one branch that performs the optional rating task and one branch that bypasses it"
+          },
+          "reason": "M1 is a missing decision gateway for an optional step. I need to check whether an error-driven guideline already covers optional follow-up steps before I write mine.",
+          "result": [
+           {
+            "id": "LRN-031",
+            "rule": "When the description says a review or determination ends in one of two outcomes, one that grants something and one that refuses it, and each outcome requires its own notification or follow-up action before the case moves on to a shared later step: Model an exclusive gateway directly after the review or determination task, with one outgoing sequence flow per outcome. Give each outcome flow its own task that performs that outcome's stated action (for example the notification of the decision), including the refusal outcome. Merge the outcome branches with an exclusive gateway before the shared later step. Do not connect the review directly to one shared notification task that ignores the outcome split."
+           },
+           {
+            "id": "LRN-067",
+            "rule": "When the description states that an actor chooses one of two outcomes for an item they received, and the outcomes are stated as a choice the actor makes, not as a count or condition on other work: Model the choice as an exclusive gateway whose label is a question built from the decision the description states about that item. Label each outgoing flow with the outcome the description gives for that choice. Do not label the gateway with a condition on a different activity, such as a count of earlier updates or a count of recorded items, unless the description ties the choice to that condition."
+           },
+           {
+            "id": "LRN-044",
+            "rule": "When the description states that an actor may postpone a stated activity while other pending work is handled, so the activity happens only on a condition: Model the postponable activity itself as a task labeled with the activity named in the description. Place it on the branch that the stated condition selects, behind an exclusive decision gateway whose outcomes separate the postponed case from the immediate case. Do not reduce the deferral to a gateway branch that leads only to the other pending work."
+           },
+           {
+            "id": "LRN-035",
+            "rule": "When the description says a decision leads to one of two alternatives, where one alternative is a concrete action performed by a party and is followed by further described actions, or where the other alternative sends the work back so that an earlier action must be performed again: Model every described action on those branches, including the action that follows an approval or confirmation outcome and the action repeated after a return, as its own bpmn:task on the sequence flow that the description orders. Connect the return as a sequence flow back to the earlier task or gateway. Do not omit these actions, and do not replace them with a subProcess or with an end event."
+           }
+          ]
+         },
+         {
+          "step": 3,
+          "tool": null,
+          "args": null,
+          "reason": "answer cut at the output limit",
+          "result": "asked again"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "call": 2,
+   "after_iteration": 1,
+   "outcomes": [
+    {
+     "failure_type": "T5",
+     "example_id": "42",
+     "learning_mode": "tools",
+     "retrieved": [
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "X5",
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7"
+     ],
+     "retriever_reason": "The T5 failure is driven by four reference elements with no generated counterpart: two parallel gateways (M1, M2), the end event \"Repair process over\" (M3), and the intermediate catch event \"Wait until service facility arrives\" (M4). X5 is the one generated candidate for M4, a sendTask \"Forward service request to facility\" that has no reference counterpart, so it is the likely divergent modeling of the same step. The description sentences give the intended sequence: symptoms and fridge type are ",
+     "first_wording": {
+      "trigger": "the description says an external party makes an appointment and then arrives at a time that is not fixed, so the next activity can only start after that arrival",
+      "instruction": "Model the wait for the external party's arrival as an intermediate catch event placed after the appointment activity and before the activity that depends on the arrival. Do not model this wait as an ordinary task or a send task."
+     },
+     "words_to_avoid": [
+      "appointment",
+      "makes"
+     ],
+     "candidate": {
+      "decision": "propose",
+      "trigger": "the description says an external party arrives at a time that is not fixed, and a later activity can only start after that arrival",
+      "instruction": "Model the wait for the external party's arrival as an intermediate catch event placed before the activity that is performed after the arrival. Do not model this wait as a send task that forwards a request to that party, and do not model it as an ordinary task.",
+      "category": "Events",
+      "cited": [
+       "M4",
+       "X5",
+       "S5"
+      ],
+      "reason": "The reference has an intermediate catch event \"Wait until service facility arrives\" (M4) that the generated model lacks. The generator instead added a send task \"Forward service request to facility\" (X5), which models the wait as outgoing work. The description (S5) says the facility arrives at a random time, so the next repair step depends on a waited-for trigger. EVT-03 already prescribes a catch event for waiting on a trigger. This guideline adds the case where the trigger is an arrival at an unfixed time, which the generator failed to recognize.",
+      "relation_answered": {
+       "relation": "refines",
+       "rule_id": "EVT-03"
+      }
+     },
+     "relation_judgement": {
+      "relation": "refines",
+      "rule_id": "EVT-03",
+      "reason": "The reference has an intermediate catch event \"Wait until service facility arrives\" (M4) that the generated model lacks. The generator instead added a send task \"Forward service request to facility\" (X5), which models the wait as outgoing work. The description (S5) says the facility arrives at a random time, so the next repair step depends on a waited-for trigger. EVT-03 already prescribes a catch"
+     },
+     "rules_shown": [
+      "EVT-03",
+      "PROC-04",
+      "ACT-07",
+      "EVT-13",
+      "EVT-12",
+      "ACT-01"
+     ],
+     "learned_shown": [
+      "LRN-057",
+      "LRN-032",
+      "LRN-023",
+      "LRN-051"
+     ],
+     "status": "promoted",
+     "relation": {
+      "type": "refines",
+      "ref": "EVT-03"
+     },
+     "judged_by": "expert",
+     "detail": "refines EVT-03 (The reference has an intermediate catch event \"Wait until service facility arrives\" (M4) that the generated model lacks. The generator instead added a send task \"Forward service request to facility\" (X5), which models the wait as outgoing work. The description (S5) says the facility arrives at a random time, so the next repair step depends on a waited-for trigger. EVT-03 already prescribes a catch)",
+     "generalization": {
+      "status": "not_generalized",
+      "with": "EXS-069",
+      "reason": "still tied to a process: party"
+     },
+     "guideline_id": "LRN-099",
+     "specific_wording_id": "EXS-104",
+     "agent_trace": {
+      "retriever": [
+       {
+        "step": 1,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "missing_element"
+        },
+        "reason": "Missing reference elements are the core divergence and there are only 4, so listing them first shows what the model lacks. I can then check for differently modeled counterparts.",
+        "result": [
+         {
+          "id": "M1",
+          "text": "reference parallelGateway \"ParallelGateway_1\" has no counterpart in the generated model (after startEvent \"Fridge makes strange noises\"; before task \"Describe symptoms\", sendTask \"Send symptoms and fridge type\")"
+         },
+         {
+          "id": "M2",
+          "text": "reference parallelGateway \"ParallelGateway_2\" has no counterpart in the generated model (after sendTask \"Send symptoms and fridge type\", task \"Describe symptoms\"; before sendTask \"Notify customer fridge is repaired\")"
+         },
+         {
+          "id": "M3",
+          "text": "reference endEvent \"Repair process over\" has no counterpart in the generated model (after task \"Rate service facility\", exclusiveGateway \"Fridge repaired?\")"
+         },
+         {
+          "id": "M4",
+          "text": "reference intermediateCatchEvent \"Wait until service facility arrives\" has no counterpart in the generated model (after task \"Make appointment\"; before task \"Repair fridge\")"
+         }
+        ]
+       },
+       {
+        "step": 2,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "description"
+        },
+        "reason": "Description sentences state what the reference model should contain around the missing gateways, end event and catch event, so I need them to ground the findings.",
+        "result": [
+         {
+          "id": "S1",
+          "text": "Title: Service for Your Fridge Your fridge produces strange noises."
+         },
+         {
+          "id": "S2",
+          "text": "You describe the symptoms, and send them together with the type of fridge to the central fridge service center."
+         },
+         {
+          "id": "S3",
+          "text": "They select a local service facility (which all have their own way of interacting with customers)."
+         },
+         {
+          "id": "S4",
+          "text": "The service facility makes an appointment."
+         },
+         {
+          "id": "S5",
+          "text": "They arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts."
+         },
+         {
+          "id": "S6",
+          "text": "After your fridge is repaired, you have to confirm that it is OK again."
+         },
+         {
+          "id": "S7",
+          "text": "You can rate the service facility."
+         }
+        ]
+       },
+       {
+        "step": 3,
+        "tool": "find_counterparts",
+        "args": {
+         "record_id": "M4"
+        },
+        "reason": "M4 is a missing intermediate catch event (waiting for the service facility to arrive). Its generated counterpart may be modeled differently, such as a task or timer, so I need to see those candidates before selecting evidence.",
+        "result": [
+         {
+          "id": "X5",
+          "text": "generated sendTask \"Forward service request to facility\" has no counterpart in the reference"
+         }
+        ]
+       }
+      ],
+      "expert": [
+       {
+        "tools_used": [
+         "find_closest_documented_guidelines"
+        ],
+        "trace": [
+         {
+          "step": 1,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description says a party arrives at an uncertain time after an appointment, so the process waits for that arrival before the next activity"
+          },
+          "reason": "M4 is a missing wait for the facility's arrival. Before proposing a guideline, I need to see which documented guidelines already cover waiting for an external event.",
+          "result": [
+           {
+            "id": "PROC-04",
+            "category": "Processes and scopes",
+            "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+           },
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "EVT-01",
+            "category": "Events",
+            "rule": "Use start events for stated process triggers. A start event has no incoming sequence flow and is not the source of a message flow."
+           },
+           {
+            "id": "EVT-03",
+            "category": "Events",
+            "rule": "Use an intermediate catch event when flow waits for a trigger and an intermediate throw event when flow emits or raises a result."
+           },
+           {
+            "id": "GW-07",
+            "category": "Gateways, branches and joins",
+            "rule": "Use an event-based gateway when the first occurring event selects the path. Target supported catching events or receive tasks, not ordinary tasks."
+           },
+           {
+            "id": "XML-06",
+            "category": "Document and XML structure",
+            "rule": "Follow the BPMN XML schema: never put a documentation element directly inside bpmn:definitions, and never nest a sequenceFlow inside a task, gateway or event. If you add an ioSpecification, it must contain its dataInput and dataOutput elements first, then at least one inputSet and one outputSet, even if empty: <bpmn:inputSet/><bpmn:outputSet/>."
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tools_used": [
+         "read_description",
+         "find_closest_documented_guidelines",
+         "find_closest_learned_guidelines"
+        ],
+        "trace": [
+         {
+          "step": 1,
+          "tool": "read_description",
+          "args": {},
+          "reason": "Verify what the process states before judging the missing gateways and end event.",
+          "result": {
+           "process_description": "Title: Service for Your Fridge\n\nYour fridge produces strange noises.\nYou describe the symptoms, and send them together with the type of fridge to the central fridge service center.\nThey select a local service facility (which all have their own way of interacting with customers).\nThe service facility makes an appointment.\nThey arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts.\nAfter your fridge is repaired, you have to confirm that it is OK again.\nYou can rate the service facility."
+          }
+         },
+         {
+          "step": 2,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description says an external party arrives at a time that is not fixed, so the activity that depends on the arrival can only start after a wait for that arrival; model the wait as an intermediate catch event"
+          },
+          "reason": "Check whether a documented guideline already covers waiting for an externally timed arrival before deciding whether this is new, refined, or already covered.",
+          "result": [
+           {
+            "id": "EVT-03",
+            "category": "Events",
+            "rule": "Use an intermediate catch event when flow waits for a trigger and an intermediate throw event when flow emits or raises a result."
+           },
+           {
+            "id": "PROC-04",
+            "category": "Processes and scopes",
+            "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+           },
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "EVT-13",
+            "category": "Events",
+            "rule": "Respect event positions: a none intermediate event is catch-only in normal flow and never on a boundary; link events are intermediate-only, thrown and caught in pairs at the same process level, and a catching link has no incoming sequence flow; terminate is an end event only."
+           },
+           {
+            "id": "EVT-12",
+            "category": "Events",
+            "rule": "An error boundary event is always interrupting (cancelActivity=true); a cancel boundary event is used only on a transaction subProcess."
+           },
+           {
+            "id": "ACT-01",
+            "category": "Activities and task types",
+            "rule": "Use bpmn:task for atomic work when the execution mode is unspecified. A task contains no internal flow."
+           }
+          ]
+         },
+         {
+          "step": 3,
+          "tool": "find_closest_learned_guidelines",
+          "args": {
+           "text": "the description ends with a final step after a rating or confirmation, so the process needs an end event after the last activity and before any loop back to a decision"
+          },
+          "reason": "Check whether the missing end event (M3) is already covered by a learned guideline before proposing anything.",
+          "result": [
+           {
+            "id": "LRN-057",
+            "rule": "When the description states that one outcome ends the process, but a further rating or condition, checked after that outcome, lets the process continue, and a recurring activity still applies on the continuing path: After the activity that produces the outcome, place an exclusive gateway for that outcome. On the branch where the process ends, connect to an end event. On the branch where the outcome does not end the process, place a second exclusive gateway whose question names the further rating or condition. Put the recurring activity only on the branch where that condition holds, and loop that branch back to the waiting point. Do not connect the outcome gateway directly to the recurring activity, and do not place the recurring activity on the branch where the process ends."
+           },
+           {
+            "id": "LRN-032",
+            "rule": "When the description ends by naming an action that a party carries out as its last step, and the process concludes only after that action, so the action is a performed piece of work rather than a terminal state: Model that final action as a task, named with the action the description gives, placed before the end event and connected to it by a sequence flow. The end event carries no work and represents the terminal outcome. Do not make the action itself the end event."
+           },
+           {
+            "id": "LRN-023",
+            "rule": "When the description says the process ends with one of several alternative outcomes, each stated as an action performed on the item the process handles, and the outcome is chosen at a decision point: Model each outcome as a task that performs the stated action, placed on its own branch after the decision gateway, and give each such task its own end event. Do not connect the decision gateway directly to bare end events named after the resulting state."
+           },
+           {
+            "id": "LRN-051",
+            "rule": "When the description states a chain of steps that runs from one beginning to one final outcome, and a state or a performed step is reached partway along the chain while further steps still follow it before the chain concludes: Do not place an end event after such a partway state or step. Model the state as an intermediate event in the sequence flow, or as a task if work is performed. Place a single end event only after the last performed step of the chain, and connect it to that step by a sequence flow. Use an end event for each separate terminal outcome only when the description states that outcome as a conclusion."
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "failure_type": "T6",
+     "example_id": "42",
+     "learning_mode": "tools",
+     "retrieved": [
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "X5",
+      "S2",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "P4",
+      "P5"
+     ],
+     "retriever_reason": "The T6 failure is a label-level divergence, and the selected records cover the main gaps. M1 and M2 are the two missing parallel gateways around describing symptoms and sending the request, and M3 is the missing end event after rating. M4 is the missing wait for the service facility, and X5 is the generated sendTask \"Forward service request to facility\" that may be its counterpart. Descriptions S2, S4, S5, S6 and S7 state what should happen at these points: sending symptoms and fridge type, the ",
+     "first_answer": {
+      "decision": "abstain",
+      "reason": ""
+     },
+     "candidate": {
+      "decision": "propose",
+      "trigger": "the description says an outside party arrives at a time that is not fixed or random, and a later work step can only start after that arrival",
+      "instruction": "Model the wait for the outside party's arrival as an intermediate catch event placed directly before the work step that follows the arrival. Do not replace this wait with a send task that forwards a request, and do not model it as an ordinary task. Add a sending task only when the description names a sending action of its own.",
+      "category": "Events",
+      "cited": [
+       "M4",
+       "X5",
+       "S4",
+       "S5"
+      ],
+      "reason": "The reference has an intermediate catch event for the random arrival (M4), while the generated model used a send task to forward a request in its place (X5). The description says the facility makes an appointment and then arrives at a random time (S4, S5), so the arrival is a wait, not a sending action. LRN-099 already states this rule, so the guideline is essentially the same as a learned one. The other missing elements (M1, M2) are parallel gateways that the description does not call for, so they do not support a new guideline. M3 is covered by the existing multiple-end-event guideline PROC-",
+      "relation_answered": {
+       "relation": "same_as_learned",
+       "rule_id": "LRN-099"
+      }
+     },
+     "relation_judgement": {
+      "relation": "same_as_learned",
+      "rule_id": "LRN-099",
+      "reason": "The reference has an intermediate catch event for the random arrival (M4), while the generated model used a send task to forward a request in its place (X5). The description says the facility makes an appointment and then arrives at a random time (S4, S5), so the arrival is a wait, not a sending action. LRN-099 already states this rule, so the guideline is essentially the same as a learned one. Th"
+     },
+     "rules_shown": [
+      "EVT-03",
+      "ACT-07",
+      "PROC-04",
+      "EVT-13",
+      "ACT-05",
+      "ACT-04"
+     ],
+     "learned_shown": [
+      "LRN-099",
+      "LRN-069",
+      "LRN-087",
+      "LRN-081"
+     ],
+     "status": "merged_with_learned",
+     "ref": "LRN-099",
+     "judged_by": "expert",
+     "detail": "same as LRN-099 (The reference has an intermediate catch event for the random arrival (M4), while the generated model used a send task to forward a request in its place (X5). The description says the facility makes an appointment and then arrives at a random time (S4, S5), so the arrival is a wait, not a sending action. LRN-099 already states this rule, so the guideline is essentially the same as a learned one. Th)",
+     "guideline_id": "LRN-099",
+     "agent_trace": {
+      "retriever": [
+       {
+        "step": 1,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "missing_element"
+        },
+        "reason": "Start with the 4 missing reference elements, since they most directly explain the activity label divergence (T6).",
+        "result": [
+         {
+          "id": "M1",
+          "text": "reference parallelGateway \"ParallelGateway_1\" has no counterpart in the generated model (after startEvent \"Fridge makes strange noises\"; before task \"Describe symptoms\", sendTask \"Send symptoms and fridge type\")"
+         },
+         {
+          "id": "M2",
+          "text": "reference parallelGateway \"ParallelGateway_2\" has no counterpart in the generated model (after sendTask \"Send symptoms and fridge type\", task \"Describe symptoms\"; before sendTask \"Notify customer fridge is repaired\")"
+         },
+         {
+          "id": "M3",
+          "text": "reference endEvent \"Repair process over\" has no counterpart in the generated model (after task \"Rate service facility\", exclusiveGateway \"Fridge repaired?\")"
+         },
+         {
+          "id": "M4",
+          "text": "reference intermediateCatchEvent \"Wait until service facility arrives\" has no counterpart in the generated model (after task \"Make appointment\"; before task \"Repair fridge\")"
+         }
+        ]
+       },
+       {
+        "step": 2,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "description"
+        },
+        "reason": "The missing elements need the description sentences that state what the reference process should contain, so I need to see those before choosing evidence.",
+        "result": [
+         {
+          "id": "S1",
+          "text": "Title: Service for Your Fridge Your fridge produces strange noises."
+         },
+         {
+          "id": "S2",
+          "text": "You describe the symptoms, and send them together with the type of fridge to the central fridge service center."
+         },
+         {
+          "id": "S3",
+          "text": "They select a local service facility (which all have their own way of interacting with customers)."
+         },
+         {
+          "id": "S4",
+          "text": "The service facility makes an appointment."
+         },
+         {
+          "id": "S5",
+          "text": "They arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts."
+         },
+         {
+          "id": "S6",
+          "text": "After your fridge is repaired, you have to confirm that it is OK again."
+         },
+         {
+          "id": "S7",
+          "text": "You can rate the service facility."
+         }
+        ]
+       },
+       {
+        "step": 3,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "label_pair"
+        },
+        "reason": "The failure is label-level semantic divergence, so I need the reference-versus-generated label pairs to see which labels differ in meaning.",
+        "result": [
+         {
+          "id": "P1",
+          "text": "exclusiveGateway: generated \"Rate service facility?\" matched to reference \"Additional parts needed?\" (label similarity 0.51)"
+         },
+         {
+          "id": "P2",
+          "text": "exclusiveGateway: generated \"Fridge repaired?\" matched to reference \"Submit a rating?\" (label similarity 0.511)"
+         },
+         {
+          "id": "P3",
+          "text": "manualTask: generated \"Send symptoms and fridge type\" matched to reference \"Collect fridge type data\" (label similarity 0.753)"
+         },
+         {
+          "id": "P4",
+          "text": "serviceTask: generated \"Make appointment\" matched to reference \"Schedule an appointment for fridge repair\" (label similarity 0.785)"
+         },
+         {
+          "id": "P5",
+          "text": "userTask: generated \"Notify customer fridge is repaired\" matched to reference \"Send a report to the fridge service center\" (label similarity 0.818)"
+         },
+         {
+          "id": "P6",
+          "text": "manualTask: generated \"Confirm fridge is working again\" matched to reference \"Confirm that fridge is okay\" (label similarity 0.888)"
+         },
+         {
+          "id": "P7",
+          "text": "manualTask: generated \"Repair fridge\" matched to reference \"Repair the fridge\" (label similarity 0.976)"
+         },
+         {
+          "id": "P8",
+          "text": "userTask: generated \"Describe symptoms\" matched to reference \"Describe the symptoms\" (label similarity 0.981)"
+         }
+        ]
+       },
+       {
+        "step": 4,
+        "tool": "find_counterparts",
+        "args": {
+         "record_id": "M4"
+        },
+        "reason": "M4 is a missing reference catch event (wait for service facility). Checking whether a generated element models the same wait differently, which is needed to explain the label divergence.",
+        "result": [
+         {
+          "id": "X5",
+          "text": "generated sendTask \"Forward service request to facility\" has no counterpart in the reference"
+         }
+        ]
+       }
+      ],
+      "expert": [
+       {
+        "tools_used": [
+         "read_description",
+         "find_closest_documented_guidelines"
+        ],
+        "trace": [
+         {
+          "step": 1,
+          "tool": "read_description",
+          "args": {},
+          "reason": "Verify what the description states about the waiting step and the parallel-looking steps before choosing a guideline.",
+          "result": {
+           "process_description": "Title: Service for Your Fridge\n\nYour fridge produces strange noises.\nYou describe the symptoms, and send them together with the type of fridge to the central fridge service center.\nThey select a local service facility (which all have their own way of interacting with customers).\nThe service facility makes an appointment.\nThey arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts.\nAfter your fridge is repaired, you have to confirm that it is OK again.\nYou can rate the service facility."
+          }
+         },
+         {
+          "step": 2,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description says a party arrives at a random or unspecified time, so the process must wait for that arrival before continuing; model the wait as an intermediate catch event"
+          },
+          "reason": "Check whether a documented guideline already covers waiting for an external arrival (M4) and how it relates to the proposed rule.",
+          "result": [
+           {
+            "id": "EVT-03",
+            "category": "Events",
+            "rule": "Use an intermediate catch event when flow waits for a trigger and an intermediate throw event when flow emits or raises a result."
+           },
+           {
+            "id": "EVT-13",
+            "category": "Events",
+            "rule": "Respect event positions: a none intermediate event is catch-only in normal flow and never on a boundary; link events are intermediate-only, thrown and caught in pairs at the same process level, and a catching link has no incoming sequence flow; terminate is an end event only."
+           },
+           {
+            "id": "PROC-04",
+            "category": "Processes and scopes",
+            "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+           },
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "EVT-01",
+            "category": "Events",
+            "rule": "Use start events for stated process triggers. A start event has no incoming sequence flow and is not the source of a message flow."
+           },
+           {
+            "id": "GW-07",
+            "category": "Gateways, branches and joins",
+            "rule": "Use an event-based gateway when the first occurring event selects the path. Target supported catching events or receive tasks, not ordinary tasks."
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tools_used": [
+         "read_description",
+         "find_closest_documented_guidelines",
+         "find_closest_learned_guidelines"
+        ],
+        "trace": [
+         {
+          "step": 1,
+          "tool": "read_description",
+          "args": {},
+          "reason": "Verify what the description states about waiting for the service facility before choosing the guideline.",
+          "result": {
+           "process_description": "Title: Service for Your Fridge\n\nYour fridge produces strange noises.\nYou describe the symptoms, and send them together with the type of fridge to the central fridge service center.\nThey select a local service facility (which all have their own way of interacting with customers).\nThe service facility makes an appointment.\nThey arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts.\nAfter your fridge is repaired, you have to confirm that it is OK again.\nYou can rate the service facility."
+          }
+         },
+         {
+          "step": 2,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description says an external party arrives at an unpredictable time before a further activity can start; model the wait as an intermediate catch event before that activity"
+          },
+          "reason": "Check whether a documented guideline already covers waiting for an external arrival (M4, S5) and whether it conflicts with the proposed intermediate catch event.",
+          "result": [
+           {
+            "id": "EVT-03",
+            "category": "Events",
+            "rule": "Use an intermediate catch event when flow waits for a trigger and an intermediate throw event when flow emits or raises a result."
+           },
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "PROC-04",
+            "category": "Processes and scopes",
+            "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+           },
+           {
+            "id": "EVT-13",
+            "category": "Events",
+            "rule": "Respect event positions: a none intermediate event is catch-only in normal flow and never on a boundary; link events are intermediate-only, thrown and caught in pairs at the same process level, and a catching link has no incoming sequence flow; terminate is an end event only."
+           },
+           {
+            "id": "ACT-05",
+            "category": "Activities and task types",
+            "rule": "Distinguish message tasks from message events: a task models performed work; an event models a message occurrence affecting flow."
+           },
+           {
+            "id": "ACT-04",
+            "category": "Activities and task types",
+            "rule": "Use bpmn:sendTask or bpmn:receiveTask when sending or waiting for a message is itself the modeled unit of work."
+           }
+          ]
+         },
+         {
+          "step": 3,
+          "tool": "find_closest_learned_guidelines",
+          "args": {
+           "text": "the description says an external party arrives at an unpredictable time before a further activity can start; model the wait as an intermediate catch event before that activity"
+          },
+          "reason": "Check whether an error-driven guideline already covers waiting for an external arrival before an activity, to classify the relation.",
+          "result": [
+           {
+            "id": "LRN-099",
+            "rule": "When the description says an external party arrives at a time that is not fixed, and a later activity can only start after that arrival: Model the wait for the external party's arrival as an intermediate catch event placed before the activity that is performed after the arrival. Do not model this wait as a send task that forwards a request to that party, and do not model it as an ordinary task."
+           },
+           {
+            "id": "LRN-069",
+            "rule": "When the description says that after a step the process must wait for a stated duration or until other parties reply, and a later decision or step depends on the outcome of that wait: Model the wait as an intermediate catch event on the sequence flow directly after the step that starts the wait and before the gateway or task that uses its outcome. Label the event with the stated duration or the condition being waited for. Do not drop the wait or fold it into the preceding task."
+           },
+           {
+            "id": "LRN-087",
+            "rule": "When the description says physical goods from an outside source arrive, and the participant then starts working with the arrived goods; the arrival is something the participant takes in, not a notification, timer, or condition: Model the receipt of the physical goods as a manual task performed by that participant, placed in the sequence before the activity that works with the goods. Do not model the arrival as an intermediate catch event. Reserve intermediate catch events for waits on messages, signals, timers, or conditions."
+           },
+           {
+            "id": "LRN-081",
+            "rule": "When the description says an external device or party keeps sending back status or updates while the actor performs other work at the same time: Model the receipt of these ongoing updates as its own intermediate catch event on a branch that runs in parallel with the actor's other work, and do not omit it. Do not model it as a receive task, because the wait is for a recurring message rather than a unit of work. Join the branch back to the main flow when the work it supports completes."
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "call": 3,
+   "after_iteration": 2,
+   "outcomes": [
+    {
+     "failure_type": "T5",
+     "example_id": "42",
+     "learning_mode": "tools",
+     "retrieved": [
+      "M1",
+      "M2",
+      "M3",
+      "F15",
+      "F12",
+      "F13",
+      "F14",
+      "F3",
+      "F7",
+      "G1",
+      "G10",
+      "S2"
+     ],
+     "retriever_reason": "The failure is structural: the reference runs the process through two parallel gateways (ParallelGateway_1 after the start event, ParallelGateway_2 after sending symptoms), and the generated model omits both. Its flows bypass them (start event directly to 'Describe symptoms', 'Describe symptoms' directly to the send task) and it adds an extra start event 'Symptoms received' that feeds 'Select local service facility' directly. M1, M2 and M3 record the missing gateways and the missing end event. F",
+     "first_answer": {
+      "decision": "abstain",
+      "reason": "The description says the customer describes the symptoms and then sends them together with the fridge type, so the second step depends on the first. The reference model instead forks after the start event into 'Describe symptoms' and 'Send symptoms and fridge type' in parallel, then joins them. That split makes the two steps concurrent, which contradicts the stated order. The records show a structural difference, but the reference's parallel branch is not supported by the description, so I cannot turn it into a guideline. The generated sequence (describe, then send) matches the text. The missi"
+     },
+     "candidate": {
+      "decision": "propose",
+      "trigger": "the description has a decision after an activity, where one outcome returns the process to an earlier activity and the other outcome states that the process is over",
+      "instruction": "Model the decision as an exclusive gateway. Keep the return outcome as a sequence flow back to the earlier activity. Connect the concluding outcome to an explicit end event, placed after the last performed activity on that path, so that the finished state is shown as a terminal outcome.",
+      "category": "Events",
+      "cited": [
+       "M3"
+      ],
+      "reason": "The records show a real structural gap in the generated model: the reference has the end event 'Repair process over' after the rating task and the 'Fridge repaired?' decision, and this end event is missing (M3). The reference's parallel fork (M1, M2, F12-F14, F3, F7, F15) contradicts the description, which orders describing the symptoms before sending them, so I do not turn that part into a guideline. The end-event gap is the only difference that the description supports.",
+      "relation_answered": {
+       "relation": "refines FLOW-06: FLOW-06 already requires tracing every split to its continuations or endings, and this guideline adds that a decision whose one outcome loops back and whose other outcome concludes the process must produce an end event on the concluding branch.",
+       "rule_id": "FLOW-06"
+      }
+     },
+     "relation_judgement": {
+      "relation": "refines",
+      "rule_id": "FLOW-06",
+      "reason": "The records show a real structural gap in the generated model: the reference has the end event 'Repair process over' after the rating task and the 'Fridge repaired?' decision, and this end event is missing (M3). The reference's parallel fork (M1, M2, F12-F14, F3, F7, F15) contradicts the description, which orders describing the symptoms before sending them, so I do not turn that part into a guidel"
+     },
+     "rules_shown": [
+      "EVT-02",
+      "PROC-04",
+      "EVT-09",
+      "FLOW-06",
+      "PROC-05",
+      "FID-01",
+      "ACT-07",
+      "GW-06",
+      "GW-09",
+      "EVT-13",
+      "SUB-03",
+      "LANE-03",
+      "XML-06",
+      "FID-02"
+     ],
+     "learned_shown": [
+      "LRN-032",
+      "LRN-096",
+      "LRN-051",
+      "LRN-012"
+     ],
+     "status": "merged_with_learned",
+     "ref": "LRN-003",
+     "detail": "same as LRN-003 (cosine 0.89)",
+     "guideline_id": "LRN-003",
+     "agent_trace": {
+      "retriever": [
+       {
+        "step": 1,
+        "tool": null,
+        "args": null,
+        "reason": "answer cut at the output limit",
+        "result": "asked again"
+       },
+       {
+        "step": 2,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "missing_element"
+        },
+        "reason": "The T5 failure is driven by missing reference elements and order differences. Listing the 3 missing_element records shows which reference elements have no counterpart in the generated model, which anchors the rest of the evidence selection.",
+        "result": [
+         {
+          "id": "M1",
+          "text": "reference parallelGateway \"ParallelGateway_1\" has no counterpart in the generated model (after startEvent \"Fridge makes strange noises\"; before task \"Describe symptoms\", sendTask \"Send symptoms and fridge type\")"
+         },
+         {
+          "id": "M2",
+          "text": "reference parallelGateway \"ParallelGateway_2\" has no counterpart in the generated model (after sendTask \"Send symptoms and fridge type\", task \"Describe symptoms\"; before sendTask \"Notify customer fridge is repaired\")"
+         },
+         {
+          "id": "M3",
+          "text": "reference endEvent \"Repair process over\" has no counterpart in the generated model (after task \"Rate service facility\", exclusiveGateway \"Fridge repaired?\")"
+         }
+        ]
+       },
+       {
+        "step": 3,
+        "tool": "search_evidence",
+        "args": {
+         "words": "parallel describe symptoms send notify"
+        },
+        "reason": "Find description sentences stating the parallel split and join around 'Describe symptoms' and the send task, which the reference model requires.",
+        "result": [
+         {
+          "id": "S2",
+          "kind": "description",
+          "text": "You describe the symptoms, and send them together with the type of fridge to the central fridge service center."
+         },
+         {
+          "id": "COUNTS",
+          "kind": "counts",
+          "text": "{\"by_type\": {\"endEvent\": {\"gold_count\": 1, \"gen_count\": 3, \"tp\": 1, \"fp\": 2, \"fn\": 0}, \"exclusiveGateway\": {\"gold_count\": 3, \"gen_count\": 3, \"tp\": 3, \"fp\": 0, \"fn\": 0}, \"intermediateCatchEvent\": {\"gold_count\": 1, \"gen_count\": 3, \"tp\": 1, \"fp\": 2, \"fn\": 0}, \"parallelGateway\": {\"gold_count\": 2, \"gen_count\": 0, \"tp\": 0, \"fp\": 0, \"fn\": 2}, \"startEvent\": {\"gold_count\": 1, \"gen_count\": 3, \"tp\": 1, \"fp\": 2, \"fn\": 0}, \"task\": {\"gold_count\": 8, \"gen_count\": 12, \"tp\": 8, \"fp\": 4, \"fn\": 0}}, \"reference_elements\": 16, \"generated_elements\": 24, \"matched_elements\": 13}"
+         },
+         {
+          "id": "M1",
+          "kind": "missing_element",
+          "text": "reference parallelGateway \"ParallelGateway_1\" has no counterpart in the generated model (after startEvent \"Fridge makes strange noises\"; before task \"Describe symptoms\", sendTask \"Send symptoms and fridge type\")"
+         },
+         {
+          "id": "M2",
+          "kind": "missing_element",
+          "text": "reference parallelGateway \"ParallelGateway_2\" has no counterpart in the generated model (after sendTask \"Send symptoms and fridge type\", task \"Describe symptoms\"; before sendTask \"Notify customer fridge is repaired\")"
+         },
+         {
+          "id": "X4",
+          "kind": "extra_element",
+          "text": "generated startEvent \"Symptoms received\" has no counterpart in the reference"
+         },
+         {
+          "id": "X5",
+          "kind": "extra_element",
+          "text": "generated sendTask \"Forward service request to facility\" has no counterpart in the reference"
+         },
+         {
+          "id": "F1",
+          "kind": "missing_flow",
+          "text": "reference flow sendTask \"Notify customer fridge is repaired\" -> task \"Select local service facility\" is absent from the generated model"
+         },
+         {
+          "id": "F3",
+          "kind": "missing_flow",
+          "text": "reference flow task \"Describe symptoms\" -> parallelGateway is absent from the generated model"
+         },
+         {
+          "id": "F7",
+          "kind": "missing_flow",
+          "text": "reference flow sendTask \"Send symptoms and fridge type\" -> parallelGateway is absent from the generated model"
+         },
+         {
+          "id": "F11",
+          "kind": "missing_flow",
+          "text": "reference flow exclusiveGateway \"Rating decision done\" -> sendTask \"Send appointment to customer\" is absent from the generated model"
+         },
+         {
+          "id": "F12",
+          "kind": "missing_flow",
+          "text": "reference flow parallelGateway -> task \"Describe symptoms\" is absent from the generated model"
+         },
+         {
+          "id": "F13",
+          "kind": "missing_flow",
+          "text": "reference flow parallelGateway -> sendTask \"Send symptoms and fridge type\" is absent from the generated model"
+         },
+         {
+          "id": "F14",
+          "kind": "missing_flow",
+          "text": "reference flow parallelGateway -> sendTask \"Notify customer fridge is repaired\" is absent from the generated model"
+         },
+         {
+          "id": "F15",
+          "kind": "missing_flow",
+          "text": "reference flow startEvent \"Fridge makes strange noises\" -> parallelGateway is absent from the generated model"
+         },
+         {
+          "id": "G1",
+          "kind": "extra_flow",
+          "text": "generated flow startEvent \"Fridge makes strange noises\" -> task \"Describe symptoms\" is absent from the reference"
+         },
+         {
+          "id": "G2",
+          "kind": "extra_flow",
+          "text": "generated flow task \"Describe symptoms\" -> sendTask \"Send symptoms and fridge type\" is absent from the reference"
+         },
+         {
+          "id": "G3",
+          "kind": "extra_flow",
+          "text": "generated flow sendTask \"Send symptoms and fridge type\" -> intermediateCatchEvent \"Appointment proposed\" is absent from the reference"
+         },
+         {
+          "id": "G10",
+          "kind": "extra_flow",
+          "text": "generated flow startEvent \"Symptoms received\" -> task \"Select local service facility\" is absent from the reference"
+         },
+         {
+          "id": "G11",
+          "kind": "extra_flow",
+          "text": "generated flow task \"Select local service facility\" -> sendTask \"Forward service request to facility\" is absent from the reference"
+         },
+         {
+          "id": "G12",
+          "kind": "extra_flow",
+          "text": "generated flow sendTask \"Forward service request to facility\" -> endEvent \"Facility selected\" is absent from the reference"
+         },
+         {
+          "id": "G14",
+          "kind": "extra_flow",
+          "text": "generated flow task \"Make appointment\" -> sendTask \"Send appointment to customer\" is absent from the reference"
+         },
+         {
+          "id": "G19",
+          "kind": "extra_flow",
+          "text": "generated flow task \"Repair fridge\" -> sendTask \"Notify customer fridge is repaired\" is absent from the reference"
+         },
+         {
+          "id": "G21",
+          "kind": "extra_flow",
+          "text": "generated flow sendTask \"Notify customer fridge is repaired\" -> endEvent \"Service job closed\" is absent from the reference"
+         }
+        ]
+       },
+       {
+        "step": 4,
+        "tool": "find_counterparts",
+        "args": {
+         "record_id": "M1"
+        },
+        "reason": "M1 is a missing parallelGateway after the start event. Checking which generated elements may model the same fork (for example, a start event or task that replaces it) before selecting evidence.",
+        "result": []
+       }
+      ],
+      "expert": [
+       {
+        "tools_used": [
+         "read_description",
+         "find_closest_documented_guidelines"
+        ],
+        "trace": [
+         {
+          "step": 1,
+          "tool": "read_description",
+          "args": {},
+          "reason": "Verify what the process actually states about the parallel branches after the start event and the symptom sending step before deciding on a guideline.",
+          "result": {
+           "process_description": "Title: Service for Your Fridge\n\nYour fridge produces strange noises.\nYou describe the symptoms, and send them together with the type of fridge to the central fridge service center.\nThey select a local service facility (which all have their own way of interacting with customers).\nThe service facility makes an appointment.\nThey arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts.\nAfter your fridge is repaired, you have to confirm that it is OK again.\nYou can rate the service facility."
+          }
+         },
+         {
+          "step": 2,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description says one activity is performed and then another activity sends its result; model them in sequence, not in parallel with a parallel gateway"
+          },
+          "reason": "Check whether documented guidelines already cover sequencing dependent activities versus parallel gateways before deciding on the reference's parallel split.",
+          "result": [
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "DATA-02",
+            "category": "Data and documentation artifacts",
+            "rule": "Use data input and output associations between data and activities. Data associations do not define execution order."
+           },
+           {
+            "id": "FLOW-02",
+            "category": "Sequence flows and conditions",
+            "rule": "Only activities, gateways and events are sequence-flow endpoints. Never connect sequence flows to pools, lanes, data objects, groups or annotations."
+           },
+           {
+            "id": "LANE-03",
+            "category": "Lanes and responsibility",
+            "rule": "Sequence flows may cross lanes in one process. Use message flows across participant pools, never between lanes."
+           },
+           {
+            "id": "COL-03",
+            "category": "Collaboration, pools and messages",
+            "rule": "Use sequence flows inside one participant process and message flows between different participants. Never use sequence flow across pools."
+           },
+           {
+            "id": "ACT-05",
+            "category": "Activities and task types",
+            "rule": "Distinguish message tasks from message events: a task models performed work; an event models a message occurrence affecting flow."
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tools_used": [
+         "read_description",
+         "find_closest_documented_guidelines",
+         "find_closest_learned_guidelines",
+         "find_closest_documented_guidelines",
+         "find_closest_documented_guidelines"
+        ],
+        "trace": [
+         {
+          "step": 1,
+          "tool": "read_description",
+          "args": {},
+          "reason": "The second request says the description forces a sequential order between describing symptoms and sending them. I need the exact text to check whether the reference's parallel fork is supported.",
+          "result": {
+           "process_description": "Title: Service for Your Fridge\n\nYour fridge produces strange noises.\nYou describe the symptoms, and send them together with the type of fridge to the central fridge service center.\nThey select a local service facility (which all have their own way of interacting with customers).\nThe service facility makes an appointment.\nThey arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts.\nAfter your fridge is repaired, you have to confirm that it is OK again.\nYou can rate the service facility."
+          }
+         },
+         {
+          "step": 2,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description ends with a final step after which the process is over; model an end event after the last activity of each path"
+          },
+          "reason": "Check whether the missing end event (M3) is already covered by a documented guideline before proposing one.",
+          "result": [
+           {
+            "id": "EVT-02",
+            "category": "Events",
+            "rule": "Use end events for terminal outcomes. An end event has no outgoing sequence flow and is not the target of a message flow."
+           },
+           {
+            "id": "PROC-04",
+            "category": "Processes and scopes",
+            "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+           },
+           {
+            "id": "EVT-09",
+            "category": "Events",
+            "rule": "Use a terminate end only when all remaining activity in the current scope must end immediately."
+           },
+           {
+            "id": "FLOW-06",
+            "category": "Sequence flows and conditions",
+            "rule": "Trace every split to continuations or endings. Add a join only when paths reunite and choose matching waiting semantics."
+           },
+           {
+            "id": "PROC-05",
+            "category": "Processes and scopes",
+            "rule": "Give every process and every expanded subProcess its own explicit start event and end event. A trigger that occurs after the main flow (for example later feedback or a return) is joined to the main flow by a gateway, or modeled as an event subprocess or a separate process."
+           },
+           {
+            "id": "FID-01",
+            "category": "Faithfulness and modeling decisions",
+            "rule": "Model every distinct activity, event, participant, decision, branch, loop, message and outcome stated in the description. Do not invent process facts."
+           }
+          ]
+         },
+         {
+          "step": 3,
+          "tool": "find_closest_learned_guidelines",
+          "args": {
+           "text": "the description ends with a final activity after which the process is over; model an end event after that last activity"
+          },
+          "reason": "Check whether an error-driven guideline already covers the missing end event after the final activity (M3) before deciding.",
+          "result": [
+           {
+            "id": "LRN-032",
+            "rule": "When the description ends by naming an action that a party carries out as its last step, and the process concludes only after that action, so the action is a performed piece of work rather than a terminal state: Model that final action as a task, named with the action the description gives, placed before the end event and connected to it by a sequence flow. The end event carries no work and represents the terminal outcome. Do not make the action itself the end event."
+           },
+           {
+            "id": "LRN-096",
+            "rule": "When the description states that an occurrence arising outside the currently running activity changes what happens next, either by continuing an earlier activity or by ending the process, and that occurrence does not itself begin the described process: Model the occurrence as an intermediate catch event, not as a start event or an embedded subprocess. Place it where the description puts it in the flow, or as a boundary event on the ongoing activity when the description says that activity is interrupted. If the description says an earlier activity continues, connect the catch event's outgoing flow to that activity. If it says the process ends, connect the flow to an end event. Model every stated follow-up step as its own task or gateway in the sequence."
+           },
+           {
+            "id": "LRN-051",
+            "rule": "When the description states a chain of steps that runs from one beginning to one final outcome, and a state or a performed step is reached partway along the chain while further steps still follow it before the chain concludes: Do not place an end event after such a partway state or step. Model the state as an intermediate event in the sequence flow, or as a task if work is performed. Place a single end event only after the last performed step of the chain, and connect it to that step by a sequence flow. Use an end event for each separate terminal outcome only when the description states that outcome as a conclusion."
+           },
+           {
+            "id": "LRN-012",
+            "rule": "When the description says that a process ends at its described outcome and that a later occurrence from outside the process, such as feedback or a return, may lead to follow-up work: Do not add a second start event with no incoming sequence flow to the same process to begin a separate start-to-end chain. Model the follow-up work as a message start event in its own process, as an event subprocess, or as a path joined to the main flow through a gateway. The main process keeps only the start event that begins its described flow."
+           }
+          ]
+         },
+         {
+          "step": 4,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "an exclusive gateway checks whether a condition holds; one branch loops back to an earlier activity and the other branch concludes the process, so the concluding branch is connected to an end event"
+          },
+          "reason": "Check whether a documented guideline already covers ending a process from a gateway branch, to classify the candidate guideline for the end-event difference M3.",
+          "result": [
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "PROC-05",
+            "category": "Processes and scopes",
+            "rule": "Give every process and every expanded subProcess its own explicit start event and end event. A trigger that occurs after the main flow (for example later feedback or a return) is joined to the main flow by a gateway, or modeled as an event subprocess or a separate process."
+           },
+           {
+            "id": "GW-06",
+            "category": "Gateways, branches and joins",
+            "rule": "Use an inclusive split when one or more conditions can be true; use an inclusive join to synchronize only activated reachable branches."
+           },
+           {
+            "id": "PROC-04",
+            "category": "Processes and scopes",
+            "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+           },
+           {
+            "id": "GW-09",
+            "category": "Gateways, branches and joins",
+            "rule": "Give the outgoing sequence flows of an event-based gateway no conditionExpression; the first occurring target event selects the path."
+           },
+           {
+            "id": "EVT-13",
+            "category": "Events",
+            "rule": "Respect event positions: a none intermediate event is catch-only in normal flow and never on a boundary; link events are intermediate-only, thrown and caught in pairs at the same process level, and a catching link has no incoming sequence flow; terminate is an end event only."
+           }
+          ]
+         },
+         {
+          "step": 5,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description states that one step is performed and a later step sends its result onward; the later step depends on the earlier one, so the two steps are ordered in sequence and not split by a parallel gateway"
+          },
+          "reason": "Check whether a documented guideline already governs sequential dependent steps versus parallel splits before proposing the guideline.",
+          "result": [
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "SUB-03",
+            "category": "Subprocesses, calls and repetition",
+            "rule": "An ordinary embedded subprocess participates in normal sequence flow and may contain its own starts, ends, activities, gateways and flows."
+           },
+           {
+            "id": "LANE-03",
+            "category": "Lanes and responsibility",
+            "rule": "Sequence flows may cross lanes in one process. Use message flows across participant pools, never between lanes."
+           },
+           {
+            "id": "XML-06",
+            "category": "Document and XML structure",
+            "rule": "Follow the BPMN XML schema: never put a documentation element directly inside bpmn:definitions, and never nest a sequenceFlow inside a task, gateway or event. If you add an ioSpecification, it must contain its dataInput and dataOutput elements first, then at least one inputSet and one outputSet, even if empty: <bpmn:inputSet/><bpmn:outputSet/>."
+           },
+           {
+            "id": "GW-09",
+            "category": "Gateways, branches and joins",
+            "rule": "Give the outgoing sequence flows of an event-based gateway no conditionExpression; the first occurring target event selects the path."
+           },
+           {
+            "id": "FID-02",
+            "category": "Faithfulness and modeling decisions",
+            "rule": "Do not merge separately described actions into one task or split one stated action without a process reason. Preserve described dependencies."
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "failure_type": "T6",
+     "example_id": "42",
+     "learning_mode": "tools",
+     "retrieved": [
+      "M1",
+      "M2",
+      "M3",
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "P1",
+      "P2"
+     ],
+     "retriever_reason": "tool_calls_left is 0, so no further lookups were possible. Selected the three missing_element records (M1, M2, M3) that show the reference's two parallel gateways and the 'Repair process over' end event are absent from the generated model. Included the description sentences S1-S7, which state the intended process flow (symptoms sent, facility selected, appointment, arrival with possible incomplete repair, confirmation, rating). Added P1 and P2, the label pairs for the two exclusive gateways whos",
+     "first_answer": {
+      "decision": "abstain",
+      "reason": "The reference puts 'Describe symptoms' and 'Send symptoms and fridge type' in parallel (M1, M2). The description (S2) says the symptoms are described and then sent together with the fridge type, so sending depends on describing. A parallel split would contradict the description, and the reference is wrong here. The learned parallel-gateway rules (LRN-004, LRN-015) apply to independent activities, which these are not. The remaining records (M3, P1, P2) are an unmatched end event and label-similarity pairs; they do not show a clear modeling difference that a general guideline would prevent, so I"
+     },
+     "candidate": {
+      "decision": "propose",
+      "trigger": "the description says the process ends after a final activity that is optional, meaning a decision can skip it, and the stated outcome is reached on both the performed and the skipped path",
+      "instruction": "Model one end event for the process completion. Route the sequence flow of the last performed activity and the skip branch of the decision gateway into that same end event. Do not leave either path without a terminal end event, and do not add a separate end event for each path unless the description names different outcomes.",
+      "category": "Events",
+      "cited": [
+       "M3",
+       "S7",
+       "S6"
+      ],
+      "reason": "M3 shows the reference has an end event after the optional rating activity and the 'Fridge repaired?' decision, which the generated model lacks. S6 and S7 describe the confirmation as required and the rating as optional, so the rating's skip path must also reach the end. FLOW-06 already requires tracing every split to an ending, and EVT-02 requires end events for terminal outcomes. This guideline adds the specific case of an optional final activity that can be skipped and must still converge on one end event. The parallel-gateway records (M1, M2) are not used. Under the description, the sequen",
+      "relation_answered": {
+       "relation": "refines",
+       "rule_id": "FLOW-06"
+      }
+     },
+     "relation_judgement": {
+      "relation": "refines",
+      "rule_id": "FLOW-06",
+      "reason": "M3 shows the reference has an end event after the optional rating activity and the 'Fridge repaired?' decision, which the generated model lacks. S6 and S7 describe the confirmation as required and the rating as optional, so the rating's skip path must also reach the end. FLOW-06 already requires tracing every split to an ending, and EVT-02 requires end events for terminal outcomes. This guideline "
+     },
+     "rules_shown": [
+      "ACT-07",
+      "FLOW-02",
+      "DATA-02",
+      "FID-02",
+      "LANE-03",
+      "XML-06",
+      "EVT-09",
+      "EVT-02",
+      "FLOW-06",
+      "EVT-13",
+      "GW-07",
+      "EVT-12"
+     ],
+     "learned_shown": [],
+     "status": "promoted",
+     "relation": {
+      "type": "refines",
+      "ref": "FLOW-06"
+     },
+     "judged_by": "expert",
+     "detail": "refines FLOW-06 (M3 shows the reference has an end event after the optional rating activity and the 'Fridge repaired?' decision, which the generated model lacks. S6 and S7 describe the confirmation as required and the rating as optional, so the rating's skip path must also reach the end. FLOW-06 already requires tracing every split to an ending, and EVT-02 requires end events for terminal outcomes. This guideline )",
+     "generalization": {
+      "status": "not_generalized",
+      "with": "EXS-097",
+      "reason": "The two guidelines address different modeling situations. The first concerns an optional final activity that a decision can skip, where both paths converge on one shared end event. The second concerns a condition detected during a repeated monitoring activity that must terminate the process or halt "
+     },
+     "guideline_id": "LRN-100",
+     "agent_trace": {
+      "retriever": [
+       {
+        "step": 1,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "missing_element"
+        },
+        "reason": "Start with the 3 missing reference elements, since unmatched activities drive the T6 label divergence (6 activities without partner).",
+        "result": [
+         {
+          "id": "M1",
+          "text": "reference parallelGateway \"ParallelGateway_1\" has no counterpart in the generated model (after startEvent \"Fridge makes strange noises\"; before task \"Describe symptoms\", sendTask \"Send symptoms and fridge type\")"
+         },
+         {
+          "id": "M2",
+          "text": "reference parallelGateway \"ParallelGateway_2\" has no counterpart in the generated model (after sendTask \"Send symptoms and fridge type\", task \"Describe symptoms\"; before sendTask \"Notify customer fridge is repaired\")"
+         },
+         {
+          "id": "M3",
+          "text": "reference endEvent \"Repair process over\" has no counterpart in the generated model (after task \"Rate service facility\", exclusiveGateway \"Fridge repaired?\")"
+         }
+        ]
+       },
+       {
+        "step": 2,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "description"
+        },
+        "reason": "The missing parallel gateways and end event need the description sentences that state what the model should contain at these points. Listing the description records first.",
+        "result": [
+         {
+          "id": "S1",
+          "text": "Title: Service for Your Fridge Your fridge produces strange noises."
+         },
+         {
+          "id": "S2",
+          "text": "You describe the symptoms, and send them together with the type of fridge to the central fridge service center."
+         },
+         {
+          "id": "S3",
+          "text": "They select a local service facility (which all have their own way of interacting with customers)."
+         },
+         {
+          "id": "S4",
+          "text": "The service facility makes an appointment."
+         },
+         {
+          "id": "S5",
+          "text": "They arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts."
+         },
+         {
+          "id": "S6",
+          "text": "After your fridge is repaired, you have to confirm that it is OK again."
+         },
+         {
+          "id": "S7",
+          "text": "You can rate the service facility."
+         }
+        ]
+       },
+       {
+        "step": 3,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "label_pair"
+        },
+        "reason": "The failure is label-level (T6), so I need the reference-generated label pairs to see which activity labels diverge before choosing the supporting description sentences.",
+        "result": [
+         {
+          "id": "P1",
+          "text": "exclusiveGateway: generated \"Rate service facility?\" matched to reference \"Additional parts needed?\" (label similarity 0.51)"
+         },
+         {
+          "id": "P2",
+          "text": "exclusiveGateway: generated \"Fridge repaired?\" matched to reference \"Submit a rating?\" (label similarity 0.511)"
+         },
+         {
+          "id": "P3",
+          "text": "manualTask: generated \"Send symptoms and fridge type\" matched to reference \"Collect fridge type data\" (label similarity 0.753)"
+         },
+         {
+          "id": "P4",
+          "text": "serviceTask: generated \"Send appointment to customer\" matched to reference \"Schedule an appointment for fridge repair\" (label similarity 0.76)"
+         },
+         {
+          "id": "P5",
+          "text": "intermediateCatchEvent: generated \"Facility arrives at random time\" matched to reference \"Wait until service facility arrives\" (label similarity 0.802)"
+         },
+         {
+          "id": "P6",
+          "text": "userTask: generated \"Notify customer fridge is repaired\" matched to reference \"Send a report to the fridge service center\" (label similarity 0.818)"
+         },
+         {
+          "id": "P7",
+          "text": "manualTask: generated \"Confirm fridge is working again\" matched to reference \"Confirm that fridge is okay\" (label similarity 0.888)"
+         },
+         {
+          "id": "P8",
+          "text": "manualTask: generated \"Repair fridge\" matched to reference \"Repair the fridge\" (label similarity 0.976)"
+         },
+         {
+          "id": "P9",
+          "text": "userTask: generated \"Describe symptoms\" matched to reference \"Describe the symptoms\" (label similarity 0.981)"
+         }
+        ]
+       },
+       {
+        "step": 4,
+        "tool": "list_evidence",
+        "args": {
+         "kind": "extra_element"
+        },
+        "reason": "The label pairs show several generated gateways and tasks matched to differently worded reference labels. Listing the unmatched generated elements shows which labels diverge from the description and should be selected as evidence.",
+        "result": [
+         {
+          "id": "X1",
+          "text": "generated intermediateCatchEvent \"Appointment proposed\" has no counterpart in the reference"
+         },
+         {
+          "id": "X2",
+          "text": "generated intermediateCatchEvent \"Fridge repaired\" has no counterpart in the reference"
+         },
+         {
+          "id": "X3",
+          "text": "generated endEvent \"Service completed\" has no counterpart in the reference"
+         },
+         {
+          "id": "X4",
+          "text": "generated startEvent \"Symptoms received\" has no counterpart in the reference"
+         },
+         {
+          "id": "X5",
+          "text": "generated sendTask \"Forward service request to facility\" has no counterpart in the reference"
+         },
+         {
+          "id": "X6",
+          "text": "generated endEvent \"Facility selected\" has no counterpart in the reference"
+         },
+         {
+          "id": "X7",
+          "text": "generated startEvent \"Service request received\" has no counterpart in the reference"
+         },
+         {
+          "id": "X8",
+          "text": "generated task \"Make appointment\" has no counterpart in the reference"
+         },
+         {
+          "id": "X9",
+          "text": "generated task \"Attempt repair at customer\" has no counterpart in the reference"
+         },
+         {
+          "id": "X10",
+          "text": "generated task \"Leave without repair (additional parts needed)\" has no counterpart in the reference"
+         },
+         {
+          "id": "X11",
+          "text": "generated endEvent \"Service job closed\" has no counterpart in the reference"
+         }
+        ]
+       }
+      ],
+      "expert": [
+       {
+        "tools_used": [
+         "read_description",
+         "find_closest_documented_guidelines",
+         "find_closest_learned_guidelines"
+        ],
+        "trace": [
+         {
+          "step": 1,
+          "tool": "read_description",
+          "args": {},
+          "reason": "Verify what the description states about the start, the parallel steps and the end before deciding whether these gaps are real.",
+          "result": {
+           "process_description": "Title: Service for Your Fridge\n\nYour fridge produces strange noises.\nYou describe the symptoms, and send them together with the type of fridge to the central fridge service center.\nThey select a local service facility (which all have their own way of interacting with customers).\nThe service facility makes an appointment.\nThey arrive at a random time, and sometimes have to leave without repairing your fridge, because they need additional parts.\nAfter your fridge is repaired, you have to confirm that it is OK again.\nYou can rate the service facility."
+          }
+         },
+         {
+          "step": 2,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description says two actions are performed together or both must be completed before the next step, so the actions are modeled in parallel between a parallel gateway split and join"
+          },
+          "reason": "Check whether documented guidelines already cover parallel split and join for jointly performed actions, and whether any contradicts them.",
+          "result": [
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "FID-02",
+            "category": "Faithfulness and modeling decisions",
+            "rule": "Do not merge separately described actions into one task or split one stated action without a process reason. Preserve described dependencies."
+           },
+           {
+            "id": "SUB-03",
+            "category": "Subprocesses, calls and repetition",
+            "rule": "An ordinary embedded subprocess participates in normal sequence flow and may contain its own starts, ends, activities, gateways and flows."
+           },
+           {
+            "id": "GW-04",
+            "category": "Gateways, branches and joins",
+            "rule": "Use a parallel split when all outgoing branches start. Do not add decision conditions to parallel branches."
+           },
+           {
+            "id": "LANE-01",
+            "category": "Lanes and responsibility",
+            "rule": "Use lanes to partition one process by a stated role, department, system or responsibility; lanes are not separate processes."
+           },
+           {
+            "id": "ACT-05",
+            "category": "Activities and task types",
+            "rule": "Distinguish message tasks from message events: a task models performed work; an event models a message occurrence affecting flow."
+           }
+          ]
+         },
+         {
+          "step": 3,
+          "tool": "find_closest_learned_guidelines",
+          "args": {
+           "text": "the description says two actions are done together, both performed after a start event and both completed before the next step, so they are modeled as parallel branches between a parallel split and a parallel join"
+          },
+          "reason": "Check whether an error-driven guideline already covers parallel actions joined before the next step, to decide the relation.",
+          "result": [
+           {
+            "id": "LRN-004",
+            "rule": "When the description states that one party performs two activities joined by 'and', with no stated order between them, and both must be finished before the next described step: Model the two activities as parallel branches: place a parallel gateway split before them, connect each activity to a parallel gateway join, and continue from the join to the next step. Do not sequence the activities one after the other unless the description orders them, and do not put an exclusive gateway between them."
+           },
+           {
+            "id": "LRN-061",
+            "rule": "When the description lists two or more actions that must each be carried out, such as notifying different parties, without stating an order between them, and the process continues only after all of them are done: Model each such action as its own branch that starts from a parallel gateway, and join the branches with a parallel gateway before the next step. Do not use an exclusive gateway, and do not add conditions to these branches."
+           },
+           {
+            "id": "LRN-040",
+            "rule": "When the description states that one branch or outcome of a decision is followed by several separately named actions performed by different actors or departments (for example, one actor receives materials while another department sets something up), joined by 'and' or 'and also': Model each separately named action as its own task in that branch, with one task per actor action, and do not merge them into one task, even when the actions are described in the same sentence. Place the tasks in parallel after the branch's split, and join them with a parallel gateway when the description requires all of them to be completed before the process continues."
+           },
+           {
+            "id": "LRN-015",
+            "rule": "When the description says several activities are performed independently of each other and all of them must be completed before a later step can begin: Model a parallel gateway that splits the flow into one branch per independent activity, and a parallel gateway that joins those branches so the later step starts only after all of them finish. Do not leave the branches unsynchronized, and do not use an exclusive gateway for a join that requires every branch."
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tools_used": [
+         "find_closest_documented_guidelines",
+         "find_closest_documented_guidelines"
+        ],
+        "trace": [
+         {
+          "step": 1,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description states that one activity is completed before another activity whose content depends on it, so the two activities must be ordered in sequence, not run in parallel with a parallel gateway"
+          },
+          "reason": "Check whether a documented guideline already covers sequencing of dependent activities versus parallel splits before proposing a guideline.",
+          "result": [
+           {
+            "id": "ACT-07",
+            "category": "Activities and task types",
+            "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+           },
+           {
+            "id": "FLOW-02",
+            "category": "Sequence flows and conditions",
+            "rule": "Only activities, gateways and events are sequence-flow endpoints. Never connect sequence flows to pools, lanes, data objects, groups or annotations."
+           },
+           {
+            "id": "DATA-02",
+            "category": "Data and documentation artifacts",
+            "rule": "Use data input and output associations between data and activities. Data associations do not define execution order."
+           },
+           {
+            "id": "FID-02",
+            "category": "Faithfulness and modeling decisions",
+            "rule": "Do not merge separately described actions into one task or split one stated action without a process reason. Preserve described dependencies."
+           },
+           {
+            "id": "LANE-03",
+            "category": "Lanes and responsibility",
+            "rule": "Sequence flows may cross lanes in one process. Use message flows across participant pools, never between lanes."
+           },
+           {
+            "id": "XML-06",
+            "category": "Document and XML structure",
+            "rule": "Follow the BPMN XML schema: never put a documentation element directly inside bpmn:definitions, and never nest a sequenceFlow inside a task, gateway or event. If you add an ioSpecification, it must contain its dataInput and dataOutput elements first, then at least one inputSet and one outputSet, even if empty: <bpmn:inputSet/><bpmn:outputSet/>."
+           }
+          ]
+         },
+         {
+          "step": 2,
+          "tool": "find_closest_documented_guidelines",
+          "args": {
+           "text": "the description says the process is finished after the last activity, including after an optional final activity that may be skipped, so every path must reach an end event"
+          },
+          "reason": "M3 is the only record that points to a concrete missing element. Before proposing a guideline on it, I need to check whether the documented guidelines already cover ending the process after an optional final activity.",
+          "result": [
+           {
+            "id": "EVT-09",
+            "category": "Events",
+            "rule": "Use a terminate end only when all remaining activity in the current scope must end immediately."
+           },
+           {
+            "id": "EVT-02",
+            "category": "Events",
+            "rule": "Use end events for terminal outcomes. An end event has no outgoing sequence flow and is not the target of a message flow."
+           },
+           {
+            "id": "FLOW-06",
+            "category": "Sequence flows and conditions",
+            "rule": "Trace every split to continuations or endings. Add a join only when paths reunite and choose matching waiting semantics."
+           },
+           {
+            "id": "EVT-13",
+            "category": "Events",
+            "rule": "Respect event positions: a none intermediate event is catch-only in normal flow and never on a boundary; link events are intermediate-only, thrown and caught in pairs at the same process level, and a catching link has no incoming sequence flow; terminate is an end event only."
+           },
+           {
+            "id": "GW-07",
+            "category": "Gateways, branches and joins",
+            "rule": "Use an event-based gateway when the first occurring event selects the path. Target supported catching events or receive tasks, not ordinary tasks."
+           },
+           {
+            "id": "EVT-12",
+            "category": "Events",
+            "rule": "An error boundary event is always interrupting (cancelActivity=true); a cancel boundary event is used only on a transaction subProcess."
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

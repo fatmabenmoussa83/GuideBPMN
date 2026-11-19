@@ -1,0 +1,598 @@
+{
+ "example_id": "50",
+ "outcomes": [
+  {
+   "failure_type": "T5",
+   "example_id": "50",
+   "learning_mode": "tools",
+   "retrieved": [
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "X1",
+    "X2",
+    "S1",
+    "S2",
+    "S3",
+    "S4",
+    "S5"
+   ],
+   "retriever_reason": "The T5 failure stems from the generated model replacing the reference's review structure. M1 and M2 are reference tasks (claim examination and recommendation check by a senior officer) with no counterpart, while X1 (\"Check settlement recommendation\") is an extra generated task that appears to stand in for the senior review without matching it. M3 (senior officer marks the claim) has no counterpart, and X2 (\"Record claim outcome as OK or Not OK\") is an extra task in its place. M4 is the missing g",
+   "first_wording": {
+    "trigger": "the description says that a negative verdict from a reviewer or check sends the item back to an earlier activity, and that this earlier activity is then repeated before the process continues",
+    "instruction": "Place an exclusive merge gateway immediately before the earlier activity that is repeated. Connect the main incoming flow and the rework flow from the negative-verdict decision into this merge gateway, and connect the merge gateway to the repeated activity. Do not let the main path and the rework path enter the repeated activity directly, and do not omit the merge point."
+   },
+   "words_to_avoid": [
+    "repeated"
+   ],
+   "candidate": {
+    "decision": "abstain",
+    "trigger": "",
+    "instruction": "",
+    "category": "",
+    "cited": [],
+    "reason": "",
+    "relation_answered": {
+     "relation": null,
+     "rule_id": null
+    }
+   },
+   "status": "abstained",
+   "detail": "",
+   "agent_trace": {
+    "retriever": [
+     {
+      "step": 1,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "missing_element"
+      },
+      "reason": "Start with the reference elements absent from the generated model, since they are the core of the structural divergence.",
+      "result": [
+       {
+        "id": "M1",
+        "text": "reference task \"Claim is examined by a claims officer\" has no counterpart in the generated model (after userTask \"Examine claim\")"
+       },
+       {
+        "id": "M2",
+        "text": "reference task \"Recommendation is checked by a senior claims officer\" has no counterpart in the generated model (after userTask \"Write settlement recommendation\")"
+       },
+       {
+        "id": "M3",
+        "text": "reference task \"Senior claims officer marks the claim\" has no counterpart in the generated model (before exclusiveGateway \"Claim OK?\")"
+       },
+       {
+        "id": "M4",
+        "text": "reference exclusiveGateway \"ExclusiveGateway_2\" has no counterpart in the generated model (after userTask \"Return claim to claims officer\"; before userTask \"Write settlement recommendation\")"
+       }
+      ]
+     },
+     {
+      "step": 2,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "description"
+      },
+      "reason": "The missing elements M1-M4 are reference tasks and a gateway. The description sentences state what the model should contain at these points, so I need them to ground the failure.",
+      "result": [
+       {
+        "id": "S1",
+        "text": "After a claim is registered, it is examined by a claims officer."
+       },
+       {
+        "id": "S2",
+        "text": "The claims officer then writes a settlement recommendation."
+       },
+       {
+        "id": "S3",
+        "text": "This recommendation is then checked by a senior claims officer who may mark the claim as OK or Not OK."
+       },
+       {
+        "id": "S4",
+        "text": "If the claim is marked as Not OK, it is sent back to the claims officer and the recommendation is repeated."
+       },
+       {
+        "id": "S5",
+        "text": "If the claim is OK, the claim handling process proceeds."
+       }
+      ]
+     },
+     {
+      "step": 3,
+      "tool": "find_counterparts",
+      "args": {
+       "record_id": "M3"
+      },
+      "reason": "M3 (senior officer marks the claim before the 'Claim OK?' gateway) is the most likely to be modeled under a different name in the generated model, so I want to check its counterpart before selecting evidence.",
+      "result": []
+     },
+     {
+      "step": 4,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "extra_element"
+      },
+      "reason": "The missing elements (M1-M4) are the reference's senior-review and gateway steps. The generated extra elements may show how those steps were modeled differently, which helps decide which evidence to keep. This is my last tool call.",
+      "result": [
+       {
+        "id": "X1",
+        "text": "generated userTask \"Check settlement recommendation\" has no counterpart in the reference"
+       },
+       {
+        "id": "X2",
+        "text": "generated userTask \"Record claim outcome as OK or Not OK\" has no counterpart in the reference"
+       }
+      ]
+     }
+    ],
+    "expert": [
+     {
+      "tools_used": [
+       "read_description",
+       "find_closest_documented_guidelines",
+       "find_closest_learned_guidelines"
+      ],
+      "trace": [
+       {
+        "step": 1,
+        "tool": "read_description",
+        "args": {},
+        "reason": "Verify what the description states about the review, the marking and the rework loop before concluding.",
+        "result": {
+         "process_description": "After a claim is registered, it is examined by a claims officer.\nThe claims officer then writes a settlement recommendation.\nThis recommendation is then checked by a senior claims officer who may mark the claim as OK or Not OK.\nIf the claim is marked as Not OK, it is sent back to the claims officer and the recommendation is repeated.\nIf the claim is OK, the claim handling process proceeds."
+        }
+       },
+       {
+        "step": 2,
+        "tool": "find_closest_documented_guidelines",
+        "args": {
+         "text": "the description says a reviewer checks an artifact and then marks it with a verdict that decides whether it is accepted or sent back for rework"
+        },
+        "reason": "Check whether a documented guideline already covers review-then-verdict steps by a person before the decision gateway.",
+        "result": [
+         {
+          "id": "SUB-06",
+          "category": "Subprocesses, calls and repetition",
+          "rule": "Use transaction, ad-hoc or compensation behavior only when its specific semantics are explicitly described."
+         },
+         {
+          "id": "QA-04",
+          "category": "Final consistency checks",
+          "rule": "Compare the model with the description; remove unsupported elements and retain every explicitly stated alternative, outcome and collaboration."
+         },
+         {
+          "id": "PROC-04",
+          "category": "Processes and scopes",
+          "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+         },
+         {
+          "id": "FID-04",
+          "category": "Faithfulness and modeling decisions",
+          "rule": "When the description does not justify a specialized construct, use the simplest compatible BPMN construct and do not guess missing semantics."
+         },
+         {
+          "id": "QA-03",
+          "category": "Final consistency checks",
+          "rule": "Verify processRef values, lane membership, message-flow endpoints and directions, and the prohibition on sequence flows between pools."
+         },
+         {
+          "id": "FLOW-04",
+          "category": "Sequence flows and conditions",
+          "rule": "Use a boolean formal conditionExpression on a conditional flow only when the description supports the condition."
+         }
+        ]
+       },
+       {
+        "step": 3,
+        "tool": "find_closest_learned_guidelines",
+        "args": {
+         "text": "the description says a rejected item is sent back to an earlier activity and the earlier activity is repeated, so the loop re-enters a previously modeled task"
+        },
+        "reason": "Check whether learned guidelines already cover rework loops that re-enter an earlier task, which is where the generated model diverges (missing merge gateway, extra review tasks).",
+        "result": [
+         {
+          "id": "LRN-127",
+          "rule": "When the description says that when a check for one element of a collection fails, the next element of that collection is taken and the same check starts again for it: Model the selection of the next element as an explicit task placed on the path after the failed check, and connect it with a sequence flow back to the start of the repeated check, so the loop is visible in the diagram."
+         },
+         {
+          "id": "LRN-129",
+          "rule": "When the description states a yes/no check on whether a condition holds for the current item, and says that when the check fails the next item is selected and the process starts again with the same check: Model the restart as a sequence flow from the failing branch, after the next-item selection task, back into the existing decision gateway for that check. Label the gateway as a question that uses the condition's term from the description. Do not add a second decision gateway that tests the same condition again."
+         },
+         {
+          "id": "LRN-089",
+          "rule": "When the description says that while an activity is being carried out, an outside party or device keeps sending back status messages that the process has to receive: Model the receipt of these repeated status messages as its own receive task, or as a message intermediate catch event, placed in a parallel branch that starts together with the activity it reports on. Connect that branch so that it runs alongside the activity and is synchronized with it by a parallel join, and do not drop the status reception or fold it into the activity itself."
+         },
+         {
+          "id": "LRN-093",
+          "rule": "When The description says that a device or system keeps sending back its status repeatedly while a preparation step runs, and a later check on that status decides when the repetition ends.: Model the repetition with an exclusive merge gateway placed before the repeated receive task. Follow the receive task with an exclusive gateway on the stop condition. Route one outgoing flow back into the merge gateway to repeat the receive, and route the other onward to the next activity. Do not model the repetition as a plain sequence with no merge point."
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tools_used": [],
+      "trace": []
+     }
+    ]
+   }
+  },
+  {
+   "failure_type": "T6",
+   "example_id": "50",
+   "learning_mode": "tools",
+   "retrieved": [
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "X1",
+    "X2",
+    "S1",
+    "S2",
+    "S3",
+    "S4",
+    "S5"
+   ],
+   "retriever_reason": "The T6 divergence is driven by four missing reference elements (M1-M4: the claims-officer examination task, the senior officer recommendation check, the senior officer marking task, and the gateway after the return path) and two extra generated tasks (X1, X2) that appear in place of them. The description sentences S1-S5 state the intended sequence: examine claim, write recommendation, senior check marking OK/Not OK, Not OK loop back, and OK proceeding. Together these show what labels and structu",
+   "first_wording": {
+    "trigger": "the description says that a reviewer's rejection sends an item back to an earlier actor, and the earlier work is repeated before the item is checked again",
+    "instruction": "Place an exclusive merge gateway immediately before the first activity of the repeated work, so that the flow from before the loop and the rejection return flow both join there. After the reviewer's check and outcome gateway, route the rejection branch back into the merge gateway and route the accepted branch onward to the next step. Do not connect the rejection branch directly to the repeated activity, and do not model the repetition as a plain sequence with no merge point."
+   },
+   "words_to_avoid": [
+    "repeated"
+   ],
+   "candidate": {
+    "decision": "propose",
+    "trigger": "the description has a sentence in which a party examines or writes an item, followed by a sentence in which a different party checks that work and may record an outcome for it, and each sentence names its own action and object",
+    "instruction": "Model each described action as its own task, placed in the lane of the party named in its sentence. Label every task with the action and object of its own sentence, using the description's words. Do not label the examination or writing step with the wording of the later check or outcome step, and do not label the check or outcome step with the wording of the earlier step. Keep the check task and the outcome-recording task separate, and keep the examination and writing tasks even when a neighboring task uses similar wording.",
+    "category": "Activities and task types",
+    "cited": [
+     "M1",
+     "M2",
+     "M3",
+     "X1",
+     "X2",
+     "S1",
+     "S2",
+     "S3"
+    ],
+    "reason": "The records show that the generated model has tasks named for the check and outcome (X1, X2) while the reference has separate tasks for the senior officer's check and outcome marking (M2, M3), and the examination and writing steps are missing as separately labelled tasks (M1). This is a label-level divergence from the description's own sentences (S1 to S3), so the guideline targets how labels are taken from each sentence and kept in each performer's lane.",
+    "relation_answered": {
+     "relation": "refines FID-02: FID-02 says not to merge separately described actions, and this guideline adds how to label each task and which lane it goes in when the actions come from different sentences with similar wording. It is not the same as LRN-103, which concerns two steps that share the same action wording for different purposes, while this trigger is a sequence of different actions by different parties.",
+     "rule_id": "FID-02"
+    }
+   },
+   "relation_judgement": {
+    "relation": "same_as_learned",
+    "rule_id": "FID-02",
+    "reason": "The records show that the generated model has tasks named for the check and outcome (X1, X2) while the reference has separate tasks for the senior officer's check and outcome marking (M2, M3), and the examination and writing steps are missing as separately labelled tasks (M1). This is a label-level divergence from the description's own sentences (S1 to S3), so the guideline targets how labels are "
+   },
+   "rules_shown": [
+    "PROC-04",
+    "ACT-05",
+    "FID-02",
+    "LANE-01",
+    "SUB-03",
+    "ACT-07"
+   ],
+   "learned_shown": [
+    "LRN-139",
+    "LRN-103",
+    "LRN-029",
+    "LRN-081"
+   ],
+   "status": "example_specific",
+   "relation": {
+    "type": "new",
+    "ref": null
+   },
+   "detail": "kept for this example only, tied to it by: writes",
+   "generalization": {
+    "status": "not_generalized",
+    "with": "EXS-047",
+    "reason": "The two guidelines address different situations. The first concerns a two-step sequence in which one party examines or writes an item and a different party later checks it and records an outcome, and it is about placing these as separate tasks in the correct lanes. The second concerns label wording "
+   },
+   "guideline_id": "EXS-130",
+   "agent_trace": {
+    "retriever": [
+     {
+      "step": 1,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "missing_element"
+      },
+      "reason": "T6 is a label-level divergence with 5 activities lacking a partner. I need to see the four missing_element records first to know which reference activities have no counterpart in the generated model.",
+      "result": [
+       {
+        "id": "M1",
+        "text": "reference task \"Claim is examined by a claims officer\" has no counterpart in the generated model (after userTask \"Examine claim\")"
+       },
+       {
+        "id": "M2",
+        "text": "reference task \"Recommendation is checked by a senior claims officer\" has no counterpart in the generated model (after userTask \"Write settlement recommendation\")"
+       },
+       {
+        "id": "M3",
+        "text": "reference task \"Senior claims officer marks the claim\" has no counterpart in the generated model (before exclusiveGateway \"Claim OK?\")"
+       },
+       {
+        "id": "M4",
+        "text": "reference exclusiveGateway \"ExclusiveGateway_2\" has no counterpart in the generated model (after userTask \"Return claim to claims officer\"; before userTask \"Write settlement recommendation\")"
+       }
+      ]
+     },
+     {
+      "step": 2,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "description"
+      },
+      "reason": "Description sentences state what the reference model should contain at each point, needed to ground the four missing elements.",
+      "result": [
+       {
+        "id": "S1",
+        "text": "After a claim is registered, it is examined by a claims officer."
+       },
+       {
+        "id": "S2",
+        "text": "The claims officer then writes a settlement recommendation."
+       },
+       {
+        "id": "S3",
+        "text": "This recommendation is then checked by a senior claims officer who may mark the claim as OK or Not OK."
+       },
+       {
+        "id": "S4",
+        "text": "If the claim is marked as Not OK, it is sent back to the claims officer and the recommendation is repeated."
+       },
+       {
+        "id": "S5",
+        "text": "If the claim is OK, the claim handling process proceeds."
+       }
+      ]
+     },
+     {
+      "step": 3,
+      "tool": "find_counterparts",
+      "args": {
+       "record_id": "M3"
+      },
+      "reason": "M3 (senior claims officer marks the claim before 'Claim OK?') is the central missing task behind the Not OK/OK branching in S3-S5. Checking which generated elements could model it differently.",
+      "result": []
+     },
+     {
+      "step": 4,
+      "tool": "list_evidence",
+      "args": {
+       "kind": "extra_element"
+      },
+      "reason": "I have one call left. Listing the extra generated elements shows which generated elements have no reference counterpart. These may be the missing reference elements (M1-M4) modeled differently, which find_counterparts only returned empty for M3. I will decide the final selection after seeing them.",
+      "result": [
+       {
+        "id": "X1",
+        "text": "generated userTask \"Check settlement recommendation\" has no counterpart in the reference"
+       },
+       {
+        "id": "X2",
+        "text": "generated userTask \"Record claim outcome as OK or Not OK\" has no counterpart in the reference"
+       }
+      ]
+     }
+    ],
+    "expert": [
+     {
+      "tools_used": [
+       "read_description",
+       "find_closest_documented_guidelines",
+       "find_closest_documented_guidelines",
+       "find_closest_learned_guidelines"
+      ],
+      "trace": [
+       {
+        "step": 1,
+        "tool": "read_description",
+        "args": {},
+        "reason": "Verify the full process description before concluding which element is missing.",
+        "result": {
+         "process_description": "After a claim is registered, it is examined by a claims officer.\nThe claims officer then writes a settlement recommendation.\nThis recommendation is then checked by a senior claims officer who may mark the claim as OK or Not OK.\nIf the claim is marked as Not OK, it is sent back to the claims officer and the recommendation is repeated.\nIf the claim is OK, the claim handling process proceeds."
+        }
+       },
+       {
+        "step": 2,
+        "tool": "find_closest_documented_guidelines",
+        "args": {
+         "text": "the description states that a role performs an action on an object: name the user task after that role and action, keeping the verb and object stated in the description"
+        },
+        "reason": "Check whether a documented guideline already covers task labels that name the actor and action as stated in the description, since the mismatches are mainly label divergences.",
+        "result": [
+         {
+          "id": "ACT-08",
+          "category": "Activities and task types",
+          "rule": "Do not infer a task subtype only from a verb in its label; require supporting meaning in the full description."
+         },
+         {
+          "id": "FID-02",
+          "category": "Faithfulness and modeling decisions",
+          "rule": "Do not merge separately described actions into one task or split one stated action without a process reason. Preserve described dependencies."
+         },
+         {
+          "id": "ACT-05",
+          "category": "Activities and task types",
+          "rule": "Distinguish message tasks from message events: a task models performed work; an event models a message occurrence affecting flow."
+         },
+         {
+          "id": "FID-03",
+          "category": "Faithfulness and modeling decisions",
+          "rule": "Use short, faithful labels in the input language. Prefer verb-object activity names and meaningful business triggers or outcomes for events."
+         },
+         {
+          "id": "FID-01",
+          "category": "Faithfulness and modeling decisions",
+          "rule": "Model every distinct activity, event, participant, decision, branch, loop, message and outcome stated in the description. Do not invent process facts."
+         },
+         {
+          "id": "LANE-01",
+          "category": "Lanes and responsibility",
+          "rule": "Use lanes to partition one process by a stated role, department, system or responsibility; lanes are not separate processes."
+         }
+        ]
+       },
+       {
+        "step": 3,
+        "tool": "find_closest_documented_guidelines",
+        "args": {
+         "text": "the description states that a rejected item is sent back to an earlier actor and the work is repeated: model a merge exclusive gateway before the repeated activity so the loop rejoins it"
+        },
+        "reason": "Check whether a documented guideline already covers rework loops and merge gateways before choosing the guideline.",
+        "result": [
+         {
+          "id": "ACT-07",
+          "category": "Activities and task types",
+          "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+         },
+         {
+          "id": "EVT-12",
+          "category": "Events",
+          "rule": "An error boundary event is always interrupting (cancelActivity=true); a cancel boundary event is used only on a transaction subProcess."
+         },
+         {
+          "id": "FID-02",
+          "category": "Faithfulness and modeling decisions",
+          "rule": "Do not merge separately described actions into one task or split one stated action without a process reason. Preserve described dependencies."
+         },
+         {
+          "id": "FLOW-02",
+          "category": "Sequence flows and conditions",
+          "rule": "Only activities, gateways and events are sequence-flow endpoints. Never connect sequence flows to pools, lanes, data objects, groups or annotations."
+         },
+         {
+          "id": "EVT-07",
+          "category": "Events",
+          "rule": "Attach a boundary event with attachedToRef. Set cancelActivity=true when it interrupts the activity and false only for supported non-interrupting behavior."
+         },
+         {
+          "id": "PROC-04",
+          "category": "Processes and scopes",
+          "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+         }
+        ]
+       },
+       {
+        "step": 4,
+        "tool": "find_closest_learned_guidelines",
+        "args": {
+         "text": "the description says a rejected item is sent back to an earlier actor and the work is repeated: model an exclusive merge gateway before the repeated activity so the rework loop rejoins the normal flow"
+        },
+        "reason": "Check whether an error-driven guideline already covers the missing merge gateway before the repeated activity.",
+        "result": [
+         {
+          "id": "LRN-093",
+          "rule": "When The description says that a device or system keeps sending back its status repeatedly while a preparation step runs, and a later check on that status decides when the repetition ends.: Model the repetition with an exclusive merge gateway placed before the repeated receive task. Follow the receive task with an exclusive gateway on the stop condition. Route one outgoing flow back into the merge gateway to repeat the receive, and route the other onward to the next activity. Do not model the repetition as a plain sequence with no merge point."
+         },
+         {
+          "id": "LRN-069",
+          "rule": "When the description says that a part of the process is repeated until a check is made, and that the check either sends the flow back to repeat that part or moves on to a later step or ends the process: Model the repeated part as a loop. Place an exclusive merge gateway before the first element of the repeated part, so that the entry flow and the return flow both join there. Place the check after the repeated part as an exclusive decision gateway. One outgoing flow of the decision returns to the merge gateway for another pass, and the other leads to the next step the description names or to an end event if the description says the process stops there. Ensure every merge gateway inside the cycle has a path to an end event. Do not connect the check directly back into the repeated part without a merge gateway, and do not run the repeated part once and move on without the loop."
+         },
+         {
+          "id": "LRN-139",
+          "rule": "When the description says a check or review of an earlier work product ends in one of two outcomes, and each outcome is followed either by a further described action or by termination of the process: Model the check as a task in the lane of the party that performs it, and model the recording of its outcome as a separate task in that same lane. Place an exclusive gateway after the outcome task, with one branch per outcome. On each branch, model the described follow-up action as its own task, including any return to an earlier actor for repetition and any continuation to the next stage. Where the description gives no follow-up action for an outcome, route that branch directly to an end event named for that outcome. Do not merge the two outcomes, do not place the follow-up action before the gateway, and do not replace a described action with a bare sequence flow or an end event that carries the action's meaning."
+         },
+         {
+          "id": "LRN-078",
+          "rule": "When the description says that one outcome of a choice made by a participant leads to several follow-up actions that are not ordered relative to each other, and all of them must be carried out before the process moves on: Model the choice as an exclusive split with one labelled outgoing flow per outcome. On the branch of the outcome that triggers the follow-up actions, place a parallel gateway that forks them as concurrent branches, and join those branches with a parallel gateway before the next step. Do not chain the unordered follow-up actions in a fixed sequence, and do not join them with an exclusive gateway."
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tools_used": [
+       "read_description",
+       "find_closest_learned_guidelines",
+       "find_closest_documented_guidelines"
+      ],
+      "trace": [
+       {
+        "step": 1,
+        "tool": "read_description",
+        "args": {},
+        "reason": "Verify the full process description before deciding whether the missing review tasks and the outcome gateway reflect a real difference in the description.",
+        "result": {
+         "process_description": "After a claim is registered, it is examined by a claims officer.\nThe claims officer then writes a settlement recommendation.\nThis recommendation is then checked by a senior claims officer who may mark the claim as OK or Not OK.\nIf the claim is marked as Not OK, it is sent back to the claims officer and the recommendation is repeated.\nIf the claim is OK, the claim handling process proceeds."
+        }
+       },
+       {
+        "step": 2,
+        "tool": "find_closest_learned_guidelines",
+        "args": {
+         "text": "the description says a reviewer's check marks an item as OK or Not OK, and a Not OK outcome sends it back to an earlier actor who repeats the work; the check and the outcome marking are separate steps whose labels follow the description"
+        },
+        "reason": "Check whether the learned guidelines already cover the rejection loop merge and the split of check and outcome marking before proposing anything.",
+        "result": [
+         {
+          "id": "LRN-139",
+          "rule": "When the description says a check or review of an earlier work product ends in one of two outcomes, and each outcome is followed either by a further described action or by termination of the process: Model the check as a task in the lane of the party that performs it, and model the recording of its outcome as a separate task in that same lane. Place an exclusive gateway after the outcome task, with one branch per outcome. On each branch, model the described follow-up action as its own task, including any return to an earlier actor for repetition and any continuation to the next stage. Where the description gives no follow-up action for an outcome, route that branch directly to an end event named for that outcome. Do not merge the two outcomes, do not place the follow-up action before the gateway, and do not replace a described action with a bare sequence flow or an end event that carries the action's meaning."
+         },
+         {
+          "id": "LRN-103",
+          "rule": "When the description has two steps that each describe the same kind of action toward the same recipients, but for different purposes stated in their own sentences, and a later step in the description uses similar action wording for its own purpose: Label each such step with the action and object of its own sentence, taken from the description's words. Do not copy the label of a neighboring or later step with similar wording, and do not carry over the purpose of another step into the label. Keep the purpose clause of a step out of its label unless the description attaches it to the action itself."
+         },
+         {
+          "id": "LRN-029",
+          "rule": "When the description states that an assessment or review is performed by a party, and that its result decides whether a later step proceeds (for example, if the result is positive, the following step is carried out): Model the assessment itself as its own task, placed before the decision point and connected to the step that performs it. Follow it with an exclusive gateway on its outcome, with one branch continuing to the stated next step and the other leading to the stated negative outcome. The gateway must represent only the decision and must not replace the assessment task, and the assessment task must be kept even when the description does not name its result separately."
+         },
+         {
+          "id": "LRN-081",
+          "rule": "When the description enumerates several separate conditions or required items that must each be satisfied before a later decision or completeness check, and it lists them individually: Model a separate verification task for each enumerated condition or item, each connected in sequence before the gateway that makes the decision. Do not replace the individual checks with one combined check task, and do not omit a listed item because the description does not name a separate result for it."
+         }
+        ]
+       },
+       {
+        "step": 3,
+        "tool": "find_closest_documented_guidelines",
+        "args": {
+         "text": "the description says a check by a party of an earlier work product ends in an OK or Not OK outcome, and a Not OK outcome sends the item back to an earlier actor who redoes the work; each described action, including the examination and the writing that precede the check, is modeled as its own task in the lane of the party that performs it"
+        },
+        "reason": "Check whether a documented guideline already covers or contradicts a guideline for missing sequential actor tasks and the check-outcome-return pattern before wording a final guideline.",
+        "result": [
+         {
+          "id": "PROC-04",
+          "category": "Processes and scopes",
+          "rule": "Allow multiple start or end events when the description has distinct triggers or outcomes. Do not force all outcomes into one end."
+         },
+         {
+          "id": "ACT-05",
+          "category": "Activities and task types",
+          "rule": "Distinguish message tasks from message events: a task models performed work; an event models a message occurrence affecting flow."
+         },
+         {
+          "id": "FID-02",
+          "category": "Faithfulness and modeling decisions",
+          "rule": "Do not merge separately described actions into one task or split one stated action without a process reason. Preserve described dependencies."
+         },
+         {
+          "id": "LANE-01",
+          "category": "Lanes and responsibility",
+          "rule": "Use lanes to partition one process by a stated role, department, system or responsibility; lanes are not separate processes."
+         },
+         {
+          "id": "SUB-03",
+          "category": "Subprocesses, calls and repetition",
+          "rule": "An ordinary embedded subprocess participates in normal sequence flow and may contain its own starts, ends, activities, gateways and flows."
+         },
+         {
+          "id": "ACT-07",
+          "category": "Activities and task types",
+          "rule": "Several unconditional outgoing flows from one activity can all proceed. Use a gateway when the description requires a decision or synchronization."
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

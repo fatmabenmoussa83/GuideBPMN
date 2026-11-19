@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ITSolutionRequest" targetNamespace="http://example.com/bpmn/it-solution-request">
+  <bpmn:message id="Message_ITSolutionRequest" name="IT solution request"/>
+  <bpmn:process id="Process_ITSolutionRequest" name="IT solution request" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_IT">
+      <bpmn:lane id="Lane_IT" name="IT">
+        <bpmn:flowNodeRef>Start_RequestReceived</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AssessmentSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CheckCompatibility</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EvaluateCostResources</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AssessmentJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Approval</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ProcureTools</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_InstallSolution</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TestSolution</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RollOutSolution</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Training</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ProvideTraining</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TrainingMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_KeepSupportAvailable</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_NotApproved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Completed</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_RequestReceived" name="IT solution request received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_RequestReceived" messageRef="Message_ITSolutionRequest"/>
+    </bpmn:startEvent>
+    <bpmn:parallelGateway id="Gateway_AssessmentSplit" name="Assess request criteria"/>
+    <bpmn:task id="Task_CheckCompatibility" name="Check system compatibility"/>
+    <bpmn:task id="Task_EvaluateCostResources" name="Evaluate cost and resource needs"/>
+    <bpmn:parallelGateway id="Gateway_AssessmentJoin" name="Assessment complete"/>
+    <bpmn:exclusiveGateway id="Gateway_Approval" name="Request approved?" default="Flow_Approval_NotApproved"/>
+    <bpmn:task id="Task_ProcureTools" name="Procure necessary tools or licenses"/>
+    <bpmn:task id="Task_InstallSolution" name="Install solution"/>
+    <bpmn:task id="Task_TestSolution" name="Test solution in a controlled environment"/>
+    <bpmn:task id="Task_RollOutSolution" name="Roll out solution to requesting department"/>
+    <bpmn:exclusiveGateway id="Gateway_Training" name="Provide training?" default="Flow_Training_Skip"/>
+    <bpmn:task id="Task_ProvideTraining" name="Provide training"/>
+    <bpmn:exclusiveGateway id="Gateway_TrainingMerge" name="Continue after training decision"/>
+    <bpmn:task id="Task_KeepSupportAvailable" name="Keep IT support available for troubleshooting"/>
+    <bpmn:endEvent id="End_NotApproved" name="Request not approved"/>
+    <bpmn:endEvent id="End_Completed" name="Solution rolled out and IT support available"/>
+    <bpmn:sequenceFlow id="Flow_Request_AssessmentSplit" sourceRef="Start_RequestReceived" targetRef="Gateway_AssessmentSplit"/>
+    <bpmn:sequenceFlow id="Flow_AssessmentSplit_Compatibility" sourceRef="Gateway_AssessmentSplit" targetRef="Task_CheckCompatibility"/>
+    <bpmn:sequenceFlow id="Flow_AssessmentSplit_CostResources" sourceRef="Gateway_AssessmentSplit" targetRef="Task_EvaluateCostResources"/>
+    <bpmn:sequenceFlow id="Flow_Compatibility_AssessmentJoin" sourceRef="Task_CheckCompatibility" targetRef="Gateway_AssessmentJoin"/>
+    <bpmn:sequenceFlow id="Flow_CostResources_AssessmentJoin" sourceRef="Task_EvaluateCostResources" targetRef="Gateway_AssessmentJoin"/>
+    <bpmn:sequenceFlow id="Flow_AssessmentJoin_Approval" sourceRef="Gateway_AssessmentJoin" targetRef="Gateway_Approval"/>
+    <bpmn:sequenceFlow id="Flow_Approval_Procure" name="Approved" sourceRef="Gateway_Approval" targetRef="Task_ProcureTools">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">approved</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Approval_NotApproved" name="Not approved" sourceRef="Gateway_Approval" targetRef="End_NotApproved"/>
+    <bpmn:sequenceFlow id="Flow_Procure_Install" sourceRef="Task_ProcureTools" targetRef="Task_InstallSolution"/>
+    <bpmn:sequenceFlow id="Flow_Install_Test" sourceRef="Task_InstallSolution" targetRef="Task_TestSolution"/>
+    <bpmn:sequenceFlow id="Flow_Test_RollOut" sourceRef="Task_TestSolution" targetRef="Task_RollOutSolution"/>
+    <bpmn:sequenceFlow id="Flow_RollOut_Training" sourceRef="Task_RollOutSolution" targetRef="Gateway_Training"/>
+    <bpmn:sequenceFlow id="Flow_Training_Provide" name="Training provided" sourceRef="Gateway_Training" targetRef="Task_ProvideTraining">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">training is provided</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Training_Skip" name="No training" sourceRef="Gateway_Training" targetRef="Gateway_TrainingMerge"/>
+    <bpmn:sequenceFlow id="Flow_ProvideTraining_TrainingMerge" sourceRef="Task_ProvideTraining" targetRef="Gateway_TrainingMerge"/>
+    <bpmn:sequenceFlow id="Flow_TrainingMerge_Support" sourceRef="Gateway_TrainingMerge" targetRef="Task_KeepSupportAvailable"/>
+    <bpmn:sequenceFlow id="Flow_Support_Completed" sourceRef="Task_KeepSupportAvailable" targetRef="End_Completed"/>
+  </bpmn:process>
+  <bpmn:collaboration id="Collaboration_ITSolutionRequest">
+    <bpmn:participant id="Participant_Requester" name="Employee or department"/>
+    <bpmn:participant id="Participant_IT" name="IT" processRef="Process_ITSolutionRequest"/>
+    <bpmn:messageFlow id="MessageFlow_Request" name="Submit IT solution request" sourceRef="Participant_Requester" targetRef="Start_RequestReceived" messageRef="Message_ITSolutionRequest"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_OEE" targetNamespace="http://example.com/bpmn/oee">
+  <bpmn:message id="Message_MachineRestarted" name="Machine restarted"/>
+  <bpmn:process id="Process_OEE" name="OEE" isExecutable="false">
+    <bpmn:startEvent id="Start_OEE" name="Start OEE measurement"/>
+    <bpmn:startEvent id="Start_MachineRestarted" name="Machine restarted">
+      <bpmn:messageEventDefinition id="MED_MachineRestarted" messageRef="Message_MachineRestarted"/>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_Merge_Cycle" name="Measurement cycle"/>
+    <bpmn:exclusiveGateway id="Gateway_Machine_Connected" name="Machine disconnected?" default="Flow_Machine_Connected"/>
+    <bpmn:endEvent id="End_ProcessStopped" name="Process stopped (machine disconnected)"/>
+    <bpmn:parallelGateway id="Gateway_Retrieval_Split" name="Collect measurement inputs"/>
+    <bpmn:serviceTask id="Task_CollectAvailability" name="Collect availability data"/>
+    <bpmn:serviceTask id="Task_CollectPerformance" name="Collect performance data"/>
+    <bpmn:serviceTask id="Task_CollectQuality" name="Collect quality data"/>
+    <bpmn:parallelGateway id="Gateway_Retrieval_Join" name="All inputs collected"/>
+    <bpmn:serviceTask id="Task_CalculateOEE" name="Calculate OEE"/>
+    <bpmn:exclusiveGateway id="Gateway_OEE_Check" name="OEE below threshold?" default="Flow_OEE_AtOrAboveThreshold"/>
+    <bpmn:serviceTask id="Task_StopMachine" name="Stop machine"/>
+    <bpmn:sendTask id="Task_SendEmailEngineer" name="Send email to engineer"/>
+    <bpmn:endEvent id="End_OEEHalted" name="Machine stopped (OEE below threshold)"/>
+    <bpmn:sequenceFlow id="Flow_Start_Merge" sourceRef="Start_OEE" targetRef="Gateway_Merge_Cycle"/>
+    <bpmn:sequenceFlow id="Flow_Restarted_Merge" sourceRef="Start_MachineRestarted" targetRef="Gateway_Merge_Cycle"/>
+    <bpmn:sequenceFlow id="Flow_Merge_Connected" sourceRef="Gateway_Merge_Cycle" targetRef="Gateway_Machine_Connected"/>
+    <bpmn:sequenceFlow id="Flow_Disconnected_End" name="Yes" sourceRef="Gateway_Machine_Connected" targetRef="End_ProcessStopped"/>
+    <bpmn:sequenceFlow id="Flow_Machine_Connected" name="No" sourceRef="Gateway_Machine_Connected" targetRef="Gateway_Retrieval_Split"/>
+    <bpmn:sequenceFlow id="Flow_Split_Availability" sourceRef="Gateway_Retrieval_Split" targetRef="Task_CollectAvailability"/>
+    <bpmn:sequenceFlow id="Flow_Split_Performance" sourceRef="Gateway_Retrieval_Split" targetRef="Task_CollectPerformance"/>
+    <bpmn:sequenceFlow id="Flow_Split_Quality" sourceRef="Gateway_Retrieval_Split" targetRef="Task_CollectQuality"/>
+    <bpmn:sequenceFlow id="Flow_Availability_Join" sourceRef="Task_CollectAvailability" targetRef="Gateway_Retrieval_Join"/>
+    <bpmn:sequenceFlow id="Flow_Performance_Join" sourceRef="Task_CollectPerformance" targetRef="Gateway_Retrieval_Join"/>
+    <bpmn:sequenceFlow id="Flow_Quality_Join" sourceRef="Task_CollectQuality" targetRef="Gateway_Retrieval_Join"/>
+    <bpmn:sequenceFlow id="Flow_Join_Calculate" sourceRef="Gateway_Retrieval_Join" targetRef="Task_CalculateOEE"/>
+    <bpmn:sequenceFlow id="Flow_Calculate_Check" sourceRef="Task_CalculateOEE" targetRef="Gateway_OEE_Check"/>
+    <bpmn:sequenceFlow id="Flow_OEE_Below" name="Yes" sourceRef="Gateway_OEE_Check" targetRef="Task_StopMachine"/>
+    <bpmn:sequenceFlow id="Flow_OEE_AtOrAboveThreshold" name="No" sourceRef="Gateway_OEE_Check" targetRef="Gateway_Merge_Cycle"/>
+    <bpmn:sequenceFlow id="Flow_Stop_Email" sourceRef="Task_StopMachine" targetRef="Task_SendEmailEngineer"/>
+    <bpmn:sequenceFlow id="Flow_Email_Halted" sourceRef="Task_SendEmailEngineer" targetRef="End_OEEHalted"/>
+  </bpmn:process>
+</bpmn:definitions>

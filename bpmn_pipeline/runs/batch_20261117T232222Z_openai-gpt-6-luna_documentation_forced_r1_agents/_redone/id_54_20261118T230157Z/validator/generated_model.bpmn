@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_TransactionRequest" targetNamespace="http://example.com/bpmn/transaction-request">
+  <bpmn:message id="Message_TransactionDataRequest" name="Transaction data request"/>
+  <bpmn:message id="Message_DataTransmission" name="Transmission of data"/>
+  <bpmn:message id="Message_Rejection" name="Rejection"/>
+
+  <bpmn:process id="Process_INQ" name="INQ" isExecutable="false">
+    <bpmn:startEvent id="Start_INQ" name="Start"/>
+    <bpmn:sendTask id="Send_Request" name="Transmit transaction data request" messageRef="Message_TransactionDataRequest"/>
+    <bpmn:eventBasedGateway id="Gateway_WaitForAnswer" name="Wait for IP answer" eventGatewayType="Exclusive" instantiate="false"/>
+    <bpmn:intermediateCatchEvent id="Catch_DataTransmission" name="Receive transmission of data">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_CatchData" messageRef="Message_DataTransmission"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Catch_Rejection" name="Receive rejection">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_CatchRejection" messageRef="Message_Rejection"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End_DataReceived" name="Data received"/>
+    <bpmn:endEvent id="End_RejectionReceived" name="Rejection received"/>
+
+    <bpmn:sequenceFlow id="Flow_INQ_1" sourceRef="Start_INQ" targetRef="Send_Request"/>
+    <bpmn:sequenceFlow id="Flow_INQ_2" sourceRef="Send_Request" targetRef="Gateway_WaitForAnswer"/>
+    <bpmn:sequenceFlow id="Flow_INQ_3" sourceRef="Gateway_WaitForAnswer" targetRef="Catch_DataTransmission"/>
+    <bpmn:sequenceFlow id="Flow_INQ_4" sourceRef="Gateway_WaitForAnswer" targetRef="Catch_Rejection"/>
+    <bpmn:sequenceFlow id="Flow_INQ_5" sourceRef="Catch_DataTransmission" targetRef="End_DataReceived"/>
+    <bpmn:sequenceFlow id="Flow_INQ_6" sourceRef="Catch_Rejection" targetRef="End_RejectionReceived"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_IP" name="IP" isExecutable="false">
+    <bpmn:startEvent id="Start_IP" name="Receive transaction data request">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Request" messageRef="Message_TransactionDataRequest"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Check_Request" name="Check INQ request"/>
+    <bpmn:exclusiveGateway id="Gateway_ExaminationOutcome" name="Examination outcome"/>
+    <bpmn:sendTask id="Send_DataTransmission" name="Answer INQ by transmitting data" messageRef="Message_DataTransmission"/>
+    <bpmn:sendTask id="Send_Rejection" name="Answer INQ with rejection" messageRef="Message_Rejection"/>
+    <bpmn:endEvent id="End_IP_Data" name="Data transmitted"/>
+    <bpmn:endEvent id="End_IP_Rejection" name="Request rejected"/>
+
+    <bpmn:sequenceFlow id="Flow_IP_1" sourceRef="Start_IP" targetRef="Check_Request"/>
+    <bpmn:sequenceFlow id="Flow_IP_2" sourceRef="Check_Request" targetRef="Gateway_ExaminationOutcome"/>
+    <bpmn:sequenceFlow id="Flow_IP_3" name="Transmission of data" sourceRef="Gateway_ExaminationOutcome" targetRef="Send_DataTransmission"/>
+    <bpmn:sequenceFlow id="Flow_IP_4" name="Rejection" sourceRef="Gateway_ExaminationOutcome" targetRef="Send_Rejection"/>
+    <bpmn:sequenceFlow id="Flow_IP_5" sourceRef="Send_DataTransmission" targetRef="End_IP_Data"/>
+    <bpmn:sequenceFlow id="Flow_IP_6" sourceRef="Send_Rejection" targetRef="End_IP_Rejection"/>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_TransactionRequest">
+    <bpmn:participant id="Participant_INQ" name="INQ" processRef="Process_INQ"/>
+    <bpmn:participant id="Participant_IP" name="IP" processRef="Process_IP"/>
+    <bpmn:messageFlow id="MessageFlow_Request" name="Transaction data request" sourceRef="Send_Request" targetRef="Start_IP" messageRef="Message_TransactionDataRequest"/>
+    <bpmn:messageFlow id="MessageFlow_DataTransmission" name="Transmission of data" sourceRef="Send_DataTransmission" targetRef="Catch_DataTransmission" messageRef="Message_DataTransmission"/>
+    <bpmn:messageFlow id="MessageFlow_Rejection" name="Rejection" sourceRef="Send_Rejection" targetRef="Catch_Rejection" messageRef="Message_Rejection"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

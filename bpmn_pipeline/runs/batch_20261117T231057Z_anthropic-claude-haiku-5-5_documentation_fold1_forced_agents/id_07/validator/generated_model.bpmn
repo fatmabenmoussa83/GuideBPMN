@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_TravelBooking" targetNamespace="http://example.com/bpmn/travel-booking">
+  <bpmn:message id="Msg_SearchRequest" name="Ticket search request"/>
+  <bpmn:message id="Msg_BookingDetails" name="Personal and payment details"/>
+  <bpmn:message id="Msg_Ticket" name="Ticket (email or SMS)"/>
+  <bpmn:message id="Msg_Reminder" name="Reminder and check-in or boarding instructions"/>
+  <bpmn:message id="Msg_Feedback" name="Feedback request or service offer"/>
+  <bpmn:collaboration id="Collaboration_TravelBooking">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_TravelCompany" name="Travel company" processRef="Process_TravelCompany"/>
+    <bpmn:messageFlow id="MF_SearchRequest" name="Ticket search request" sourceRef="Task_SearchTicket" targetRef="Start_SearchReceived"/>
+    <bpmn:messageFlow id="MF_BookingDetails" name="Personal and payment details" sourceRef="Task_ProvideDetails" targetRef="Catch_BookingDetailsReceived"/>
+    <bpmn:messageFlow id="MF_TicketEmail" name="Ticket by email" sourceRef="Task_SendTicketEmail" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MF_TicketSMS" name="Ticket by SMS" sourceRef="Task_SendTicketSMS" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MF_Reminder" name="Reminder and instructions" sourceRef="Task_SendReminder" targetRef="Participant_Customer"/>
+    <bpmn:messageFlow id="MF_Feedback" name="Feedback request or service offer" sourceRef="Task_SendFeedback" targetRef="Participant_Customer"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Customer" name="Customer booking actions" isExecutable="false">
+    <bpmn:startEvent id="Start_Customer"/>
+    <bpmn:task id="Task_SearchTicket" name="Search for flight, train or bus ticket"/>
+    <bpmn:task id="Task_SelectRouteDateTime" name="Select route, date and time"/>
+    <bpmn:task id="Task_ProvideDetails" name="Provide personal and payment details"/>
+    <bpmn:endEvent id="End_DetailsSubmitted" name="Booking details submitted"/>
+    <bpmn:sequenceFlow id="Flow_CustStart" sourceRef="Start_Customer" targetRef="Task_SearchTicket"/>
+    <bpmn:sequenceFlow id="Flow_CustSearchToSelect" sourceRef="Task_SearchTicket" targetRef="Task_SelectRouteDateTime"/>
+    <bpmn:sequenceFlow id="Flow_CustSelectToProvide" sourceRef="Task_SelectRouteDateTime" targetRef="Task_ProvideDetails"/>
+    <bpmn:sequenceFlow id="Flow_CustProvideToEnd" sourceRef="Task_ProvideDetails" targetRef="End_DetailsSubmitted"/>
+  </bpmn:process>
+  <bpmn:process id="Process_TravelCompany" name="Travel company booking process" isExecutable="false">
+    <bpmn:startEvent id="Start_SearchReceived" name="Ticket search request received">
+      <bpmn:messageEventDefinition id="MED_SearchReceived" messageRef="Msg_SearchRequest"/>
+    </bpmn:startEvent>
+    <bpmn:intermediateCatchEvent id="Catch_BookingDetailsReceived" name="Personal and payment details received">
+      <bpmn:messageEventDefinition id="MED_BookingDetails" messageRef="Msg_BookingDetails"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="Task_GenerateTicket" name="Generate ticket"/>
+    <bpmn:exclusiveGateway id="Gateway_ChannelSplit" name="Ticket sent by email or SMS?"/>
+    <bpmn:sendTask id="Task_SendTicketEmail" name="Send ticket via email" messageRef="Msg_Ticket"/>
+    <bpmn:sendTask id="Task_SendTicketSMS" name="Send ticket via SMS" messageRef="Msg_Ticket"/>
+    <bpmn:exclusiveGateway id="Gateway_ChannelMerge" name="Ticket sent"/>
+    <bpmn:serviceTask id="Task_UpdateInventory" name="Update seat inventory"/>
+    <bpmn:sendTask id="Task_SendReminder" name="Send reminders and check-in or boarding instructions" messageRef="Msg_Reminder"/>
+    <bpmn:intermediateCatchEvent id="Catch_JourneyCompleted" name="Customer completes journey"/>
+    <bpmn:exclusiveGateway id="Gateway_Feedback" name="Post-travel feedback or services offered?" default="Flow_NoFeedback"/>
+    <bpmn:sendTask id="Task_SendFeedback" name="Send feedback request or service offer" messageRef="Msg_Feedback"/>
+    <bpmn:endEvent id="End_FeedbackRequested" name="Feedback or services offered"/>
+    <bpmn:endEvent id="End_Concluded" name="Process concluded"/>
+    <bpmn:sequenceFlow id="Flow_SearchToDetails" sourceRef="Start_SearchReceived" targetRef="Catch_BookingDetailsReceived"/>
+    <bpmn:sequenceFlow id="Flow_DetailsToGenerate" sourceRef="Catch_BookingDetailsReceived" targetRef="Task_GenerateTicket"/>
+    <bpmn:sequenceFlow id="Flow_GenerateToChannelSplit" sourceRef="Task_GenerateTicket" targetRef="Gateway_ChannelSplit"/>
+    <bpmn:sequenceFlow id="Flow_ChannelToEmail" name="Email" sourceRef="Gateway_ChannelSplit" targetRef="Task_SendTicketEmail"/>
+    <bpmn:sequenceFlow id="Flow_ChannelToSMS" name="SMS" sourceRef="Gateway_ChannelSplit" targetRef="Task_SendTicketSMS"/>
+    <bpmn:sequenceFlow id="Flow_EmailToMerge" sourceRef="Task_SendTicketEmail" targetRef="Gateway_ChannelMerge"/>
+    <bpmn:sequenceFlow id="Flow_SMSToMerge" sourceRef="Task_SendTicketSMS" targetRef="Gateway_ChannelMerge"/>
+    <bpmn:sequenceFlow id="Flow_MergeToInventory" sourceRef="Gateway_ChannelMerge" targetRef="Task_UpdateInventory"/>
+    <bpmn:sequenceFlow id="Flow_InventoryToReminder" sourceRef="Task_UpdateInventory" targetRef="Task_SendReminder"/>
+    <bpmn:sequenceFlow id="Flow_ReminderToJourney" sourceRef="Task_SendReminder" targetRef="Catch_JourneyCompleted"/>
+    <bpmn:sequenceFlow id="Flow_JourneyToFeedbackGateway" sourceRef="Catch_JourneyCompleted" targetRef="Gateway_Feedback"/>
+    <bpmn:sequenceFlow id="Flow_NoFeedback" sourceRef="Gateway_Feedback" targetRef="End_Concluded"/>
+    <bpmn:sequenceFlow id="Flow_Feedback" name="Feedback or services offered" sourceRef="Gateway_Feedback" targetRef="Task_SendFeedback"/>
+    <bpmn:sequenceFlow id="Flow_FeedbackToEnd" sourceRef="Task_SendFeedback" targetRef="End_FeedbackRequested"/>
+  </bpmn:process>
+</bpmn:definitions>

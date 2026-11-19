@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_StorageManagement"
+                  targetNamespace="http://example.com/bpmn/storage-management">
+  <bpmn:message id="Message_Reorder" name="Product reorder"/>
+  <bpmn:message id="Message_ProductArrival" name="Product arrival"/>
+  <bpmn:message id="Message_DelayPenalty" name="Delivery delay penalty demand"/>
+  <bpmn:message id="Message_CourierRequest" name="Courier request"/>
+
+  <bpmn:collaboration id="Collaboration_StorageManagement">
+    <bpmn:participant id="Participant_StorageManagement" name="Storage management" processRef="Process_StorageManagement"/>
+    <bpmn:participant id="Participant_Wholesaler" name="Wholesaler"/>
+    <bpmn:participant id="Participant_Courier" name="Courier"/>
+    <bpmn:messageFlow id="MessageFlow_Reorder" name="Reorder product" sourceRef="Task_ReorderProduct" targetRef="Participant_Wholesaler" messageRef="Message_Reorder"/>
+    <bpmn:messageFlow id="MessageFlow_ProductArrival" name="Product arrival" sourceRef="Participant_Wholesaler" targetRef="Event_ProductArrival" messageRef="Message_ProductArrival"/>
+    <bpmn:messageFlow id="MessageFlow_DelayPenalty" name="Delivery delay penalty demand" sourceRef="Task_DemandDelayPenalty" targetRef="Participant_Wholesaler" messageRef="Message_DelayPenalty"/>
+    <bpmn:messageFlow id="MessageFlow_CourierRequest" name="Courier request" sourceRef="Task_RequestCourier" targetRef="Participant_Courier" messageRef="Message_CourierRequest"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_StorageManagement" name="Storage management" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_OrderProcessing" name="Order processing starts"/>
+    <bpmn:serviceTask id="Task_ReadOrder" name="Read order from automatic order management system"/>
+    <bpmn:task id="Task_CheckStock" name="Check if first product is in stock"/>
+    <bpmn:exclusiveGateway id="Gateway_StockDecision" name="Is the first product in stock?" default="Flow_NotInStock"/>
+    <bpmn:task id="Task_WithdrawProduct" name="Withdraw product from warehouse"/>
+    <bpmn:sendTask id="Task_ReorderProduct" name="Reorder product from wholesaler" messageRef="Message_Reorder"/>
+    <bpmn:intermediateCatchEvent id="Event_ProductArrival" name="Product arrives">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_ProductArrival" messageRef="Message_ProductArrival"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_WaitThreshold" name="Was the wait more than 10 days?" default="Flow_WaitNotExceeded"/>
+    <bpmn:sendTask id="Task_DemandDelayPenalty" name="Automatically demand delivery delay penalty" messageRef="Message_DelayPenalty"/>
+    <bpmn:exclusiveGateway id="Gateway_PenaltyMerge" name="Continue after delay check"/>
+    <bpmn:serviceTask id="Task_RegisterProduct" name="Register product in stock management system"/>
+    <bpmn:exclusiveGateway id="Gateway_ProductRouteMerge" name="Continue after product processing"/>
+    <bpmn:task id="Task_CheckOrderReady" name="Check if the whole order is ready for shipment"/>
+    <bpmn:exclusiveGateway id="Gateway_OrderReadyDecision" name="Is the whole order ready for shipment?" default="Flow_OrderNotReady"/>
+    <bpmn:task id="Task_SelectNextProduct" name="Select next product"/>
+    <bpmn:parallelGateway id="Gateway_ShipmentSplit" name="Request courier and pack products"/>
+    <bpmn:sendTask id="Task_RequestCourier" name="Request courier" messageRef="Message_CourierRequest"/>
+    <bpmn:task id="Task_PackProducts" name="Pack products"/>
+    <bpmn:parallelGateway id="Gateway_ShipmentJoin" name="Courier requested and products packed"/>
+    <bpmn:task id="Task_ShipProducts" name="Ship products"/>
+    <bpmn:endEvent id="EndEvent_Shipped" name="Order shipped"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_ReadOrder" sourceRef="StartEvent_OrderProcessing" targetRef="Task_ReadOrder"/>
+    <bpmn:sequenceFlow id="Flow_ReadOrder_CheckStock" sourceRef="Task_ReadOrder" targetRef="Task_CheckStock"/>
+    <bpmn:sequenceFlow id="Flow_CheckStock_StockDecision" sourceRef="Task_CheckStock" targetRef="Gateway_StockDecision"/>
+    <bpmn:sequenceFlow id="Flow_InStock" name="In stock" sourceRef="Gateway_StockDecision" targetRef="Task_WithdrawProduct">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">The first product is in stock</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotInStock" name="Not in stock" sourceRef="Gateway_StockDecision" targetRef="Task_ReorderProduct"/>
+    <bpmn:sequenceFlow id="Flow_Withdraw_ProductMerge" sourceRef="Task_WithdrawProduct" targetRef="Gateway_ProductRouteMerge"/>
+    <bpmn:sequenceFlow id="Flow_Reorder_ProductArrival" sourceRef="Task_ReorderProduct" targetRef="Event_ProductArrival"/>
+    <bpmn:sequenceFlow id="Flow_ProductArrival_WaitThreshold" sourceRef="Event_ProductArrival" targetRef="Gateway_WaitThreshold"/>
+    <bpmn:sequenceFlow id="Flow_WaitExceeded" name="More than 10 days" sourceRef="Gateway_WaitThreshold" targetRef="Task_DemandDelayPenalty">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">The wait for the product to arrive exceeded 10 days</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_WaitNotExceeded" name="10 days or less" sourceRef="Gateway_WaitThreshold" targetRef="Gateway_PenaltyMerge"/>
+    <bpmn:sequenceFlow id="Flow_Penalty_PenaltyMerge" sourceRef="Task_DemandDelayPenalty" targetRef="Gateway_PenaltyMerge"/>
+    <bpmn:sequenceFlow id="Flow_PenaltyMerge_Register" sourceRef="Gateway_PenaltyMerge" targetRef="Task_RegisterProduct"/>
+    <bpmn:sequenceFlow id="Flow_Register_ProductMerge" sourceRef="Task_RegisterProduct" targetRef="Gateway_ProductRouteMerge"/>
+    <bpmn:sequenceFlow id="Flow_ProductMerge_CheckReady" sourceRef="Gateway_ProductRouteMerge" targetRef="Task_CheckOrderReady"/>
+    <bpmn:sequenceFlow id="Flow_CheckReady_Decision" sourceRef="Task_CheckOrderReady" targetRef="Gateway_OrderReadyDecision"/>
+    <bpmn:sequenceFlow id="Flow_OrderReady" name="Ready for shipment" sourceRef="Gateway_OrderReadyDecision" targetRef="Gateway_ShipmentSplit">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">The whole order is ready for shipment</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_OrderNotReady" name="Not ready for shipment" sourceRef="Gateway_OrderReadyDecision" targetRef="Task_SelectNextProduct"/>
+    <bpmn:sequenceFlow id="Flow_SelectNext_CheckStock" sourceRef="Task_SelectNextProduct" targetRef="Task_CheckStock"/>
+    <bpmn:sequenceFlow id="Flow_Split_RequestCourier" sourceRef="Gateway_ShipmentSplit" targetRef="Task_RequestCourier"/>
+    <bpmn:sequenceFlow id="Flow_Split_PackProducts" sourceRef="Gateway_ShipmentSplit" targetRef="Task_PackProducts"/>
+    <bpmn:sequenceFlow id="Flow_RequestCourier_Join" sourceRef="Task_RequestCourier" targetRef="Gateway_ShipmentJoin"/>
+    <bpmn:sequenceFlow id="Flow_PackProducts_Join" sourceRef="Task_PackProducts" targetRef="Gateway_ShipmentJoin"/>
+    <bpmn:sequenceFlow id="Flow_Join_ShipProducts" sourceRef="Gateway_ShipmentJoin" targetRef="Task_ShipProducts"/>
+    <bpmn:sequenceFlow id="Flow_ShipProducts_End" sourceRef="Task_ShipProducts" targetRef="EndEvent_Shipped"/>
+  </bpmn:process>
+</bpmn:definitions>

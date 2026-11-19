@@ -1,0 +1,312 @@
+{
+ "id": "45",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 31,
+  "T6": 5
+ },
+ "first_pass_error_counts": {
+  "T5": 34,
+  "T6": 6
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-051 (The generated model replaces the participant's own action with a start event, adds a send task for the check result that the description does not state, and adds an extra end event for the rejection branch. The reference models the action as a manual task before the check, with the check flowing directly into the decision gateway (F2 missing, G14 and G15 extra). The description states no message b)",
+   "guideline_id": "LRN-051",
+   "ref": "LRN-051",
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines EVT-02 (cosine 0.73)",
+   "guideline_id": "LRN-093",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "generalized",
+   "detail": "general guideline covering EXS-002 (example 02) and this example",
+   "guideline_id": "LRN-094",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-022 (Record M3 shows the reference's end event for the failed-login branch after the login decision has no counterpart in the generated model, and the description (S2) states that the else-outcome ends the activity with no further steps. P3 confirms the decision gateway itself was matched, so the missing piece is the branch's end event. The rule is written in terms of the description's structure, not t)",
+   "guideline_id": "LRN-022",
+   "ref": "LRN-022",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "rejected_bad_citation",
+   "detail": "cited ['S1', 'S2', 'M1', 'F4', 'F11', 'G1', 'G11', 'EVT-01', 'LRN-093'] but was given ['F11', 'F2', 'F4', 'F7', 'G1', 'G11', 'M1', 'M2', 'M3', 'S1', 'S2', 'S5']",
+   "guideline_id": null,
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines ACT-02 (The reference models the customer's login as a manualTask before the credential check, but the generated model omits it. S1 states that the customer logs in and the system then checks the credentials, so the customer's own action is a distinct, software-free step. Modeling it as a manual task before the service task keeps that responsibility split visible.)",
+   "guideline_id": "LRN-095",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-051",
+   "instruction": "When the description says a participant personally carries out an action, such as a request, a review, an evaluation, or a delivery step, and does not say that a message is sent to another participant as the unit of work: Model that action as a user task performed by the responsible participant, not as a send task. Reserve a send task for cases where transmitting a message is itself the modeled work. Make sure each such action appears as its own task in the sequence where the description places it.",
+   "situation": "the description states that a participant performs an action itself (for example, identifying itself to a system) and that the system then checks this action, with a decision following on the check result",
+   "source": "learned guideline (refines ACT-04)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-093",
+   "instruction": "When the description states that a participant performs its own action on a system (such as logging in or submitting its own input) and that the system then checks that action before a decision depends on the result: Model the participant's own action as a userTask performed by that participant, labeled with the verb and object the description uses for that action, placed in sequence before the system's check task. Do not drop this action or fold it into the check task. Keep any wait for the confirmation after the participant's action and before the process continues.",
+   "situation": "the description states that a participant performs its own action on a system (such as logging in or submitting its own input) and that the system then checks that action before a decision depends on the result",
+   "source": "learned guideline (refines EVT-02)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-094",
+   "instruction": "When the description states that the flow begins with an actor's own action, with no separate triggering event or message described before it, and a later check of that action follows: Model exactly one start event at the process entry. Connect it by a sequence flow to a bpmn:task for the actor's stated action, and never model that action as a start event. Do not add further start events for later checks or later phases, and do not connect the start event directly to a check the description places after the action. A later phase begins from the outgoing flow of the preceding step to a task for its first activity.",
+   "situation": "the description states that the flow begins with an actor's own action, with no separate triggering event or message described before it, and a later check of that action follows",
+   "source": "learned guideline (refines PROC-05), generalized from EXS-002",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-022",
+   "instruction": "When the description states that a later step continues only if an assessment result is positive (for example, \"if approved, ...\") and gives no alternative handling for the negative result, so the process must end on that branch: Place an exclusive gateway directly after the assessment activity. Label one outgoing flow with the positive condition, leading to the continuing activities. Label the other outgoing flow with the negative condition, leading to its own end event. Keep a dedicated decision gateway with the stated condition on the flow, and do not leave the negative outcome as an unlabeled or unconnected path.",
+   "situation": "the description says that if a decision's one outcome has no further steps (for example, 'else the shopping experience ends' or 'else the activity ends'), so that the customer or participant's work ends on that branch",
+   "source": "learned guideline (new)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-095",
+   "instruction": "When the description states that a participant performs an action itself, without an application, and a system then verifies or processes the result of that action: Model the participant's own hands-on action as a bpmn:manualTask placed before the bpmn:serviceTask that performs the system check. Do not omit the participant's action or fold it into the automated check.",
+   "situation": "the description states that a participant performs an action itself, without an application, and a system then verifies or processes the result of that action",
+   "source": "learned guideline (refines ACT-02)",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

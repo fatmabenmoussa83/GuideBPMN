@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/bpmn/inventory-replenishment">
+  <bpmn:message id="Message_ReorderOrder" name="Reorder order"/>
+
+  <bpmn:collaboration id="Collaboration_InventoryReplenishment">
+    <bpmn:participant id="Participant_WarehouseStore" name="Warehouse or store" processRef="Process_InventoryReplenishment"/>
+    <bpmn:participant id="Participant_Suppliers" name="Suppliers"/>
+    <bpmn:messageFlow id="MessageFlow_ReorderOrder" name="Reorder order" messageRef="Message_ReorderOrder" sourceRef="Task_PlaceOrder" targetRef="Participant_Suppliers"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_InventoryReplenishment" name="Inventory Replenishment" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_InventoryReplenishment">
+      <bpmn:lane id="Lane_WarehouseStore" name="Warehouse or store">
+        <bpmn:flowNodeRef>StartEvent_Monitoring</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MonitorInventory</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Threshold</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_SignalMethod</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ManualCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_SignalMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReceiveStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_InspectStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_StorageChoice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PlaceOnShelves</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PlaceInStorage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_StorageMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_InventoryUpdated</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_ProcurementTeam" name="Procurement team">
+        <bpmn:flowNodeRef>Task_PlaceOrder</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_InventorySystem" name="Inventory system">
+        <bpmn:flowNodeRef>Task_AutomatedAlert</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_UpdateExpectedDelivery</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RecordStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_UpdateInventoryLevels</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_Monitoring" name="Begin monitoring inventory"/>
+    <bpmn:task id="Task_MonitorInventory" name="Monitor inventory levels"/>
+    <bpmn:exclusiveGateway id="Gateway_Threshold" name="Reorder threshold reached?" default="Flow_ThresholdNotReached"/>
+    <bpmn:exclusiveGateway id="Gateway_SignalMethod" name="Signal need to reorder"/>
+    <bpmn:serviceTask id="Task_AutomatedAlert" name="Generate automated alert"/>
+    <bpmn:manualTask id="Task_ManualCheck" name="Perform manual check"/>
+    <bpmn:exclusiveGateway id="Gateway_SignalMerge" name="Merge reorder signals"/>
+    <bpmn:sendTask id="Task_PlaceOrder" name="Consider supplier factors and place order" messageRef="Message_ReorderOrder"/>
+    <bpmn:serviceTask id="Task_UpdateExpectedDelivery" name="Update expected delivery dates"/>
+    <bpmn:task id="Task_ReceiveStock" name="Receive stock"/>
+    <bpmn:task id="Task_InspectStock" name="Inspect stock quality"/>
+    <bpmn:serviceTask id="Task_RecordStock" name="Record stock in the system"/>
+    <bpmn:exclusiveGateway id="Gateway_StorageChoice" name="Choose stock placement"/>
+    <bpmn:task id="Task_PlaceOnShelves" name="Place stock on shelves"/>
+    <bpmn:task id="Task_PlaceInStorage" name="Place stock in storage"/>
+    <bpmn:exclusiveGateway id="Gateway_StorageMerge" name="Merge stock placement paths"/>
+    <bpmn:serviceTask id="Task_UpdateInventoryLevels" name="Update inventory levels"/>
+    <bpmn:endEvent id="EndEvent_InventoryUpdated" name="Inventory levels updated after restock"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Monitor" sourceRef="StartEvent_Monitoring" targetRef="Task_MonitorInventory"/>
+    <bpmn:sequenceFlow id="Flow_Monitor_Threshold" sourceRef="Task_MonitorInventory" targetRef="Gateway_Threshold"/>
+    <bpmn:sequenceFlow id="Flow_ThresholdReached" name="Threshold reached" sourceRef="Gateway_Threshold" targetRef="Gateway_SignalMethod">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">stockLevel &lt;= reorderThreshold</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ThresholdNotReached" name="Threshold not reached" sourceRef="Gateway_Threshold" targetRef="Task_MonitorInventory"/>
+    <bpmn:sequenceFlow id="Flow_Signal_Automated" name="Automated alert" sourceRef="Gateway_SignalMethod" targetRef="Task_AutomatedAlert"/>
+    <bpmn:sequenceFlow id="Flow_Signal_Manual" name="Manual check" sourceRef="Gateway_SignalMethod" targetRef="Task_ManualCheck"/>
+    <bpmn:sequenceFlow id="Flow_Automated_Merge" sourceRef="Task_AutomatedAlert" targetRef="Gateway_SignalMerge"/>
+    <bpmn:sequenceFlow id="Flow_Manual_Merge" sourceRef="Task_ManualCheck" targetRef="Gateway_SignalMerge"/>
+    <bpmn:sequenceFlow id="Flow_Merge_PlaceOrder" sourceRef="Gateway_SignalMerge" targetRef="Task_PlaceOrder"/>
+    <bpmn:sequenceFlow id="Flow_PlaceOrder_UpdateDates" sourceRef="Task_PlaceOrder" targetRef="Task_UpdateExpectedDelivery"/>
+    <bpmn:sequenceFlow id="Flow_UpdateDates_Receive" sourceRef="Task_UpdateExpectedDelivery" targetRef="Task_ReceiveStock"/>
+    <bpmn:sequenceFlow id="Flow_Receive_Inspect" sourceRef="Task_ReceiveStock" targetRef="Task_InspectStock"/>
+    <bpmn:sequenceFlow id="Flow_Inspect_Record" sourceRef="Task_InspectStock" targetRef="Task_RecordStock"/>
+    <bpmn:sequenceFlow id="Flow_Record_StorageChoice" sourceRef="Task_RecordStock" targetRef="Gateway_StorageChoice"/>
+    <bpmn:sequenceFlow id="Flow_Storage_Shelves" name="Shelves" sourceRef="Gateway_StorageChoice" targetRef="Task_PlaceOnShelves"/>
+    <bpmn:sequenceFlow id="Flow_Storage_Storage" name="Storage" sourceRef="Gateway_StorageChoice" targetRef="Task_PlaceInStorage"/>
+    <bpmn:sequenceFlow id="Flow_Shelves_Merge" sourceRef="Task_PlaceOnShelves" targetRef="Gateway_StorageMerge"/>
+    <bpmn:sequenceFlow id="Flow_Storage_Merge" sourceRef="Task_PlaceInStorage" targetRef="Gateway_StorageMerge"/>
+    <bpmn:sequenceFlow id="Flow_Merge_UpdateInventory" sourceRef="Gateway_StorageMerge" targetRef="Task_UpdateInventoryLevels"/>
+    <bpmn:sequenceFlow id="Flow_UpdateInventory_End" sourceRef="Task_UpdateInventoryLevels" targetRef="EndEvent_InventoryUpdated"/>
+  </bpmn:process>
+</bpmn:definitions>

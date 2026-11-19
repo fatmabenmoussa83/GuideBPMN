@@ -1,0 +1,329 @@
+{
+ "id": "33",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6"
+ ],
+ "error_counts": {
+  "T5": 25,
+  "T6": 5
+ },
+ "first_pass_error_counts": {
+  "T1": 1,
+  "T5": 30,
+  "T6": 6
+ },
+ "guidelines": [
+  {
+   "failure_type": "T1",
+   "status": "abstained",
+   "detail": "The only failure evidence is the schema error at line 118, where a sequenceFlow was serialized inside another element. The description (S4 to S8) states ordered steps and decisions that the model can express with ordinary sequence flows, so it shows no modeling difference from the reference. The fix is a serialization rule that is already documented in XML-06 and FLOW-01 and already learned in the previous guideline. A new guideline would duplicate them, so I abstain.",
+   "guideline_id": null,
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines ACT-04 (The description states that the printer continuously sends back its status while the bed and extruder are heated, and this status reception is missing from the generated model (M2). ACT-04 already advises receiveTask for waiting on a message, but it does not say that a status stream running alongside another activity must be modeled as a parallel branch that is reconnected at a join. The new guide)",
+   "guideline_id": "LRN-089",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines ACT-04 (The description says the printer continuously sends back its status while the bed and extruder heat up, and the reference models this as a separate receive step. The generated model omitted that receipt, and the same gap appears for the order confirmation. ACT-04 already allows receiveTask for waiting on a message, but it does not say when such a receipt must be a separate element running in paral)",
+   "guideline_id": "LRN-090",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines GW-03 (cosine 0.76)",
+   "guideline_id": "LRN-091",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines ACT-02 (M1 shows the reference has a human check activity before the threshold gateway, and X4 shows the generated model used a generic task for the same step. ACT-02 assigns bpmn:manualTask to human work performed without an execution application, and LRN-072 says the same when no software is named. The guideline adds the condition under which the documented rule applies to a threshold check. Other diffe)",
+   "guideline_id": "LRN-092",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines GW-03 (M5 shows the reference has an exclusive gateway that merges the loop-back flow before the repeated status receive, and the generated model lacks it. S7 states that the printer continuously sends back its status, which is the repetition. GW-03 already covers exclusive merges for alternative paths but does not say that a loop-back into a repeated receive needs a merge gateway, so this guideline adds)",
+   "guideline_id": "LRN-093",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "existing_documentation_rule",
+   "detail": "documentation rule GW-03 not applied (The reference model has an exclusive gateway between the 'in stock' and 'ordered' alternatives and the printer heating step (M4), but the generated model has no merge there. The description makes both alternatives lead to the plastic being available before the printer is turned on (S4, S6, S7). The documented guideline GW-03 covers this, so the gap is a failure to apply an existing rule rather tha)",
+   "guideline_id": null,
+   "ref": "GW-03",
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-089",
+   "instruction": "When the description says that while an activity is being carried out, an outside party or device keeps sending back status messages that the process has to receive: Model the receipt of these repeated status messages as its own receive task, or as a message intermediate catch event, placed in a parallel branch that starts together with the activity it reports on. Connect that branch so that it runs alongside the activity and is synchronized with it by a parallel join, and do not drop the status reception or fold it into the activity itself.",
+   "situation": "the description says that while an activity is being carried out, an outside party or device keeps sending back status messages that the process has to receive",
+   "source": "learned guideline (refines ACT-04)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-090",
+   "instruction": "When the description says an external device or party keeps sending back its status, or sends a confirmation, while or after the process is doing another activity, so the process has to receive that message: Model each such receipt as its own element: a bpmn:receiveTask when receiving the message is itself the unit of work, or an intermediate message catch event when the receipt only gates the flow. Place it in a parallel branch next to the activity it accompanies, and join that branch back before any step that depends on the received content. Do not fold the receipt into the sending or the accompanying activity.",
+   "situation": "the description says an external device or party keeps sending back its status, or sends a confirmation, while or after the process is doing another activity, so the process has to receive that message",
+   "source": "learned guideline (refines ACT-04)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-091",
+   "instruction": "When the description says a device or outside party keeps sending back its status while a preparation activity runs, and the process must wait for that status to show the preparation is finished before the next step: Model a receive task (or message intermediate catch event) for the repeated status in a branch that runs alongside the preparation activity. After it, place an exclusive gateway with one outgoing flow looping back to the status receive, which repeats until the reported state is the target state, and one outgoing flow that leaves toward the parallel join that synchronizes with the accompanying activity. Do not let the status receive be the exit of the wait by itself, and do not skip the decision that checks for the target state.",
+   "situation": "the description says a device or outside party keeps sending back its status while a preparation activity runs, and the process must wait for that status to show the preparation is finished before the next step",
+   "source": "learned guideline (refines GW-03)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-092",
+   "instruction": "When the description states that a person inspects a quantity themselves (without naming any software or system) and that a later decision branches on whether that quantity is below a threshold: Model the inspection as its own human activity placed directly before the threshold gateway, typed bpmn:manualTask because no software is named. Do not fold it into the gateway or leave it as a generic bpmn:task.",
+   "situation": "the description states that a person inspects a quantity themselves (without naming any software or system) and that a later decision branches on whether that quantity is below a threshold",
+   "source": "learned guideline (refines ACT-02)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-093",
+   "instruction": "When The description says that a device or system keeps sending back its status repeatedly while a preparation step runs, and a later check on that status decides when the repetition ends.: Model the repetition with an exclusive merge gateway placed before the repeated receive task. Follow the receive task with an exclusive gateway on the stop condition. Route one outgoing flow back into the merge gateway to repeat the receive, and route the other onward to the next activity. Do not model the repetition as a plain sequence with no merge point.",
+   "situation": "The description says that a device or system keeps sending back its status repeatedly while a preparation step runs, and a later check on that status decides when the repetition ends.",
+   "source": "learned guideline (refines GW-03)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "GW-03",
+   "instruction": "Use an exclusive merge for alternative paths; it does not wait for inactive alternatives.",
+   "situation": "the description states two alternative ways to obtain the same item (for example, using stock already at hand, or ordering it when it is not available), and a later step needs that item regardless of which way was taken",
+   "source": "documentation rule not applied",
+   "failure_type": "T6"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T1",
+  "T5",
+  "T6"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

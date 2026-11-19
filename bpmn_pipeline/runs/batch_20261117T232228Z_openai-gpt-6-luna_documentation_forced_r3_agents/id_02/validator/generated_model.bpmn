@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Recruitment"
+                  targetNamespace="http://example.com/bpmn/recruitment">
+  <bpmn:message id="Message_InterviewInvitation" name="Interview invitation"/>
+  <bpmn:message id="Message_InterviewPreference" name="Interview preference"/>
+  <bpmn:message id="Message_JobOffer" name="Job offer"/>
+  <bpmn:message id="Message_OfferAcceptance" name="Offer acceptance"/>
+
+  <bpmn:process id="Process_Recruitment" name="Recruitment and onboarding" isExecutable="false">
+    <bpmn:startEvent id="Event_NeedIdentified" name="Department identifies need for a new hire"/>
+    <bpmn:task id="Task_CreateJobDescription" name="Create job description"/>
+    <bpmn:task id="Task_PostJobDescription" name="Post job description on job boards"/>
+    <bpmn:task id="Task_CollectResumes" name="Collect resumes"/>
+    <bpmn:task id="Task_ScreenResumes" name="Screen resumes"/>
+    <bpmn:task id="Task_ConductPhoneInterviews" name="Conduct initial phone interviews"/>
+    <bpmn:task id="Task_SelectCandidates" name="Select candidates for interviews"/>
+    <bpmn:sendTask id="Task_InviteCandidates" name="Invite selected candidates" messageRef="Message_InterviewInvitation"/>
+    <bpmn:receiveTask id="Task_ReceivePreference" name="Receive candidate interview preference" messageRef="Message_InterviewPreference"/>
+    <bpmn:exclusiveGateway id="Gateway_InterviewFormat" name="Choose interview format"/>
+    <bpmn:task id="Task_InPersonInterview" name="Conduct in-person interview"/>
+    <bpmn:task id="Task_VirtualInterview" name="Conduct virtual interview"/>
+    <bpmn:exclusiveGateway id="Gateway_InterviewMerge" name="Merge interview paths"/>
+    <bpmn:task id="Task_ChooseCandidate" name="Choose candidate"/>
+    <bpmn:sendTask id="Task_ExtendOffer" name="Extend offer" messageRef="Message_JobOffer"/>
+    <bpmn:exclusiveGateway id="Gateway_NegotiationSplit" name="Salary negotiation takes place?" default="Flow_SkipNegotiation"/>
+    <bpmn:task id="Task_NegotiateSalary" name="Conduct salary negotiations"/>
+    <bpmn:exclusiveGateway id="Gateway_NegotiationMerge" name="Merge negotiation paths"/>
+    <bpmn:intermediateCatchEvent id="Event_OfferAccepted" name="Offer accepted">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_OfferAccepted" messageRef="Message_OfferAcceptance"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_BeginOnboarding" name="Begin onboarding"/>
+    <bpmn:parallelGateway id="Gateway_OnboardingSplit" name="Complete onboarding steps"/>
+    <bpmn:task id="Task_CompletePaperwork" name="Complete onboarding paperwork"/>
+    <bpmn:task id="Task_ConductOrientation" name="Conduct orientation"/>
+    <bpmn:task id="Task_ProvideTraining" name="Provide training"/>
+    <bpmn:parallelGateway id="Gateway_OnboardingJoin" name="All onboarding steps completed"/>
+    <bpmn:task id="Task_IntegrateNewHire" name="Fully integrate new hire into the team"/>
+    <bpmn:endEvent id="Event_ProcessComplete" name="New hire fully integrated into the team"/>
+
+    <bpmn:sequenceFlow id="Flow_Start_Create" sourceRef="Event_NeedIdentified" targetRef="Task_CreateJobDescription"/>
+    <bpmn:sequenceFlow id="Flow_Create_Post" sourceRef="Task_CreateJobDescription" targetRef="Task_PostJobDescription"/>
+    <bpmn:sequenceFlow id="Flow_Post_Collect" sourceRef="Task_PostJobDescription" targetRef="Task_CollectResumes"/>
+    <bpmn:sequenceFlow id="Flow_Collect_Screen" sourceRef="Task_CollectResumes" targetRef="Task_ScreenResumes"/>
+    <bpmn:sequenceFlow id="Flow_Screen_Phone" sourceRef="Task_ScreenResumes" targetRef="Task_ConductPhoneInterviews"/>
+    <bpmn:sequenceFlow id="Flow_Phone_Select" sourceRef="Task_ConductPhoneInterviews" targetRef="Task_SelectCandidates"/>
+    <bpmn:sequenceFlow id="Flow_Select_Invite" sourceRef="Task_SelectCandidates" targetRef="Task_InviteCandidates"/>
+    <bpmn:sequenceFlow id="Flow_Invite_Preference" sourceRef="Task_InviteCandidates" targetRef="Task_ReceivePreference"/>
+    <bpmn:sequenceFlow id="Flow_Preference_Format" sourceRef="Task_ReceivePreference" targetRef="Gateway_InterviewFormat"/>
+    <bpmn:sequenceFlow id="Flow_Format_InPerson" sourceRef="Gateway_InterviewFormat" targetRef="Task_InPersonInterview">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">candidate preference is in-person</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Format_Virtual" sourceRef="Gateway_InterviewFormat" targetRef="Task_VirtualInterview">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">candidate preference is virtual</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_InPerson_Merge" sourceRef="Task_InPersonInterview" targetRef="Gateway_InterviewMerge"/>
+    <bpmn:sequenceFlow id="Flow_Virtual_Merge" sourceRef="Task_VirtualInterview" targetRef="Gateway_InterviewMerge"/>
+    <bpmn:sequenceFlow id="Flow_Merge_Choose" sourceRef="Gateway_InterviewMerge" targetRef="Task_ChooseCandidate"/>
+    <bpmn:sequenceFlow id="Flow_Choose_Offer" sourceRef="Task_ChooseCandidate" targetRef="Task_ExtendOffer"/>
+    <bpmn:sequenceFlow id="Flow_Offer_Negotiation" sourceRef="Task_ExtendOffer" targetRef="Gateway_NegotiationSplit"/>
+    <bpmn:sequenceFlow id="Flow_Negotiate" sourceRef="Gateway_NegotiationSplit" targetRef="Task_NegotiateSalary">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">salary negotiations take place</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SkipNegotiation" sourceRef="Gateway_NegotiationSplit" targetRef="Gateway_NegotiationMerge"/>
+    <bpmn:sequenceFlow id="Flow_Negotiate_Merge" sourceRef="Task_NegotiateSalary" targetRef="Gateway_NegotiationMerge"/>
+    <bpmn:sequenceFlow id="Flow_Negotiation_Accepted" sourceRef="Gateway_NegotiationMerge" targetRef="Event_OfferAccepted"/>
+    <bpmn:sequenceFlow id="Flow_Accepted_BeginOnboarding" sourceRef="Event_OfferAccepted" targetRef="Task_BeginOnboarding"/>
+    <bpmn:sequenceFlow id="Flow_BeginOnboarding_Split" sourceRef="Task_BeginOnboarding" targetRef="Gateway_OnboardingSplit"/>
+    <bpmn:sequenceFlow id="Flow_Onboarding_Paperwork" sourceRef="Gateway_OnboardingSplit" targetRef="Task_CompletePaperwork"/>
+    <bpmn:sequenceFlow id="Flow_Onboarding_Orientation" sourceRef="Gateway_OnboardingSplit" targetRef="Task_ConductOrientation"/>
+    <bpmn:sequenceFlow id="Flow_Onboarding_Training" sourceRef="Gateway_OnboardingSplit" targetRef="Task_ProvideTraining"/>
+    <bpmn:sequenceFlow id="Flow_Paperwork_Join" sourceRef="Task_CompletePaperwork" targetRef="Gateway_OnboardingJoin"/>
+    <bpmn:sequenceFlow id="Flow_Orientation_Join" sourceRef="Task_ConductOrientation" targetRef="Gateway_OnboardingJoin"/>
+    <bpmn:sequenceFlow id="Flow_Training_Join" sourceRef="Task_ProvideTraining" targetRef="Gateway_OnboardingJoin"/>
+    <bpmn:sequenceFlow id="Flow_Join_Integrate" sourceRef="Gateway_OnboardingJoin" targetRef="Task_IntegrateNewHire"/>
+    <bpmn:sequenceFlow id="Flow_Integrate_End" sourceRef="Task_IntegrateNewHire" targetRef="Event_ProcessComplete"/>
+  </bpmn:process>
+
+  <bpmn:collaboration id="Collaboration_Recruitment">
+    <bpmn:participant id="Participant_Recruitment" name="Recruitment and onboarding process" processRef="Process_Recruitment"/>
+    <bpmn:participant id="Participant_Candidate" name="Candidate"/>
+    <bpmn:messageFlow id="MessageFlow_Invite" name="Interview invitation" sourceRef="Task_InviteCandidates" targetRef="Participant_Candidate" messageRef="Message_InterviewInvitation"/>
+    <bpmn:messageFlow id="MessageFlow_Preference" name="Interview preference" sourceRef="Participant_Candidate" targetRef="Task_ReceivePreference" messageRef="Message_InterviewPreference"/>
+    <bpmn:messageFlow id="MessageFlow_Offer" name="Job offer" sourceRef="Task_ExtendOffer" targetRef="Participant_Candidate" messageRef="Message_JobOffer"/>
+    <bpmn:messageFlow id="MessageFlow_Acceptance" name="Offer acceptance" sourceRef="Participant_Candidate" targetRef="Event_OfferAccepted" messageRef="Message_OfferAcceptance"/>
+  </bpmn:collaboration>
+</bpmn:definitions>

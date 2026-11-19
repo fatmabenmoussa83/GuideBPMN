@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_RoomService" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Msg_RoomServiceCall" name="Guest calls room service"/>
+  <bpmn:process id="Process_RoomService" name="Room Service Order at The Evanstonian" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_RoomService">
+      <bpmn:lane id="Lane_RoomServiceManager" name="Room-service manager">
+        <bpmn:flowNodeRef>Start_GuestCall</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TakeOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitTicket</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GiveOrderSommelier</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AssignWaiter</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Prep_Split</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Kitchen" name="Kitchen">
+        <bpmn:flowNodeRef>Task_PrepareFood</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Sommelier" name="Sommelier (wine waiter)">
+        <bpmn:flowNodeRef>GW_Alcohol_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FetchWine</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Alcohol_Join</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Waiter" name="Waiter">
+        <bpmn:flowNodeRef>Task_ReadyCart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NonalcoholicDrinks</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Prep_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DeliverOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReturnToStation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Postpone_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PostponeBilling</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Billing_Merge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DebitAccount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Billed</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_GuestCall" name="Guest calls room service">
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_GuestCall" messageRef="Msg_RoomServiceCall"/>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_TakeOrder" name="Take down order">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_SubmitTicket" name="Submit order ticket to kitchen">
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_GiveOrderSommelier" name="Give order to sommelier">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_AssignWaiter" name="Assign order to waiter">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="GW_Prep_Split" name="Start parallel preparation">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+      <bpmn:outgoing>Flow_07</bpmn:outgoing>
+      <bpmn:outgoing>Flow_08</bpmn:outgoing>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:task id="Task_PrepareFood" name="Prepare food">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Alcohol_Split" name="Order includes alcoholic beverage?" default="Flow_10">
+      <bpmn:incoming>Flow_07</bpmn:incoming>
+      <bpmn:outgoing>Flow_09</bpmn:outgoing>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_FetchWine" name="Fetch wine from cellar and prepare other alcoholic beverages">
+      <bpmn:incoming>Flow_09</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Alcohol_Join" name="Alcohol handling done">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_ReadyCart" name="Ready cart (tablecloth and silverware)">
+      <bpmn:incoming>Flow_08</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_NonalcoholicDrinks" name="Prepare nonalcoholic drinks">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+      <bpmn:outgoing>Flow_16</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="GW_Prep_Join" name="Food, wine, cart and drinks ready">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+      <bpmn:incoming>Flow_16</bpmn:incoming>
+      <bpmn:outgoing>Flow_17</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:task id="Task_DeliverOrder" name="Deliver order to guest's room">
+      <bpmn:incoming>Flow_17</bpmn:incoming>
+      <bpmn:outgoing>Flow_18</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ReturnToStation" name="Return to room-service station">
+      <bpmn:incoming>Flow_18</bpmn:incoming>
+      <bpmn:outgoing>Flow_19</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Postpone_Split" name="Waiter has another order to prepare or deliver?" default="Flow_21">
+      <bpmn:incoming>Flow_19</bpmn:incoming>
+      <bpmn:outgoing>Flow_20</bpmn:outgoing>
+      <bpmn:outgoing>Flow_21</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_PostponeBilling" name="Postpone billing">
+      <bpmn:incoming>Flow_20</bpmn:incoming>
+      <bpmn:outgoing>Flow_22</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Billing_Merge" name="Billing step reached">
+      <bpmn:incoming>Flow_21</bpmn:incoming>
+      <bpmn:incoming>Flow_22</bpmn:incoming>
+      <bpmn:outgoing>Flow_23</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_DebitAccount" name="Debit guest's account">
+      <bpmn:incoming>Flow_23</bpmn:incoming>
+      <bpmn:outgoing>Flow_24</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Billed" name="Guest account debited">
+      <bpmn:incoming>Flow_24</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="Start_GuestCall" targetRef="Task_TakeOrder"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_TakeOrder" targetRef="Task_SubmitTicket"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_SubmitTicket" targetRef="Task_GiveOrderSommelier"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_GiveOrderSommelier" targetRef="Task_AssignWaiter"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_AssignWaiter" targetRef="GW_Prep_Split"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="GW_Prep_Split" targetRef="Task_PrepareFood"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="GW_Prep_Split" targetRef="GW_Alcohol_Split"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="GW_Prep_Split" targetRef="Task_ReadyCart"/>
+    <bpmn:sequenceFlow id="Flow_09" name="Yes" sourceRef="GW_Alcohol_Split" targetRef="Task_FetchWine">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${includesAlcoholicBeverage == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_10" name="No" sourceRef="GW_Alcohol_Split" targetRef="GW_Alcohol_Join"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_FetchWine" targetRef="GW_Alcohol_Join"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="GW_Alcohol_Join" targetRef="GW_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_PrepareFood" targetRef="GW_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="GW_Prep_Split" targetRef="Task_NonalcoholicDrinks"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_ReadyCart" targetRef="GW_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Task_NonalcoholicDrinks" targetRef="GW_Prep_Join"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="GW_Prep_Join" targetRef="Task_DeliverOrder"/>
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Task_DeliverOrder" targetRef="Task_ReturnToStation"/>
+    <bpmn:sequenceFlow id="Flow_19" sourceRef="Task_ReturnToStation" targetRef="GW_Postpone_Split"/>
+    <bpmn:sequenceFlow id="Flow_20" name="Another order pending" sourceRef="GW_Postpone_Split" targetRef="Task_PostponeBilling">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${anotherOrderPending == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_21" name="No other order" sourceRef="GW_Postpone_Split" targetRef="GW_Billing_Merge"/>
+    <bpmn:sequenceFlow id="Flow_22" sourceRef="Task_PostponeBilling" targetRef="GW_Billing_Merge"/>
+    <bpmn:sequenceFlow id="Flow_23" sourceRef="GW_Billing_Merge" targetRef="Task_DebitAccount"/>
+    <bpmn:sequenceFlow id="Flow_24" sourceRef="Task_DebitAccount" targetRef="End_Billed"/>
+  </bpmn:process>
+</bpmn:definitions>

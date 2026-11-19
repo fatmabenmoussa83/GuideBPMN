@@ -1,0 +1,333 @@
+{
+ "id": "22",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6",
+  "T7"
+ ],
+ "error_counts": {
+  "T5": 12,
+  "T6": 1,
+  "T7": 4
+ },
+ "first_pass_error_counts": {
+  "T5": 23,
+  "T6": 2,
+  "T7": 6
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines FID-02 (M1 shows the reference has a 'make booking' task between the payment-received catch event and 'Close case', while the generated model dropped it. S4 states both actions in one sentence after the receipt of money, so both must be modeled as separate tasks in order.)",
+   "guideline_id": "LRN-051",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines FID-02 (The description states 'When we receive the money, I make a booking and close the case.' The generated model goes straight from the payment-received event to the closing task, so the described booking action has no counterpart (M1). The reference contains it as a task between the event and the closing task. The described action is a distinct work step with a stated order, so the modeled sequence s)",
+   "guideline_id": "LRN-052",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T7",
+   "status": "rejected_bad_citation",
+   "detail": "cited ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'S2', 'S7', 'S8', 'COL-07'] but was given ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'M1', 'M3', 'S2', 'S4', 'S7', 'S8']",
+   "guideline_id": null,
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "promoted",
+   "detail": "refines EVT-03 (The reference models the deadline as an intermediate catch event after the event-based gateway, with a flow from that event to the collection step. The generated model has the gateway but no timer catch event and no flow from a deadline event to the next step (M3, F3, F5). The description states a time-based deadline and says the case is forwarded once it passes (S8), so a timer catch event is the)",
+   "guideline_id": "LRN-053",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-053 (The reference has an intermediate catch event \"Reminder is due\" on the deadline path between the event-based gateway and the forwarding step, and the generated model has the gateway without this timer catch event. The description (S8) states that the case is forwarded only after the deadline passes without payment, so the deadline must be a timer catch event on the gateway branch. This is the same)",
+   "guideline_id": "LRN-053",
+   "ref": "LRN-053",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T7",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-053 (cosine 0.88)",
+   "guideline_id": "LRN-053",
+   "ref": "LRN-053",
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-053 (The reference has an intermediate catch event \"Reminder is due\" on the gateway branch that leads to the follow-up forwarding step, and the generated model lacks both that event and its two flows. The description says a request is sent, a reminder is made, and the case is forwarded if the deadline passes without payment. The guideline is the same as the learned LRN-053, which is the best match. The)",
+   "guideline_id": "LRN-053",
+   "ref": "LRN-053",
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-053 (The reference models a scheduled later point after the payment request as an intermediate timer catch event inside an event-based gateway, and the generated model has no such element (M3). Instead it has only a disagreement-deadline catch event (X3), so the scheduled follow-up is lost. The description states the request is sent and a follow-up is set for later (S2), and a separate deadline bounds )",
+   "guideline_id": "LRN-053",
+   "ref": "LRN-053",
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T7",
+   "status": "promoted",
+   "detail": "refines COL-07 (Every collaboration record (C1 to C6) is an extra pool or message flow that the reference does not have. In the description the external parties are only the recipients of a payment request or a forwarded case, and the process then waits for their answer or a deadline. Nothing in the text says they act as separate participants. The reference models these waits inside the single process, so the ext)",
+   "guideline_id": "LRN-054",
+   "ref": null,
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "LRN-051",
+   "instruction": "When the description says that after an awaited event occurs, two or more actions follow, joined by 'and' in one sentence: Model the awaited event as an intermediate catch event. Model each stated action as its own task, placed in sequence after that event in the order the description gives. Connect the last task to the outcome. Do not drop any stated action and do not fold one action into another task.",
+   "situation": "the description says that after an awaited event occurs, two or more actions follow, joined by 'and' in one sentence",
+   "source": "learned guideline (refines FID-02)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-052",
+   "instruction": "When the description says that after an awaited item is received (an event on a branch), the process performs one or more further named actions in sequence before a closing action: Model each described action that follows the receipt event as its own task, placed in the stated order between the receipt event and the closing task, connected by sequence flows. Do not drop such an action or merge it into the closing task or the event label.",
+   "situation": "the description says that after an awaited item is received (an event on a branch), the process performs one or more further named actions in sequence before a closing action",
+   "source": "learned guideline (refines FID-02)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-053",
+   "instruction": "When the description says that after a request is sent, the process waits for a reply and also for a stated deadline, and that when the deadline passes without the expected reply, a further step follows: Model the wait as an event-based gateway with one branch for the expected reply and one branch that starts with an intermediate timer catch event for the deadline. Connect the timer catch event to the step that the description says follows the deadline. Do not replace the timer wait with a task or leave the gateway branch without its catch event.",
+   "situation": "the description says that after a request is sent, the process waits for a reply and also for a stated deadline, and that when the deadline passes without the expected reply, a further step follows",
+   "source": "learned guideline (refines EVT-03)",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-054",
+   "instruction": "When the description says the process sends a request or case to an external party and then only waits for that party's outcome or a deadline, without describing any step the external party itself performs: Model the send as a task in the process's own pool, and model the awaited outcome as intermediate catch events or an event-based gateway in that same pool. Do not create a separate pool for the external party, and do not add message flows to or from it, unless the description states that the party performs process steps or communicates as an independent participant.",
+   "situation": "the description says the process sends a request or case to an external party and then only waits for that party's outcome or a deadline, without describing any step the external party itself performs",
+   "source": "learned guideline (refines COL-07)",
+   "failure_type": "T7"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6",
+  "T7"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}

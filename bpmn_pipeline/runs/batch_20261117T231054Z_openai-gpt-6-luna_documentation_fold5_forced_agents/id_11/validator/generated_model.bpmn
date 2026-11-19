@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" targetNamespace="http://example.com/subscription">
+  <bpmn:message id="Message_Signup" name="Subscription signup information"/>
+  <bpmn:message id="Message_Cancellation" name="Cancellation request"/>
+  <bpmn:message id="Message_Updates" name="Subscription updates, enhancements, or renewal notifications"/>
+
+  <bpmn:collaboration id="Collaboration_Subscription">
+    <bpmn:participant id="Participant_Customer" name="Customer"/>
+    <bpmn:participant id="Participant_Service" name="Subscription service" processRef="Process_Subscription"/>
+    <bpmn:messageFlow id="MessageFlow_Signup" name="Submit signup information" sourceRef="Participant_Customer" targetRef="StartEvent_Signup"/>
+    <bpmn:messageFlow id="MessageFlow_Cancellation" name="Submit cancellation request" sourceRef="Participant_Customer" targetRef="BoundaryEvent_Cancellation"/>
+    <bpmn:messageFlow id="MessageFlow_Updates" name="Receive subscription updates" sourceRef="Task_SendUpdates" targetRef="Participant_Customer"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Subscription" name="Subscription lifecycle" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Signup" name="Customer signs up">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Signup" messageRef="Message_Signup"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_GenerateAccount" name="Generate account"/>
+    <bpmn:serviceTask id="Task_AssignAccess" name="Assign access"/>
+    <bpmn:subProcess id="SubProcess_ActiveSubscription" name="Maintain active subscription">
+      <bpmn:startEvent id="SubProcess_Start" name="Begin subscription maintenance"/>
+      <bpmn:parallelGateway id="Gateway_MaintenanceSplit" name="Run subscription activities"/>
+      <bpmn:serviceTask id="Task_BillingCycles" name="Run automated billing cycles">
+        <bpmn:standardLoopCharacteristics testBefore="true">
+          <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">subscriptionActive</bpmn:loopCondition>
+        </bpmn:standardLoopCharacteristics>
+      </bpmn:serviceTask>
+      <bpmn:sendTask id="Task_SendUpdates" name="Send updates, product enhancements, or renewal notifications" messageRef="Message_Updates">
+        <bpmn:standardLoopCharacteristics testBefore="true">
+          <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">subscriptionActive</bpmn:loopCondition>
+        </bpmn:standardLoopCharacteristics>
+      </bpmn:sendTask>
+      <bpmn:parallelGateway id="Gateway_MaintenanceJoin" name="Complete subscription activities"/>
+      <bpmn:endEvent id="SubProcess_End" name="Subscription maintenance ends"/>
+      <bpmn:sequenceFlow id="Flow_MaintenanceStart_Split" sourceRef="SubProcess_Start" targetRef="Gateway_MaintenanceSplit"/>
+      <bpmn:sequenceFlow id="Flow_Split_Billing" sourceRef="Gateway_MaintenanceSplit" targetRef="Task_BillingCycles"/>
+      <bpmn:sequenceFlow id="Flow_Split_Updates" sourceRef="Gateway_MaintenanceSplit" targetRef="Task_SendUpdates"/>
+      <bpmn:sequenceFlow id="Flow_Billing_Join" sourceRef="Task_BillingCycles" targetRef="Gateway_MaintenanceJoin"/>
+      <bpmn:sequenceFlow id="Flow_Updates_Join" sourceRef="Task_SendUpdates" targetRef="Gateway_MaintenanceJoin"/>
+      <bpmn:sequenceFlow id="Flow_Join_MaintenanceEnd" sourceRef="Gateway_MaintenanceJoin" targetRef="SubProcess_End"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="BoundaryEvent_Cancellation" name="Cancellation request received" attachedToRef="SubProcess_ActiveSubscription" cancelActivity="true">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Cancellation" messageRef="Message_Cancellation"/>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Task_ProcessCancellation" name="Support team processes cancellation request"/>
+    <bpmn:inclusiveGateway id="Gateway_TermsSplit" name="Apply adjustments required by terms" default="Flow_Terms_None"/>
+    <bpmn:task id="Task_ApplyRefund" name="Apply refund"/>
+    <bpmn:task id="Task_ApplyCharge" name="Apply charge"/>
+    <bpmn:inclusiveGateway id="Gateway_TermsJoin" name="Complete applicable adjustments"/>
+    <bpmn:userTask id="Task_DeactivateSubscription" name="Support team deactivates subscription"/>
+    <bpmn:task id="Task_SettleBalance" name="Settle final account balance"/>
+    <bpmn:endEvent id="EndEvent_Settled" name="Subscription deactivated and final balance settled"/>
+
+    <bpmn:sequenceFlow id="Flow_Signup_Generate" sourceRef="StartEvent_Signup" targetRef="Task_GenerateAccount"/>
+    <bpmn:sequenceFlow id="Flow_Generate_Assign" sourceRef="Task_GenerateAccount" targetRef="Task_AssignAccess"/>
+    <bpmn:sequenceFlow id="Flow_Assign_Maintenance" sourceRef="Task_AssignAccess" targetRef="SubProcess_ActiveSubscription"/>
+    <bpmn:sequenceFlow id="Flow_Cancellation_Process" sourceRef="BoundaryEvent_Cancellation" targetRef="Task_ProcessCancellation"/>
+    <bpmn:sequenceFlow id="Flow_Process_Terms" sourceRef="Task_ProcessCancellation" targetRef="Gateway_TermsSplit"/>
+    <bpmn:sequenceFlow id="Flow_Terms_Refund" name="Refund due" sourceRef="Gateway_TermsSplit" targetRef="Task_ApplyRefund">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">refundDue</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Terms_Charge" name="Charge due" sourceRef="Gateway_TermsSplit" targetRef="Task_ApplyCharge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">chargeDue</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Terms_None" name="No refund or charge applies" sourceRef="Gateway_TermsSplit" targetRef="Gateway_TermsJoin"/>
+    <bpmn:sequenceFlow id="Flow_Refund_Join" sourceRef="Task_ApplyRefund" targetRef="Gateway_TermsJoin"/>
+    <bpmn:sequenceFlow id="Flow_Charge_Join" sourceRef="Task_ApplyCharge" targetRef="Gateway_TermsJoin"/>
+    <bpmn:sequenceFlow id="Flow_Terms_Deactivate" sourceRef="Gateway_TermsJoin" targetRef="Task_DeactivateSubscription"/>
+    <bpmn:sequenceFlow id="Flow_Deactivate_Settle" sourceRef="Task_DeactivateSubscription" targetRef="Task_SettleBalance"/>
+    <bpmn:sequenceFlow id="Flow_Settle_End" sourceRef="Task_SettleBalance" targetRef="EndEvent_Settled"/>
+  </bpmn:process>
+</bpmn:definitions>

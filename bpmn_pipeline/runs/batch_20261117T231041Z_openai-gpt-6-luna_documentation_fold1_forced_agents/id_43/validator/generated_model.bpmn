@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_CarService" targetNamespace="http://example.com/bpmn/car-service">
+  <bpmn:process id="Process_CarService" name="Car Service" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_CarService">
+      <bpmn:lane id="Lane_PoliceApp" name="Police app">
+        <bpmn:flowNodeRef>Start_AfterSuccessfulService</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Catch_ServiceNecessary</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CheckRegistration</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_CarRegistered</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NotifyOwner</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ServiceOrDeadline</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Catch_ThirtyDays</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ImposeFine</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Fined</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_NotRegistered</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_CarOwner" name="Car owner">
+        <bpmn:flowNodeRef>Catch_CarArrivesForService</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReceiveEmailUpdates</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Catch_RepairDone</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PayThroughApp</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Mechanic" name="Mechanic">
+        <bpmn:flowNodeRef>Task_EnterCarProblems</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterSuccessfulRepairAndPickerl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterNextServiceTime</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_NextServiceRecorded</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_AfterSuccessfulService" name="Successful service completed">
+      <bpmn:outgoing>Flow_Start_ToServiceNecessary</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:intermediateCatchEvent id="Catch_ServiceNecessary" name="Service becomes necessary">
+      <bpmn:incoming>Flow_Start_ToServiceNecessary</bpmn:incoming>
+      <bpmn:outgoing>Flow_ServiceNecessary_ToCheck</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition id="Conditional_ServiceNecessary">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">serviceNecessary</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="Task_CheckRegistration" name="Check whether car is still registered">
+      <bpmn:incoming>Flow_ServiceNecessary_ToCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_Check_ToRegisteredGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_CarRegistered" name="Car still registered?" gatewayDirection="Diverging" default="Flow_NotRegistered">
+      <bpmn:incoming>Flow_Check_ToRegisteredGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Registered</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotRegistered</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_NotifyOwner" name="Notify car owner">
+      <bpmn:incoming>Flow_Registered</bpmn:incoming>
+      <bpmn:outgoing>Flow_Notify_ToWaitGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:eventBasedGateway id="Gateway_ServiceOrDeadline" name="Wait for service or 30 days" gatewayDirection="Diverging" eventGatewayType="Exclusive">
+      <bpmn:incoming>Flow_Notify_ToWaitGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Wait_ToCarArrival</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Wait_ToThirtyDays</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="Catch_CarArrivesForService" name="Car arrives for service">
+      <bpmn:incoming>Flow_Wait_ToCarArrival</bpmn:incoming>
+      <bpmn:outgoing>Flow_CarArrival_ToEnterProblems</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition id="Conditional_CarArrivesForService">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">carArrivesForService</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Catch_ThirtyDays" name="30 days pass without service">
+      <bpmn:incoming>Flow_Wait_ToThirtyDays</bpmn:incoming>
+      <bpmn:outgoing>Flow_ThirtyDays_ToFine</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="Timer_ThirtyDays">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P30D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="Task_ImposeFine" name="Fine car owner">
+      <bpmn:incoming>Flow_ThirtyDays_ToFine</bpmn:incoming>
+      <bpmn:outgoing>Flow_Fine_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Fined" name="Car owner fined">
+      <bpmn:incoming>Flow_Fine_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_NotRegistered" name="Car is not registered">
+      <bpmn:incoming>Flow_NotRegistered</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:userTask id="Task_EnterCarProblems" name="Enter car problems for reference">
+      <bpmn:incoming>Flow_CarArrival_ToEnterProblems</bpmn:incoming>
+      <bpmn:outgoing>Flow_EnterProblems_ToEmailUpdates</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_ReceiveEmailUpdates" name="Receive email status updates while waiting">
+      <bpmn:incoming>Flow_EnterProblems_ToEmailUpdates</bpmn:incoming>
+      <bpmn:outgoing>Flow_EmailUpdates_ToRepairDone</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateCatchEvent id="Catch_RepairDone" name="Repair is done">
+      <bpmn:incoming>Flow_EmailUpdates_ToRepairDone</bpmn:incoming>
+      <bpmn:outgoing>Flow_RepairDone_ToPayment</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition id="Conditional_RepairDone">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">repairDone</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_PayThroughApp" name="Pay through the app">
+      <bpmn:incoming>Flow_RepairDone_ToPayment</bpmn:incoming>
+      <bpmn:outgoing>Flow_Payment_ToEnterSuccessfulRepair</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_EnterSuccessfulRepairAndPickerl" name="Enter successful repair and Pickerl">
+      <bpmn:incoming>Flow_Payment_ToEnterSuccessfulRepair</bpmn:incoming>
+      <bpmn:outgoing>Flow_SuccessfulRepair_ToNextService</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_EnterNextServiceTime" name="Enter time for next service">
+      <bpmn:incoming>Flow_SuccessfulRepair_ToNextService</bpmn:incoming>
+      <bpmn:outgoing>Flow_NextService_ToEnd</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_NextServiceRecorded" name="Next service time recorded">
+      <bpmn:incoming>Flow_NextService_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_ToServiceNecessary" sourceRef="Start_AfterSuccessfulService" targetRef="Catch_ServiceNecessary"/>
+    <bpmn:sequenceFlow id="Flow_ServiceNecessary_ToCheck" sourceRef="Catch_ServiceNecessary" targetRef="Task_CheckRegistration"/>
+    <bpmn:sequenceFlow id="Flow_Check_ToRegisteredGateway" sourceRef="Task_CheckRegistration" targetRef="Gateway_CarRegistered"/>
+    <bpmn:sequenceFlow id="Flow_Registered" name="Registered" sourceRef="Gateway_CarRegistered" targetRef="Task_NotifyOwner">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">carIsRegistered</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotRegistered" name="Not registered" sourceRef="Gateway_CarRegistered" targetRef="End_NotRegistered"/>
+    <bpmn:sequenceFlow id="Flow_Notify_ToWaitGateway" sourceRef="Task_NotifyOwner" targetRef="Gateway_ServiceOrDeadline"/>
+    <bpmn:sequenceFlow id="Flow_Wait_ToCarArrival" sourceRef="Gateway_ServiceOrDeadline" targetRef="Catch_CarArrivesForService"/>
+    <bpmn:sequenceFlow id="Flow_Wait_ToThirtyDays" sourceRef="Gateway_ServiceOrDeadline" targetRef="Catch_ThirtyDays"/>
+    <bpmn:sequenceFlow id="Flow_ThirtyDays_ToFine" sourceRef="Catch_ThirtyDays" targetRef="Task_ImposeFine"/>
+    <bpmn:sequenceFlow id="Flow_Fine_ToEnd" sourceRef="Task_ImposeFine" targetRef="End_Fined"/>
+    <bpmn:sequenceFlow id="Flow_CarArrival_ToEnterProblems" sourceRef="Catch_CarArrivesForService" targetRef="Task_EnterCarProblems"/>
+    <bpmn:sequenceFlow id="Flow_EnterProblems_ToEmailUpdates" sourceRef="Task_EnterCarProblems" targetRef="Task_ReceiveEmailUpdates"/>
+    <bpmn:sequenceFlow id="Flow_EmailUpdates_ToRepairDone" sourceRef="Task_ReceiveEmailUpdates" targetRef="Catch_RepairDone"/>
+    <bpmn:sequenceFlow id="Flow_RepairDone_ToPayment" sourceRef="Catch_RepairDone" targetRef="Task_PayThroughApp"/>
+    <bpmn:sequenceFlow id="Flow_Payment_ToEnterSuccessfulRepair" sourceRef="Task_PayThroughApp" targetRef="Task_EnterSuccessfulRepairAndPickerl"/>
+    <bpmn:sequenceFlow id="Flow_SuccessfulRepair_ToNextService" sourceRef="Task_EnterSuccessfulRepairAndPickerl" targetRef="Task_EnterNextServiceTime"/>
+    <bpmn:sequenceFlow id="Flow_NextService_ToEnd" sourceRef="Task_EnterNextServiceTime" targetRef="End_NextServiceRecorded"/>
+  </bpmn:process>
+</bpmn:definitions>

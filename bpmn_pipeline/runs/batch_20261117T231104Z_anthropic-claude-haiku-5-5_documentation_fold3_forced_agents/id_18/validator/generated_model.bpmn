@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_UniversityEnrollment" targetNamespace="http://example.org/bpmn/university-enrollment">
+
+  <bpmn:message id="Msg_ApplicationSubmitted" name="Application submitted"/>
+  <bpmn:message id="Msg_MissingDocuments" name="Missing documents notice"/>
+  <bpmn:message id="Msg_DocumentsProvided" name="Missing items provided"/>
+  <bpmn:message id="Msg_AcceptanceLetter" name="Acceptance letter"/>
+  <bpmn:message id="Msg_RejectionLetter" name="Rejection letter"/>
+  <bpmn:message id="Msg_EnrollmentConfirmed" name="Enrollment confirmed"/>
+  <bpmn:message id="Msg_OrientationMaterials" name="Orientation materials"/>
+  <bpmn:message id="Msg_GradesPosted" name="Grades posted"/>
+  <bpmn:message id="Msg_Graduation" name="Graduation notice"/>
+  <bpmn:message id="Msg_Withdrawal" name="Withdrawal notice"/>
+
+  <bpmn:collaboration id="Collaboration_Enrollment">
+    <bpmn:participant id="Participant_Student" name="Student" processRef="Process_Student"/>
+    <bpmn:participant id="Participant_University" name="University" processRef="Process_University"/>
+    <bpmn:messageFlow id="MF_ApplicationSubmitted" sourceRef="Stu_TaskSubmitApplication" targetRef="Uni_StartApplication" messageRef="Msg_ApplicationSubmitted"/>
+    <bpmn:messageFlow id="MF_MissingDocuments" sourceRef="Uni_SendNotifyMissing" targetRef="Stu_CatchMissingDocs" messageRef="Msg_MissingDocuments"/>
+    <bpmn:messageFlow id="MF_DocumentsProvided" sourceRef="Stu_TaskProvideDocuments" targetRef="Uni_CatchMissingItems" messageRef="Msg_DocumentsProvided"/>
+    <bpmn:messageFlow id="MF_AcceptanceLetter" sourceRef="Uni_SendAcceptance" targetRef="Stu_CatchAccepted" messageRef="Msg_AcceptanceLetter"/>
+    <bpmn:messageFlow id="MF_RejectionLetter" sourceRef="Uni_SendRejection" targetRef="Stu_CatchRejected" messageRef="Msg_RejectionLetter"/>
+    <bpmn:messageFlow id="MF_EnrollmentConfirmed" sourceRef="Stu_TaskConfirmEnrollment" targetRef="Uni_CatchConfirmed" messageRef="Msg_EnrollmentConfirmed"/>
+    <bpmn:messageFlow id="MF_OrientationMaterials" sourceRef="Uni_SendOrientation" targetRef="Stu_CatchOrientation" messageRef="Msg_OrientationMaterials"/>
+    <bpmn:messageFlow id="MF_GradesPosted" sourceRef="Uni_ThrowGradesPosted" targetRef="Stu_CatchGradesPosted" messageRef="Msg_GradesPosted"/>
+    <bpmn:messageFlow id="MF_GraduationNotice" sourceRef="Stu_ThrowGraduation" targetRef="Uni_CatchGraduation" messageRef="Msg_Graduation"/>
+    <bpmn:messageFlow id="MF_WithdrawalNotice" sourceRef="Stu_ThrowWithdrawal" targetRef="Uni_CatchWithdrawal" messageRef="Msg_Withdrawal"/>
+  </bpmn:collaboration>
+
+  <!-- ================= STUDENT PROCESS ================= -->
+  <bpmn:process id="Process_Student" name="Student Enrollment Process" isExecutable="false">
+
+    <bpmn:startEvent id="Stu_StartStudent" name="Prospective student starts"/>
+    <bpmn:userTask id="Stu_TaskSubmitApplication" name="Submit application online"/>
+    <bpmn:exclusiveGateway id="Stu_MergeNotice" name="Merge application status"/>
+    <bpmn:eventBasedGateway id="Stu_GatewayAwaitDecision" name="Await admissions response"/>
+    <bpmn:intermediateCatchEvent id="Stu_CatchMissingDocs" name="Missing documents notice received">
+      <bpmn:messageEventDefinition id="Stu_CatchMissingDocsDef" messageRef="Msg_MissingDocuments"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Stu_CatchAccepted" name="Acceptance letter received">
+      <bpmn:messageEventDefinition id="Stu_CatchAcceptedDef" messageRef="Msg_AcceptanceLetter"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Stu_CatchRejected" name="Rejection letter received">
+      <bpmn:messageEventDefinition id="Stu_CatchRejectedDef" messageRef="Msg_RejectionLetter"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Stu_TaskProvideDocuments" name="Provide missing documents"/>
+    <bpmn:endEvent id="Stu_EndRejected" name="Application rejected"/>
+    <bpmn:userTask id="Stu_TaskConfirmEnrollment" name="Confirm enrollment by deadline"/>
+    <bpmn:intermediateCatchEvent id="Stu_CatchOrientation" name="Orientation materials received">
+      <bpmn:messageEventDefinition id="Stu_CatchOrientationDef" messageRef="Msg_OrientationMaterials"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Stu_TaskObtainStudentID" name="Obtain student ID card"/>
+
+    <bpmn:subProcess id="Stu_SubStudyPlan" name="Create study plan">
+      <bpmn:startEvent id="SP_Start" name="Study plan started"/>
+      <bpmn:userTask id="SP_MeetAdvisor" name="Meet with academic advisor"/>
+      <bpmn:userTask id="SP_SelectCourses" name="Select courses"/>
+      <bpmn:userTask id="SP_ResolveConflicts" name="Resolve schedule conflicts"/>
+      <bpmn:endEvent id="SP_End" name="Study plan created"/>
+      <bpmn:sequenceFlow id="SPF_1" sourceRef="SP_Start" targetRef="SP_MeetAdvisor"/>
+      <bpmn:sequenceFlow id="SPF_2" sourceRef="SP_MeetAdvisor" targetRef="SP_SelectCourses"/>
+      <bpmn:sequenceFlow id="SPF_3" sourceRef="SP_SelectCourses" targetRef="SP_ResolveConflicts"/>
+      <bpmn:sequenceFlow id="SPF_4" sourceRef="SP_ResolveConflicts" targetRef="SP_End"/>
+    </bpmn:subProcess>
+
+    <bpmn:exclusiveGateway id="Stu_MergeSemester" name="Start of semester"/>
+    <bpmn:userTask id="Stu_TaskAttendClasses" name="Attend classes"/>
+    <bpmn:exclusiveGateway id="Stu_GatewayAddDrop" name="Add or drop courses?"/>
+    <bpmn:userTask id="Stu_TaskAddDropCourses" name="Add or drop courses within add/drop period"/>
+    <bpmn:exclusiveGateway id="Stu_MergeAddDrop" name="Course changes completed"/>
+    <bpmn:intermediateCatchEvent id="Stu_CatchGradesPosted" name="Grades posted">
+      <bpmn:messageEventDefinition id="Stu_CatchGradesPostedDef" messageRef="Msg_GradesPosted"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Stu_TaskReviewGrades" name="Review grades online"/>
+    <bpmn:exclusiveGateway id="Stu_GatewayGrievance" name="Grievance filed?"/>
+
+    <bpmn:subProcess id="Stu_SubAppeal" name="File appeal">
+      <bpmn:startEvent id="AP_Start" name="Appeal started"/>
+      <bpmn:userTask id="AP_SubmitForm" name="Submit appeal form"/>
+      <bpmn:userTask id="AP_MeetCommittee" name="Meet with appeals committee"/>
+      <bpmn:userTask id="AP_AwaitDecision" name="Await appeal decision"/>
+      <bpmn:endEvent id="AP_End" name="Appeal decided"/>
+      <bpmn:sequenceFlow id="APF_1" sourceRef="AP_Start" targetRef="AP_SubmitForm"/>
+      <bpmn:sequenceFlow id="APF_2" sourceRef="AP_SubmitForm" targetRef="AP_MeetCommittee"/>
+      <bpmn:sequenceFlow id="APF_3" sourceRef="AP_MeetCommittee" targetRef="AP_AwaitDecision"/>
+      <bpmn:sequenceFlow id="APF_4" sourceRef="AP_AwaitDecision" targetRef="AP_End"/>
+    </bpmn:subProcess>
+
+    <bpmn:exclusiveGateway id="Stu_MergeGrievance" name="Grievance handling completed"/>
+    <bpmn:exclusiveGateway id="Stu_GatewayStatus" name="Continue, graduate or withdraw?"/>
+    <bpmn:intermediateThrowEvent id="Stu_ThrowGraduation" name="Graduation notice sent">
+      <bpmn:messageEventDefinition id="Stu_ThrowGraduationDef" messageRef="Msg_Graduation"/>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="Stu_EndGraduated" name="Student graduated"/>
+    <bpmn:intermediateThrowEvent id="Stu_ThrowWithdrawal" name="Withdrawal notice sent">
+      <bpmn:messageEventDefinition id="Stu_ThrowWithdrawalDef" messageRef="Msg_Withdrawal"/>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="Stu_EndWithdrawn" name="Student withdrew"/>
+
+    <bpmn:sequenceFlow id="StuF_01" sourceRef="Stu_StartStudent" targetRef="Stu_TaskSubmitApplication"/>
+    <bpmn:sequenceFlow id="StuF_02" sourceRef="Stu_TaskSubmitApplication" targetRef="Stu_MergeNotice"/>
+    <bpmn:sequenceFlow id="StuF_03" sourceRef="Stu_MergeNotice" targetRef="Stu_GatewayAwaitDecision"/>
+    <bpmn:sequenceFlow id="StuF_04" sourceRef="Stu_GatewayAwaitDecision" targetRef="Stu_CatchMissingDocs"/>
+    <bpmn:sequenceFlow id="StuF_05" sourceRef="Stu_GatewayAwaitDecision" targetRef="Stu_CatchAccepted"/>
+    <bpmn:sequenceFlow id="StuF_06" sourceRef="Stu_GatewayAwaitDecision" targetRef="Stu_CatchRejected"/>
+    <bpmn:sequenceFlow id="StuF_07" sourceRef="Stu_CatchMissingDocs" targetRef="Stu_TaskProvideDocuments"/>
+    <bpmn:sequenceFlow id="StuF_08" sourceRef="Stu_TaskProvideDocuments" targetRef="Stu_MergeNotice"/>
+    <bpmn:sequenceFlow id="StuF_09" sourceRef="Stu_CatchRejected" targetRef="Stu_EndRejected"/>
+    <bpmn:sequenceFlow id="StuF_10" sourceRef="Stu_CatchAccepted" targetRef="Stu_TaskConfirmEnrollment"/>
+    <bpmn:sequenceFlow id="StuF_11" sourceRef="Stu_TaskConfirmEnrollment" targetRef="Stu_CatchOrientation"/>
+    <bpmn:sequenceFlow id="StuF_12" sourceRef="Stu_CatchOrientation" targetRef="Stu_TaskObtainStudentID"/>
+    <bpmn:sequenceFlow id="StuF_13" sourceRef="Stu_TaskObtainStudentID" targetRef="Stu_SubStudyPlan"/>
+    <bpmn:sequenceFlow id="StuF_14" sourceRef="Stu_SubStudyPlan" targetRef="Stu_MergeSemester"/>
+    <bpmn:sequenceFlow id="StuF_15" sourceRef="Stu_MergeSemester" targetRef="Stu_TaskAttendClasses"/>
+    <bpmn:sequenceFlow id="StuF_16" sourceRef="Stu_TaskAttendClasses" targetRef="Stu_GatewayAddDrop"/>
+    <bpmn:sequenceFlow id="StuF_17" name="Add or drop" sourceRef="Stu_GatewayAddDrop" targetRef="Stu_TaskAddDropCourses"/>
+    <bpmn:sequenceFlow id="StuF_18" name="No changes" sourceRef="Stu_GatewayAddDrop" targetRef="Stu_MergeAddDrop"/>
+    <bpmn:sequenceFlow id="StuF_19" sourceRef="Stu_TaskAddDropCourses" targetRef="Stu_MergeAddDrop"/>
+    <bpmn:sequenceFlow id="StuF_20" sourceRef="Stu_MergeAddDrop" targetRef="Stu_CatchGradesPosted"/>
+    <bpmn:sequenceFlow id="StuF_21" sourceRef="Stu_CatchGradesPosted" targetRef="Stu_TaskReviewGrades"/>
+    <bpmn:sequenceFlow id="StuF_22" sourceRef="Stu_TaskReviewGrades" targetRef="Stu_GatewayGrievance"/>
+    <bpmn:sequenceFlow id="StuF_23" name="Grievance" sourceRef="Stu_GatewayGrievance" targetRef="Stu_SubAppeal"/>
+    <bpmn:sequenceFlow id="StuF_24" name="No grievance" sourceRef="Stu_GatewayGrievance" targetRef="Stu_MergeGrievance"/>
+    <bpmn:sequenceFlow id="StuF_25" sourceRef="Stu_SubAppeal" targetRef="Stu_MergeGrievance"/>
+    <bpmn:sequenceFlow id="StuF_26" sourceRef="Stu_MergeGrievance" targetRef="Stu_GatewayStatus"/>
+    <bpmn:sequenceFlow id="StuF_27" name="Continue to next semester" sourceRef="Stu_GatewayStatus" targetRef="Stu_MergeSemester"/>
+    <bpmn:sequenceFlow id="StuF_28" name="Graduates" sourceRef="Stu_GatewayStatus" targetRef="Stu_ThrowGraduation"/>
+    <bpmn:sequenceFlow id="StuF_29" name="Withdraws" sourceRef="Stu_GatewayStatus" targetRef="Stu_ThrowWithdrawal"/>
+    <bpmn:sequenceFlow id="StuF_30" sourceRef="Stu_ThrowGraduation" targetRef="Stu_EndGraduated"/>
+    <bpmn:sequenceFlow id="StuF_31" sourceRef="Stu_ThrowWithdrawal" targetRef="Stu_EndWithdrawn"/>
+  </bpmn:process>
+
+  <!-- ================= UNIVERSITY PROCESS ================= -->
+  <bpmn:process id="Process_University" name="University Enrollment Process" isExecutable="false">
+
+    <bpmn:laneSet id="LaneSet_University">
+      <bpmn:lane id="Lane_AdmissionsOffice" name="Admissions Office">
+        <bpmn:flowNodeRef>Uni_StartApplication</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_TaskReviewApplication</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_GatewayDocsCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_SendNotifyMissing</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_CatchMissingItems</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_MergeDocs</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_GatewayEvalSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_GatewayEvalJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_GatewayDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_SendAcceptance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_SendRejection</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_EndRejected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_GatewayConfirm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_CatchConfirmed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_TimerDeadline</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_TaskCancelApplication</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_EndCanceled</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_GatewayEnrollSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_SendOrientation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_GatewayEnrollJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_GatewayIntl</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_AdmissionsCommittee" name="Admissions Committee">
+        <bpmn:flowNodeRef>Uni_TaskEvaluateApplication</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Finance" name="Finance Department">
+        <bpmn:flowNodeRef>Uni_TaskProcessFee</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_IT" name="IT Department">
+        <bpmn:flowNodeRef>Uni_TaskSetupAccounts</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_InternationalOffice" name="International Student Office">
+        <bpmn:flowNodeRef>Uni_TaskVisaProcessing</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_AcademicRecords" name="Academic Records">
+        <bpmn:flowNodeRef>Uni_MergeSemester</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_GatewaySemester</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_TimerSemesterEnd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_TaskPostGrades</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_ThrowGradesPosted</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_CatchGraduation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_CatchWithdrawal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_EndProgramCompleted</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Uni_EndProgramWithdrawn</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Uni_StartApplication" name="Application received">
+      <bpmn:messageEventDefinition id="Uni_StartApplicationDef" messageRef="Msg_ApplicationSubmitted"/>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Uni_TaskReviewApplication" name="Review application and supporting documents"/>
+    <bpmn:exclusiveGateway id="Uni_GatewayDocsCheck" name="Documents complete?"/>
+    <bpmn:sendTask id="Uni_SendNotifyMissing" name="Notify applicant of missing documents"/>
+    <bpmn:intermediateCatchEvent id="Uni_CatchMissingItems" name="Missing items received">
+      <bpmn:messageEventDefinition id="Uni_CatchMissingItemsDef" messageRef="Msg_DocumentsProvided"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Uni_MergeDocs" name="All documents received"/>
+    <bpmn:parallelGateway id="Uni_GatewayEvalSplit" name="Start evaluation and fee processing"/>
+    <bpmn:userTask id="Uni_TaskEvaluateApplication" name="Evaluate application"/>
+    <bpmn:userTask id="Uni_TaskProcessFee" name="Process application fees or waivers"/>
+    <bpmn:parallelGateway id="Uni_GatewayEvalJoin" name="Evaluation and fee processing completed"/>
+    <bpmn:exclusiveGateway id="Uni_GatewayDecision" name="Application accepted?"/>
+    <bpmn:sendTask id="Uni_SendAcceptance" name="Send acceptance letter"/>
+    <bpmn:sendTask id="Uni_SendRejection" name="Send rejection letter"/>
+    <bpmn:endEvent id="Uni_EndRejected" name="Application rejected"/>
+    <bpmn:eventBasedGateway id="Uni_GatewayConfirm" name="Enrollment confirmed before deadline?"/>
+    <bpmn:intermediateCatchEvent id="Uni_CatchConfirmed" name="Enrollment confirmed">
+      <bpmn:messageEventDefinition id="Uni_CatchConfirmedDef" messageRef="Msg_EnrollmentConfirmed"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Uni_TimerDeadline" name="Confirmation deadline reached">
+      <bpmn:timerEventDefinition id="Uni_TimerDeadlineDef"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Uni_TaskCancelApplication" name="Cancel application"/>
+    <bpmn:endEvent id="Uni_EndCanceled" name="Application canceled"/>
+    <bpmn:parallelGateway id="Uni_GatewayEnrollSplit" name="Start enrollment set-up"/>
+    <bpmn:sendTask id="Uni_SendOrientation" name="Send orientation materials"/>
+    <bpmn:userTask id="Uni_TaskSetupAccounts" name="Set up email, online portal and library accounts"/>
+    <bpmn:parallelGateway id="Uni_GatewayEnrollJoin" name="Enrollment set-up completed"/>
+    <bpmn:exclusiveGateway id="Uni_GatewayIntl" name="International student?"/>
+    <bpmn:userTask id="Uni_TaskVisaProcessing" name="Assist with visa processing"/>
+    <bpmn:exclusiveGateway id="Uni_MergeSemester" name="Start of semester"/>
+    <bpmn:eventBasedGateway id="Uni_GatewaySemester" name="Semester end or exit notice"/>
+    <bpmn:intermediateCatchEvent id="Uni_TimerSemesterEnd" name="End of semester">
+      <bpmn:timerEventDefinition id="Uni_TimerSemesterEndDef"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Uni_TaskPostGrades" name="Post grades"/>
+    <bpmn:intermediateThrowEvent id="Uni_ThrowGradesPosted" name="Grades posted">
+      <bpmn:messageEventDefinition id="Uni_ThrowGradesPostedDef" messageRef="Msg_GradesPosted"/>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateCatchEvent id="Uni_CatchGraduation" name="Graduation notice received">
+      <bpmn:messageEventDefinition id="Uni_CatchGraduationDef" messageRef="Msg_Graduation"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Uni_CatchWithdrawal" name="Withdrawal notice received">
+      <bpmn:messageEventDefinition id="Uni_CatchWithdrawalDef" messageRef="Msg_Withdrawal"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="Uni_EndProgramCompleted" name="Student program completed"/>
+    <bpmn:endEvent id="Uni_EndProgramWithdrawn" name="Student enrollment withdrawn"/>
+
+    <bpmn:sequenceFlow id="UniF_01" sourceRef="Uni_StartApplication" targetRef="Uni_TaskReviewApplication"/>
+    <bpmn:sequenceFlow id="UniF_02" sourceRef="Uni_TaskReviewApplication" targetRef="Uni_GatewayDocsCheck"/>
+    <bpmn:sequenceFlow id="UniF_03" name="Documents missing" sourceRef="Uni_GatewayDocsCheck" targetRef="Uni_SendNotifyMissing"/>
+    <bpmn:sequenceFlow id="UniF_04" name="All documents received" sourceRef="Uni_GatewayDocsCheck" targetRef="Uni_MergeDocs"/>
+    <bpmn:sequenceFlow id="UniF_05" sourceRef="Uni_SendNotifyMissing" targetRef="Uni_CatchMissingItems"/>
+    <bpmn:sequenceFlow id="UniF_06" sourceRef="Uni_CatchMissingItems" targetRef="Uni_MergeDocs"/>
+    <bpmn:sequenceFlow id="UniF_07" sourceRef="Uni_MergeDocs" targetRef="Uni_GatewayEvalSplit"/>
+    <bpmn:sequenceFlow id="UniF_08" sourceRef="Uni_GatewayEvalSplit" targetRef="Uni_TaskEvaluateApplication"/>
+    <bpmn:sequenceFlow id="UniF_09" sourceRef="Uni_GatewayEvalSplit" targetRef="Uni_TaskProcessFee"/>
+    <bpmn:sequenceFlow id="UniF_10" sourceRef="Uni_TaskEvaluateApplication" targetRef="Uni_GatewayEvalJoin"/>
+    <bpmn:sequenceFlow id="UniF_11" sourceRef="Uni_TaskProcessFee" targetRef="Uni_GatewayEvalJoin"/>
+    <bpmn:sequenceFlow id="UniF_12" sourceRef="Uni_GatewayEvalJoin" targetRef="Uni_GatewayDecision"/>
+    <bpmn:sequenceFlow id="UniF_13" name="Accepted" sourceRef="Uni_GatewayDecision" targetRef="Uni_SendAcceptance"/>
+    <bpmn:sequenceFlow id="UniF_14" name="Rejected" sourceRef="Uni_GatewayDecision" targetRef="Uni_SendRejection"/>
+    <bpmn:sequenceFlow id="UniF_15" sourceRef="Uni_SendRejection" targetRef="Uni_EndRejected"/>
+    <bpmn:sequenceFlow id="UniF_16" sourceRef="Uni_SendAcceptance" targetRef="Uni_GatewayConfirm"/>
+    <bpmn:sequenceFlow id="UniF_17" sourceRef="Uni_GatewayConfirm" targetRef="Uni_CatchConfirmed"/>
+    <bpmn:sequenceFlow id="UniF_18" sourceRef="Uni_GatewayConfirm" targetRef="Uni_TimerDeadline"/>
+    <bpmn:sequenceFlow id="UniF_19" sourceRef="Uni_TimerDeadline" targetRef="Uni_TaskCancelApplication"/>
+    <bpmn:sequenceFlow id="UniF_20" sourceRef="Uni_TaskCancelApplication" targetRef="Uni_EndCanceled"/>
+    <bpmn:sequenceFlow id="UniF_21" sourceRef="Uni_CatchConfirmed" targetRef="Uni_GatewayEnrollSplit"/>
+    <bpmn:sequenceFlow id="UniF_22" sourceRef="Uni_GatewayEnrollSplit" targetRef="Uni_SendOrientation"/>
+    <bpmn:sequenceFlow id="UniF_23" sourceRef="Uni_GatewayEnrollSplit" targetRef="Uni_TaskSetupAccounts"/>
+    <bpmn:sequenceFlow id="UniF_24" sourceRef="Uni_SendOrientation" targetRef="Uni_GatewayEnrollJoin"/>
+    <bpmn:sequenceFlow id="UniF_25" sourceRef="Uni_TaskSetupAccounts" targetRef="Uni_GatewayEnrollJoin"/>
+    <bpmn:sequenceFlow id="UniF_26" sourceRef="Uni_GatewayEnrollJoin" targetRef="Uni_GatewayIntl"/>
+    <bpmn:sequenceFlow id="UniF_27" name="International student" sourceRef="Uni_GatewayIntl" targetRef="Uni_TaskVisaProcessing"/>
+    <bpmn:sequenceFlow id="UniF_28" name="Domestic student" sourceRef="Uni_GatewayIntl" targetRef="Uni_MergeSemester"/>
+    <bpmn:sequenceFlow id="UniF_29" sourceRef="Uni_TaskVisaProcessing" targetRef="Uni_MergeSemester"/>
+    <bpmn:sequenceFlow id="UniF_30" sourceRef="Uni_MergeSemester" targetRef="Uni_GatewaySemester"/>
+    <bpmn:sequenceFlow id="UniF_31" sourceRef="Uni_GatewaySemester" targetRef="Uni_TimerSemesterEnd"/>
+    <bpmn:sequenceFlow id="UniF_32" sourceRef="Uni_GatewaySemester" targetRef="Uni_CatchGraduation"/>
+    <bpmn:sequenceFlow id="UniF_33" sourceRef="Uni_GatewaySemester" targetRef="Uni_CatchWithdrawal"/>
+    <bpmn:sequenceFlow id="UniF_34" sourceRef="Uni_TimerSemesterEnd" targetRef="Uni_TaskPostGrades"/>
+    <bpmn:sequenceFlow id="UniF_35" sourceRef="Uni_TaskPostGrades" targetRef="Uni_ThrowGradesPosted"/>
+    <bpmn:sequenceFlow id="UniF_36" sourceRef="Uni_ThrowGradesPosted" targetRef="Uni_MergeSemester"/>
+    <bpmn:sequenceFlow id="UniF_37" sourceRef="Uni_CatchGraduation" targetRef="Uni_EndProgramCompleted"/>
+    <bpmn:sequenceFlow id="UniF_38" sourceRef="Uni_CatchWithdrawal" targetRef="Uni_EndProgramWithdrawn"/>
+  </bpmn:process>
+
+</bpmn:definitions>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_VacationRequest" targetNamespace="http://example.com/bpmn/vacation-request">
+  <bpmn:process id="Process_VacationRequest" name="Vacation Request" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_RequestSubmitted" name="Vacation request submitted">
+      <bpmn:outgoing>Flow_Start_Register</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_RegisterRequest" name="Register vacation request">
+      <bpmn:incoming>Flow_Start_Register</bpmn:incoming>
+      <bpmn:outgoing>Flow_Register_Receive</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ReceiveRequest" name="Receive request (immediate supervisor)">
+      <bpmn:incoming>Flow_Register_Receive</bpmn:incoming>
+      <bpmn:outgoing>Flow_Receive_Decide</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ReviewRequest" name="Approve or reject request (supervisor)">
+      <bpmn:incoming>Flow_Receive_Decide</bpmn:incoming>
+      <bpmn:outgoing>Flow_Review_Outcome</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_RequestOutcome" name="Request approved?" gatewayDirection="Diverging">
+      <bpmn:incoming>Flow_Review_Outcome</bpmn:incoming>
+      <bpmn:outgoing>Flow_Outcome_Rejected</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Outcome_Approved</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ReturnRequest" name="Return rejected request to employee">
+      <bpmn:incoming>Flow_Outcome_Rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_Return_ReviewReasons</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ReviewReasons" name="Review rejection reasons (employee)">
+      <bpmn:incoming>Flow_Return_ReviewReasons</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReviewReasons_EndRejected</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_Rejected" name="Rejection reviewed">
+      <bpmn:incoming>Flow_ReviewReasons_EndRejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_GenerateNotification" name="Generate notification for Human Resources">
+      <bpmn:incoming>Flow_Outcome_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_Notification_Procedures</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CompleteProcedures" name="Complete management procedures (Human Resources Representative)">
+      <bpmn:incoming>Flow_Notification_Procedures</bpmn:incoming>
+      <bpmn:outgoing>Flow_Procedures_EndApproved</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_Approved" name="Management procedures completed">
+      <bpmn:incoming>Flow_Procedures_EndApproved</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Register" sourceRef="StartEvent_RequestSubmitted" targetRef="Task_RegisterRequest"/>
+    <bpmn:sequenceFlow id="Flow_Register_Receive" sourceRef="Task_RegisterRequest" targetRef="Task_ReceiveRequest"/>
+    <bpmn:sequenceFlow id="Flow_Receive_Decide" sourceRef="Task_ReceiveRequest" targetRef="Task_ReviewRequest"/>
+    <bpmn:sequenceFlow id="Flow_Review_Outcome" sourceRef="Task_ReviewRequest" targetRef="Gateway_RequestOutcome"/>
+    <bpmn:sequenceFlow id="Flow_Outcome_Rejected" name="Rejected" sourceRef="Gateway_RequestOutcome" targetRef="Task_ReturnRequest">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">rejected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Outcome_Approved" name="Approved" sourceRef="Gateway_RequestOutcome" targetRef="Task_GenerateNotification">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">approved</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Return_ReviewReasons" sourceRef="Task_ReturnRequest" targetRef="Task_ReviewReasons"/>
+    <bpmn:sequenceFlow id="Flow_ReviewReasons_EndRejected" sourceRef="Task_ReviewReasons" targetRef="EndEvent_Rejected"/>
+    <bpmn:sequenceFlow id="Flow_Notification_Procedures" sourceRef="Task_GenerateNotification" targetRef="Task_CompleteProcedures"/>
+    <bpmn:sequenceFlow id="Flow_Procedures_EndApproved" sourceRef="Task_CompleteProcedures" targetRef="EndEvent_Approved"/>
+  </bpmn:process>
+</bpmn:definitions>

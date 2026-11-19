@@ -1,0 +1,89 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_WorkAccident" targetNamespace="http://example.org/bpmn/work-accident">
+  <bpmn:collaboration id="Collaboration_WorkAccident" name="Work Accident">
+    <bpmn:participant id="Participant_Insured" name="Insured person" processRef="Process_Insured"/>
+    <bpmn:participant id="Participant_Employer" name="Employer" processRef="Process_Employer"/>
+    <bpmn:participant id="Participant_School" name="School, educational facility or university" processRef="Process_School"/>
+    <bpmn:participant id="Participant_AccidentInsurer" name="Accident insurance provider"/>
+    <bpmn:participant id="Participant_PrivateInsurer" name="Private insurance provider"/>
+    <bpmn:participant id="Participant_Directorate" name="Competent directorate"/>
+    <bpmn:participant id="Participant_LabourInspectorate" name="Labour Inspectorate"/>
+
+    <bpmn:messageFlow id="MessageFlow_InformEmployer" name="Inform employer" sourceRef="SendTask_InformEmployer" targetRef="StartEvent_EmployerReceived"/>
+    <bpmn:messageFlow id="MessageFlow_SelfReportInsurer" name="Report accident (self-employed)" sourceRef="SendTask_SelfReportInsurer" targetRef="Participant_AccidentInsurer"/>
+    <bpmn:messageFlow id="MessageFlow_ReportDirectorate" name="Report accident" sourceRef="SendTask_ReportDirectorate" targetRef="Participant_Directorate"/>
+    <bpmn:messageFlow id="MessageFlow_ReportPrivateInsurer" name="Report accident in writing" sourceRef="SendTask_ReportPrivateInsurer" targetRef="Participant_PrivateInsurer"/>
+    <bpmn:messageFlow id="MessageFlow_ReportLabourInspectorate" name="Report fatality or serious injury" sourceRef="SendTask_ReportLabourInspectorate" targetRef="Participant_LabourInspectorate"/>
+    <bpmn:messageFlow id="MessageFlow_EmployerReportInsurer" name="Report accident" sourceRef="SendTask_EmployerReportInsurer" targetRef="Participant_AccidentInsurer"/>
+    <bpmn:messageFlow id="MessageFlow_SchoolReportInsurer" name="Report accident in triplicate" sourceRef="SendTask_SchoolReport" targetRef="Participant_AccidentInsurer"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Insured" name="Insured person process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_IncidentOccurs" name="Work accident, near miss or safety defect occurs"/>
+    <bpmn:sendTask id="SendTask_InformEmployer" name="Inform employer immediately"/>
+    <bpmn:exclusiveGateway id="Gateway_SelfEmployedCheck" name="Self-employed?" default="Flow_SelfNotSelfEmployed"/>
+    <bpmn:sendTask id="SendTask_SelfReportInsurer" name="Report accident to accident insurance provider in good time"/>
+    <bpmn:exclusiveGateway id="Gateway_StudentCheck" name="Student or schoolchild?" default="Flow_NotStudent"/>
+    <bpmn:sendTask id="SendTask_ReportDirectorate" name="Report accident to competent directorate"/>
+    <bpmn:exclusiveGateway id="Gateway_PrivateCheck" name="Private insurance?" default="Flow_NoPrivateInsurance"/>
+    <bpmn:sendTask id="SendTask_ReportPrivateInsurer" name="Report accident in writing immediately to private insurance provider (fatalities within three days)"/>
+    <bpmn:endEvent id="EndEvent_PrivateInsurerReported" name="Private insurance provider reported"/>
+    <bpmn:endEvent id="EndEvent_NoPrivateReport" name="No private insurance report required"/>
+
+    <bpmn:sequenceFlow id="Flow_IncidentToInform" sourceRef="StartEvent_IncidentOccurs" targetRef="SendTask_InformEmployer"/>
+    <bpmn:sequenceFlow id="Flow_InformToSelfCheck" sourceRef="SendTask_InformEmployer" targetRef="Gateway_SelfEmployedCheck"/>
+    <bpmn:sequenceFlow id="Flow_SelfEmployed" name="Yes" sourceRef="Gateway_SelfEmployedCheck" targetRef="SendTask_SelfReportInsurer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${isSelfEmployed}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SelfNotSelfEmployed" name="No" sourceRef="Gateway_SelfEmployedCheck" targetRef="Gateway_StudentCheck"/>
+    <bpmn:sequenceFlow id="Flow_SelfReportToStudentCheck" sourceRef="SendTask_SelfReportInsurer" targetRef="Gateway_StudentCheck"/>
+    <bpmn:sequenceFlow id="Flow_Student" name="Yes" sourceRef="Gateway_StudentCheck" targetRef="SendTask_ReportDirectorate">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${isStudentOrSchoolchild}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotStudent" name="No" sourceRef="Gateway_StudentCheck" targetRef="Gateway_PrivateCheck"/>
+    <bpmn:sequenceFlow id="Flow_DirectorateToPrivateCheck" sourceRef="SendTask_ReportDirectorate" targetRef="Gateway_PrivateCheck"/>
+    <bpmn:sequenceFlow id="Flow_PrivateInsurance" name="Yes" sourceRef="Gateway_PrivateCheck" targetRef="SendTask_ReportPrivateInsurer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${hasPrivateInsurance}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoPrivateInsurance" name="No" sourceRef="Gateway_PrivateCheck" targetRef="EndEvent_NoPrivateReport"/>
+    <bpmn:sequenceFlow id="Flow_PrivateReportEnd" sourceRef="SendTask_ReportPrivateInsurer" targetRef="EndEvent_PrivateInsurerReported"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Employer" name="Employer process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_EmployerReceived" name="Accident or near miss reported by employee">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_EmployerReceived"/>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_LabourCheck" name="Fatality or serious injury, not reported to emergency services?" default="Flow_LabourNotRequired"/>
+    <bpmn:sendTask id="SendTask_ReportLabourInspectorate" name="Report to Labour Inspectorate immediately"/>
+    <bpmn:exclusiveGateway id="Gateway_InsurerCheck" name="Insured person killed or unable to work for three days or more?" default="Flow_InsurerNotRequired"/>
+    <bpmn:sendTask id="SendTask_EmployerReportInsurer" name="Report to accident insurance provider within five days"/>
+    <bpmn:endEvent id="EndEvent_InsurerReportedByEmployer" name="Accident reported to accident insurance provider"/>
+    <bpmn:endEvent id="EndEvent_NoInsurerReport" name="No accident insurance report required"/>
+
+    <bpmn:sequenceFlow id="Flow_ReceivedToLabourCheck" sourceRef="StartEvent_EmployerReceived" targetRef="Gateway_LabourCheck"/>
+    <bpmn:sequenceFlow id="Flow_LabourRequired" name="Yes" sourceRef="Gateway_LabourCheck" targetRef="SendTask_ReportLabourInspectorate">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${isFatalOrSeriousNotReportedToEmergency}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_LabourNotRequired" name="No" sourceRef="Gateway_LabourCheck" targetRef="Gateway_InsurerCheck"/>
+    <bpmn:sequenceFlow id="Flow_LabourReportToInsurerCheck" sourceRef="SendTask_ReportLabourInspectorate" targetRef="Gateway_InsurerCheck"/>
+    <bpmn:sequenceFlow id="Flow_InsurerRequired" name="Yes" sourceRef="Gateway_InsurerCheck" targetRef="SendTask_EmployerReportInsurer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${isKilledOrIncapacitatedThreeDays}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_InsurerNotRequired" name="No" sourceRef="Gateway_InsurerCheck" targetRef="EndEvent_NoInsurerReport"/>
+    <bpmn:sequenceFlow id="Flow_InsurerReportEnd" sourceRef="SendTask_EmployerReportInsurer" targetRef="EndEvent_InsurerReportedByEmployer"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_School" name="School process" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_SchoolAccident" name="Work accident of insured pupil, student or trainee becomes known"/>
+    <bpmn:exclusiveGateway id="Gateway_SchoolInjuryCheck" name="Insured person physically injured or killed?" default="Flow_SchoolNoInjury"/>
+    <bpmn:sendTask id="SendTask_SchoolReport" name="Report accident in triplicate to accident insurance provider within five days"/>
+    <bpmn:endEvent id="EndEvent_SchoolReported" name="Report submitted to accident insurance provider"/>
+    <bpmn:endEvent id="EndEvent_SchoolNoReport" name="No school report required"/>
+
+    <bpmn:sequenceFlow id="Flow_SchoolStart" sourceRef="StartEvent_SchoolAccident" targetRef="Gateway_SchoolInjuryCheck"/>
+    <bpmn:sequenceFlow id="Flow_SchoolInjury" name="Yes" sourceRef="Gateway_SchoolInjuryCheck" targetRef="SendTask_SchoolReport">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${isPhysicallyInjuredOrKilled}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SchoolNoInjury" name="No" sourceRef="Gateway_SchoolInjuryCheck" targetRef="EndEvent_SchoolNoReport"/>
+    <bpmn:sequenceFlow id="Flow_SchoolReportEnd" sourceRef="SendTask_SchoolReport" targetRef="EndEvent_SchoolReported"/>
+  </bpmn:process>
+</bpmn:definitions>

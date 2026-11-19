@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_FindAJob"
+                  targetNamespace="http://example.com/bpmn/find-a-job">
+  <bpmn:message id="Message_Application" name="Job application"/>
+  <bpmn:message id="Message_Confirmation" name="Application receipt confirmation"/>
+  <bpmn:message id="Message_JobOffer" name="Potential job offer"/>
+  <bpmn:message id="Message_ProbationComplete" name="Probation phase completed"/>
+  <bpmn:message id="Message_EmploymentOutcome" name="Employment outcome"/>
+
+  <bpmn:collaboration id="Collaboration_FindAJob">
+    <bpmn:participant id="Participant_Applicant" name="Job applicant" processRef="Process_Applicant"/>
+    <bpmn:participant id="Participant_Companies" name="Companies" processRef="Process_Companies"/>
+    <bpmn:messageFlow id="MessageFlow_Application" name="Job application" messageRef="Message_Application" sourceRef="Task_SubmitApplication" targetRef="Start_ApplicationReceived"/>
+    <bpmn:messageFlow id="MessageFlow_Confirmation" name="Application receipt confirmation" messageRef="Message_Confirmation" sourceRef="Task_SendConfirmation" targetRef="Task_ReceiveConfirmation"/>
+    <bpmn:messageFlow id="MessageFlow_JobOffer" name="Potential job offer" messageRef="Message_JobOffer" sourceRef="Task_SendOffer" targetRef="Task_ReceiveOffer"/>
+    <bpmn:messageFlow id="MessageFlow_ProbationComplete" name="Probation phase completed" messageRef="Message_ProbationComplete" sourceRef="Task_NotifyProbationComplete" targetRef="Task_ReceiveProbationComplete"/>
+    <bpmn:messageFlow id="MessageFlow_EmploymentOutcome" name="Employment outcome" messageRef="Message_EmploymentOutcome" sourceRef="Task_SendEmploymentOutcome" targetRef="Task_ReceiveEmploymentOutcome"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Applicant" name="Find a Job — Job applicant" isExecutable="false">
+    <bpmn:startEvent id="Start_JobSearch" name="Start job search"/>
+    <bpmn:sendTask id="Task_SubmitApplication" name="Submit job application" messageRef="Message_Application"/>
+    <bpmn:receiveTask id="Task_ReceiveConfirmation" name="Receive application receipt confirmation" messageRef="Message_Confirmation"/>
+    <bpmn:task id="Task_ReportApplications" name="Regularly report companies applied to"/>
+    <bpmn:receiveTask id="Task_ReceiveOffer" name="Receive potential job offer" messageRef="Message_JobOffer"/>
+    <bpmn:exclusiveGateway id="Gateway_InterviewSplit" name="Negotiate a job interview?"/>
+    <bpmn:task id="Task_NegotiateInterview" name="Negotiate job interview"/>
+    <bpmn:exclusiveGateway id="Gateway_InterviewMerge" name="Continue after interview choice"/>
+    <bpmn:task id="Task_EnterProbation" name="Enter probation phase"/>
+    <bpmn:sendTask id="Task_NotifyProbationComplete" name="Notify company that probation is complete" messageRef="Message_ProbationComplete"/>
+    <bpmn:task id="Task_RateCompany" name="Rate company"/>
+    <bpmn:parallelGateway id="Gateway_RatingSplit" name="Continue with review visibility and employment outcome"/>
+    <bpmn:intermediateCatchEvent id="Event_OneYear" name="One year passes">
+      <bpmn:timerEventDefinition id="TimerDefinition_OneYear">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P1Y</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End_ReviewVisible" name="Company review becomes visible to job applicants"/>
+    <bpmn:receiveTask id="Task_ReceiveEmploymentOutcome" name="Receive employment outcome" messageRef="Message_EmploymentOutcome"/>
+    <bpmn:exclusiveGateway id="Gateway_JobPermanent" name="Did the job become permanent?" default="Flow_JobNotPermanent"/>
+    <bpmn:exclusiveGateway id="Gateway_CompanyRating" name="Rated the company C or less?" default="Flow_RatingAboveC"/>
+    <bpmn:endEvent id="End_PermanentJob" name="Permanent job; process ends"/>
+
+    <bpmn:sequenceFlow id="Flow_A1" sourceRef="Start_JobSearch" targetRef="Task_SubmitApplication"/>
+    <bpmn:sequenceFlow id="Flow_A2" sourceRef="Task_SubmitApplication" targetRef="Task_ReceiveConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_A3" sourceRef="Task_ReceiveConfirmation" targetRef="Task_ReportApplications"/>
+    <bpmn:sequenceFlow id="Flow_A4" sourceRef="Task_ReportApplications" targetRef="Task_ReceiveOffer"/>
+    <bpmn:sequenceFlow id="Flow_A5" sourceRef="Task_ReceiveOffer" targetRef="Gateway_InterviewSplit"/>
+    <bpmn:sequenceFlow id="Flow_InterviewYes" name="Interview negotiated" sourceRef="Gateway_InterviewSplit" targetRef="Task_NegotiateInterview">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">interviewIsNegotiated</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_InterviewNo" name="No interview negotiated" sourceRef="Gateway_InterviewSplit" targetRef="Gateway_InterviewMerge"/>
+    <bpmn:sequenceFlow id="Flow_InterviewToMerge" sourceRef="Task_NegotiateInterview" targetRef="Gateway_InterviewMerge"/>
+    <bpmn:sequenceFlow id="Flow_A6" sourceRef="Gateway_InterviewMerge" targetRef="Task_EnterProbation"/>
+    <bpmn:sequenceFlow id="Flow_A7" sourceRef="Task_EnterProbation" targetRef="Task_NotifyProbationComplete"/>
+    <bpmn:sequenceFlow id="Flow_A8" sourceRef="Task_NotifyProbationComplete" targetRef="Task_RateCompany"/>
+    <bpmn:sequenceFlow id="Flow_A9" sourceRef="Task_RateCompany" targetRef="Gateway_RatingSplit"/>
+    <bpmn:sequenceFlow id="Flow_A10" sourceRef="Gateway_RatingSplit" targetRef="Event_OneYear"/>
+    <bpmn:sequenceFlow id="Flow_A11" sourceRef="Event_OneYear" targetRef="End_ReviewVisible"/>
+    <bpmn:sequenceFlow id="Flow_A12" sourceRef="Gateway_RatingSplit" targetRef="Task_ReceiveEmploymentOutcome"/>
+    <bpmn:sequenceFlow id="Flow_A13" sourceRef="Task_ReceiveEmploymentOutcome" targetRef="Gateway_JobPermanent"/>
+    <bpmn:sequenceFlow id="Flow_JobPermanent" name="Job becomes permanent" sourceRef="Gateway_JobPermanent" targetRef="Gateway_CompanyRating">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">jobIsPermanent</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_JobNotPermanent" name="Job does not become permanent" sourceRef="Gateway_JobPermanent" targetRef="Task_ReportApplications"/>
+    <bpmn:sequenceFlow id="Flow_RatingCLess" name="C or less" sourceRef="Gateway_CompanyRating" targetRef="Task_ReceiveOffer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">companyRatingIsCOrLess</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_RatingAboveC" name="Above C" sourceRef="Gateway_CompanyRating" targetRef="End_PermanentJob"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Companies" name="Company application and employment workflow" isExecutable="false">
+    <bpmn:startEvent id="Start_ApplicationReceived" name="Job application received">
+      <bpmn:messageEventDefinition id="MessageDefinition_ApplicationReceived" messageRef="Message_Application"/>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_SendConfirmation" name="Confirm receipt of application" messageRef="Message_Confirmation"/>
+    <bpmn:task id="Task_RateApplication" name="Rate job application"/>
+    <bpmn:exclusiveGateway id="Gateway_WantsApplicant" name="Does the company want the applicant to work for it?" default="Flow_NoOffer"/>
+    <bpmn:endEvent id="End_NoOffer" name="Company does not want the applicant to work for it"/>
+    <bpmn:sendTask id="Task_SendOffer" name="Send potential job offer" messageRef="Message_JobOffer"/>
+    <bpmn:receiveTask id="Task_ReceiveProbationComplete" name="Receive probation phase completion" messageRef="Message_ProbationComplete"/>
+    <bpmn:task id="Task_RateApplicant" name="Rate job applicant"/>
+    <bpmn:exclusiveGateway id="Gateway_JobBecomesPermanent" name="Does the job become permanent?" default="Flow_NotPermanent"/>
+    <bpmn:sendTask id="Task_SendEmploymentOutcome" name="Send employment outcome" messageRef="Message_EmploymentOutcome"/>
+    <bpmn:endEvent id="End_EmploymentOutcomeSent" name="Employment outcome sent"/>
+
+    <bpmn:sequenceFlow id="Flow_C1" sourceRef="Start_ApplicationReceived" targetRef="Task_SendConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_C2" sourceRef="Task_SendConfirmation" targetRef="Task_RateApplication"/>
+    <bpmn:sequenceFlow id="Flow_C3" sourceRef="Task_RateApplication" targetRef="Gateway_WantsApplicant"/>
+    <bpmn:sequenceFlow id="Flow_OfferWanted" name="Company wants applicant to work for it" sourceRef="Gateway_WantsApplicant" targetRef="Task_SendOffer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">companyWantsApplicant</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoOffer" name="Company does not want the applicant" sourceRef="Gateway_WantsApplicant" targetRef="End_NoOffer"/>
+    <bpmn:sequenceFlow id="Flow_C4" sourceRef="Task_SendOffer" targetRef="Task_ReceiveProbationComplete"/>
+    <bpmn:sequenceFlow id="Flow_C5" sourceRef="Task_ReceiveProbationComplete" targetRef="Task_RateApplicant"/>
+    <bpmn:sequenceFlow id="Flow_C6" sourceRef="Task_RateApplicant" targetRef="Gateway_JobBecomesPermanent"/>
+    <bpmn:sequenceFlow id="Flow_Permanent" name="Job becomes permanent" sourceRef="Gateway_JobBecomesPermanent" targetRef="Task_SendEmploymentOutcome">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">jobIsPermanent</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotPermanent" name="Job does not become permanent" sourceRef="Gateway_JobBecomesPermanent" targetRef="Task_SendEmploymentOutcome"/>
+    <bpmn:sequenceFlow id="Flow_C7" sourceRef="Task_SendEmploymentOutcome" targetRef="End_EmploymentOutcomeSent"/>
+  </bpmn:process>
+</bpmn:definitions>

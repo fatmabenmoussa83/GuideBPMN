@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  targetNamespace="http://example.com/bpmn/work-and-live-in-austria">
+  <bpmn:message id="Message_InformationRequest" name="Request for visa information"/>
+  <bpmn:collaboration id="Collaboration_WorkAndLive">
+    <bpmn:participant id="Participant_Applicant" name="Applicant" processRef="Process_Applicant"/>
+    <bpmn:participant id="Participant_Representation" name="Competent representation office"/>
+    <bpmn:messageFlow id="MessageFlow_InformationRequest" name="Request for visa information" sourceRef="Task_ContactRepresentation" targetRef="Participant_Representation" messageRef="Message_InformationRequest"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Applicant" name="Work and Live in Austria" isExecutable="false">
+    <bpmn:startEvent id="Start_Plan" name="Plan work and life in Austria"/>
+    <bpmn:parallelGateway id="Gateway_SetupSplit" name="Start accommodation, bank and visa steps"/>
+    <bpmn:task id="Task_NegotiateAccommodation" name="Negotiate accommodation"/>
+    <bpmn:task id="Task_NegotiateBankAccount" name="Negotiate a bank account"/>
+
+    <bpmn:subProcess id="SubProcess_VisaCycle" name="Visa / Rot-Weiss-Rot Card requirements cycle (every x months)">
+      <bpmn:standardLoopCharacteristics testBefore="false">
+        <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">A further visa / Rot-Weiss-Rot Card cycle is due after x months</bpmn:loopCondition>
+      </bpmn:standardLoopCharacteristics>
+      <bpmn:startEvent id="Start_VisaCycle" name="Begin visa requirements cycle"/>
+      <bpmn:task id="Task_DetermineCategory" name="Determine visa category"/>
+      <bpmn:exclusiveGateway id="Gateway_Category" name="Category A/C or type D?"/>
+      <bpmn:task id="Task_DetermineMainDestination" name="Determine Schengen main destination by length and purpose of stay"/>
+      <bpmn:exclusiveGateway id="Gateway_MainDestination" name="Can the main destination be determined?"/>
+      <bpmn:task id="Task_SelectMainDestination" name="Select the country of the main destination"/>
+      <bpmn:task id="Task_SelectFirstEntry" name="Select the country of first entry into the Schengen area"/>
+      <bpmn:exclusiveGateway id="Gateway_DestinationMerge" name="Continue with responsible country"/>
+      <bpmn:task id="Task_CompetenceAC" name="Identify the representation for the responsible country and the applicant's consular district of legal residence"/>
+      <bpmn:exclusiveGateway id="Gateway_Registered" name="Legally resident but not registered in the competent consular district?"/>
+      <bpmn:task id="Task_JustifyExceptionalCompetence" name="Provide justification for applying to that consulate"/>
+      <bpmn:exclusiveGateway id="Gateway_ACMerge" name="Continue with category A/C competence"/>
+      <bpmn:task id="Task_CompetenceD" name="Identify the competent Austrian representation by place of residence and centre of interest, verifiable by documents such as registration forms, residence permits or visas"/>
+      <bpmn:exclusiveGateway id="Gateway_CompetenceMerge" name="Continue with competent representation"/>
+      <bpmn:task id="Task_ConsultOfficeList" name="Consult the BMEIA list of representation offices, addresses, opening hours and special requirements"/>
+      <bpmn:sendTask id="Task_ContactRepresentation" name="Contact the representation in advance for more information"/>
+      <bpmn:task id="Task_CompleteForm" name="Prepare the visa application form"/>
+      <bpmn:task id="Task_CheckTravelDocument" name="Check that the travel document is valid in Austria, issued within the last ten years, has at least two empty pages, and remains valid at least three months beyond the visa duration"/>
+      <bpmn:task id="Task_PreparePhoto" name="Prepare a passport photo meeting the criteria in portrait format, 35 x 45 mm"/>
+      <bpmn:task id="Task_ObtainInsurance" name="Obtain fully comprehensive travel health insurance for the planned stay, with 30,000 Euro cover throughout the Schengen area"/>
+      <bpmn:task id="Task_ProveMeans" name="Prepare proof of sufficient means for the intended stay and return journey"/>
+      <bpmn:task id="Task_PrepareOtherEvidence" name="Prepare other evidence requested by the authorities, noting that requirements may vary by location"/>
+      <bpmn:task id="Task_CheckRefusalGrounds" name="Check for other grounds for refusal, including a residence prohibition or a Schengen alert"/>
+      <bpmn:endEvent id="End_VisaCycle" name="Visa requirements cycle reviewed"/>
+
+      <bpmn:sequenceFlow id="Flow_V1" sourceRef="Start_VisaCycle" targetRef="Task_DetermineCategory"/>
+      <bpmn:sequenceFlow id="Flow_V2" sourceRef="Task_DetermineCategory" targetRef="Gateway_Category"/>
+      <bpmn:sequenceFlow id="Flow_V3" sourceRef="Gateway_Category" targetRef="Task_DetermineMainDestination" name="Category A/C">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">The visa category is A or C</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_V4" sourceRef="Gateway_Category" targetRef="Task_CompetenceD" name="Type D">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">The visa category is type D</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_V5" sourceRef="Task_DetermineMainDestination" targetRef="Gateway_MainDestination"/>
+      <bpmn:sequenceFlow id="Flow_V6" sourceRef="Gateway_MainDestination" targetRef="Task_SelectMainDestination" name="Yes">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">The main destination can be determined</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_V7" sourceRef="Gateway_MainDestination" targetRef="Task_SelectFirstEntry" name="No">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">The main destination cannot be determined</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_V8" sourceRef="Task_SelectMainDestination" targetRef="Gateway_DestinationMerge"/>
+      <bpmn:sequenceFlow id="Flow_V9" sourceRef="Task_SelectFirstEntry" targetRef="Gateway_DestinationMerge"/>
+      <bpmn:sequenceFlow id="Flow_V10" sourceRef="Gateway_DestinationMerge" targetRef="Task_CompetenceAC"/>
+      <bpmn:sequenceFlow id="Flow_V11" sourceRef="Task_CompetenceAC" targetRef="Gateway_Registered"/>
+      <bpmn:sequenceFlow id="Flow_V12" sourceRef="Gateway_Registered" targetRef="Task_JustifyExceptionalCompetence" name="Yes">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">The applicant is legally resident but not registered in the competent consular district</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_V13" sourceRef="Gateway_Registered" targetRef="Gateway_ACMerge" name="No">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">The applicant is registered in the competent consular district</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_V14" sourceRef="Task_JustifyExceptionalCompetence" targetRef="Gateway_ACMerge"/>
+      <bpmn:sequenceFlow id="Flow_V15" sourceRef="Gateway_ACMerge" targetRef="Gateway_CompetenceMerge"/>
+      <bpmn:sequenceFlow id="Flow_V16" sourceRef="Task_CompetenceD" targetRef="Gateway_CompetenceMerge"/>
+      <bpmn:sequenceFlow id="Flow_V17" sourceRef="Gateway_CompetenceMerge" targetRef="Task_ConsultOfficeList"/>
+      <bpmn:sequenceFlow id="Flow_V18" sourceRef="Task_ConsultOfficeList" targetRef="Task_ContactRepresentation"/>
+      <bpmn:sequenceFlow id="Flow_V19" sourceRef="Task_ContactRepresentation" targetRef="Task_CompleteForm"/>
+      <bpmn:sequenceFlow id="Flow_V20" sourceRef="Task_CompleteForm" targetRef="Task_CheckTravelDocument"/>
+      <bpmn:sequenceFlow id="Flow_V21" sourceRef="Task_CheckTravelDocument" targetRef="Task_PreparePhoto"/>
+      <bpmn:sequenceFlow id="Flow_V22" sourceRef="Task_PreparePhoto" targetRef="Task_ObtainInsurance"/>
+      <bpmn:sequenceFlow id="Flow_V23" sourceRef="Task_ObtainInsurance" targetRef="Task_ProveMeans"/>
+      <bpmn:sequenceFlow id="Flow_V24" sourceRef="Task_ProveMeans" targetRef="Task_PrepareOtherEvidence"/>
+      <bpmn:sequenceFlow id="Flow_V25" sourceRef="Task_PrepareOtherEvidence" targetRef="Task_CheckRefusalGrounds"/>
+      <bpmn:sequenceFlow id="Flow_V26" sourceRef="Task_CheckRefusalGrounds" targetRef="End_VisaCycle"/>
+    </bpmn:subProcess>
+
+    <bpmn:parallelGateway id="Gateway_SetupJoin" name="Accommodation, bank and visa steps complete"/>
+    <bpmn:endEvent id="End_Process" name="Accommodation, bank and visa requirements steps complete"/>
+
+    <bpmn:sequenceFlow id="Flow_A1" sourceRef="Start_Plan" targetRef="Gateway_SetupSplit"/>
+    <bpmn:sequenceFlow id="Flow_A2" sourceRef="Gateway_SetupSplit" targetRef="Task_NegotiateAccommodation"/>
+    <bpmn:sequenceFlow id="Flow_A3" sourceRef="Gateway_SetupSplit" targetRef="Task_NegotiateBankAccount"/>
+    <bpmn:sequenceFlow id="Flow_A4" sourceRef="Gateway_SetupSplit" targetRef="SubProcess_VisaCycle"/>
+    <bpmn:sequenceFlow id="Flow_A5" sourceRef="Task_NegotiateAccommodation" targetRef="Gateway_SetupJoin"/>
+    <bpmn:sequenceFlow id="Flow_A6" sourceRef="Task_NegotiateBankAccount" targetRef="Gateway_SetupJoin"/>
+    <bpmn:sequenceFlow id="Flow_A7" sourceRef="SubProcess_VisaCycle" targetRef="Gateway_SetupJoin"/>
+    <bpmn:sequenceFlow id="Flow_A8" sourceRef="Gateway_SetupJoin" targetRef="End_Process"/>
+  </bpmn:process>
+</bpmn:definitions>

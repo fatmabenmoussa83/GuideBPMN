@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Subrogation" targetNamespace="http://example.com/bpmn/subrogation">
+  <bpmn:message id="Msg_PaymentRequest" name="Payment request"/>
+  <bpmn:message id="Msg_PaymentReceived" name="Payment received"/>
+  <bpmn:message id="Msg_Disagreement" name="Insurant disagrees with recourse"/>
+  <bpmn:message id="Msg_ForwardCase" name="Case forwarded to collection agency"/>
+
+  <bpmn:collaboration id="Collaboration_Subrogation">
+    <bpmn:participant id="Participant_Insurer" name="Insurer" processRef="Process_Subrogation"/>
+    <bpmn:participant id="Participant_Insurant" name="Insurant"/>
+    <bpmn:participant id="Participant_CollectionAgency" name="Collection agency"/>
+    <bpmn:messageFlow id="MF_PaymentRequest" name="Payment request" messageRef="Msg_PaymentRequest" sourceRef="Task_SendPaymentRequest" targetRef="Participant_Insurant"/>
+    <bpmn:messageFlow id="MF_PaymentReceived" name="Payment received" messageRef="Msg_PaymentReceived" sourceRef="Participant_Insurant" targetRef="Catch_PaymentReceived"/>
+    <bpmn:messageFlow id="MF_Disagreement" name="Disagreement" messageRef="Msg_Disagreement" sourceRef="Participant_Insurant" targetRef="Catch_Disagreement"/>
+    <bpmn:messageFlow id="MF_ForwardCase" name="Forward case" messageRef="Msg_ForwardCase" sourceRef="Task_ForwardToAgency" targetRef="Participant_CollectionAgency"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Subrogation" name="Subrogation recourse handling" isExecutable="false">
+    <bpmn:startEvent id="Start_Subrogation" name="Possible subrogation against insurant">
+      <bpmn:outgoing>SF_StartToGetInfo</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_GetInformation" name="Get information about possible subrogation">
+      <bpmn:incoming>SF_StartToGetInfo</bpmn:incoming>
+      <bpmn:outgoing>SF_GetInfoToCheck</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_CheckCase" name="Check subrogation case">
+      <bpmn:incoming>SF_GetInfoToCheck</bpmn:incoming>
+      <bpmn:outgoing>SF_CheckToPossible</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_RecoursePossible" name="Recourse possible?">
+      <bpmn:incoming>SF_CheckToPossible</bpmn:incoming>
+      <bpmn:outgoing>SF_NotPossible</bpmn:outgoing>
+      <bpmn:outgoing>SF_Possible</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_CloseNoRecourse" name="Close case">
+      <bpmn:incoming>SF_NotPossible</bpmn:incoming>
+      <bpmn:outgoing>SF_CloseNoRecourseToEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_NoRecourse" name="Case closed without recourse">
+      <bpmn:incoming>SF_CloseNoRecourseToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sendTask id="Task_SendPaymentRequest" name="Send payment request to insurant" messageRef="Msg_PaymentRequest">
+      <bpmn:incoming>SF_Possible</bpmn:incoming>
+      <bpmn:outgoing>SF_RequestToReminder</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="Task_CreateReminder" name="Create reminder">
+      <bpmn:incoming>SF_RequestToReminder</bpmn:incoming>
+      <bpmn:outgoing>SF_ReminderToEvent</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:eventBasedGateway id="Gateway_AwaitResponse" name="Await insurant response or disagreement deadline">
+      <bpmn:incoming>SF_ReminderToEvent</bpmn:incoming>
+      <bpmn:outgoing>SF_EventToPayment</bpmn:outgoing>
+      <bpmn:outgoing>SF_EventToDisagreement</bpmn:outgoing>
+      <bpmn:outgoing>SF_EventToDeadline</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+
+    <bpmn:intermediateCatchEvent id="Catch_PaymentReceived" name="Payment received">
+      <bpmn:incoming>SF_EventToPayment</bpmn:incoming>
+      <bpmn:outgoing>SF_PaymentToBooking</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_PaymentReceived" messageRef="Msg_PaymentReceived"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_BookPayment" name="Make booking">
+      <bpmn:incoming>SF_PaymentToBooking</bpmn:incoming>
+      <bpmn:outgoing>SF_BookingToClose</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:task id="Task_CloseAfterPayment" name="Close case">
+      <bpmn:incoming>SF_BookingToClose</bpmn:incoming>
+      <bpmn:outgoing>SF_CloseAfterPaymentToEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_PaymentReceived" name="Case closed after payment">
+      <bpmn:incoming>SF_CloseAfterPaymentToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:intermediateCatchEvent id="Catch_Disagreement" name="Insurant disagrees with recourse">
+      <bpmn:incoming>SF_EventToDisagreement</bpmn:incoming>
+      <bpmn:outgoing>SF_DisagreementToCheck</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Disagreement" messageRef="Msg_Disagreement"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_CheckReasoning" name="Check reasoning of disagreement">
+      <bpmn:incoming>SF_DisagreementToCheck</bpmn:incoming>
+      <bpmn:outgoing>SF_CheckReasoningToGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_ReasoningCorrect" name="Insurant reasoning correct?">
+      <bpmn:incoming>SF_CheckReasoningToGateway</bpmn:incoming>
+      <bpmn:outgoing>SF_ReasoningRight</bpmn:outgoing>
+      <bpmn:outgoing>SF_ReasoningWrong</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_CloseAccepted" name="Close case">
+      <bpmn:incoming>SF_ReasoningRight</bpmn:incoming>
+      <bpmn:outgoing>SF_CloseAcceptedToEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_DisagreementAccepted" name="Case closed, disagreement accepted">
+      <bpmn:incoming>SF_CloseAcceptedToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:intermediateCatchEvent id="Catch_DeadlineReached" name="Disagreement deadline reached without payment">
+      <bpmn:incoming>SF_EventToDeadline</bpmn:incoming>
+      <bpmn:outgoing>SF_DeadlineToMerge</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TED_DisagreementDeadline"/>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:exclusiveGateway id="Gateway_ForwardMerge" name="Forward to collection">
+      <bpmn:incoming>SF_ReasoningWrong</bpmn:incoming>
+      <bpmn:incoming>SF_DeadlineToMerge</bpmn:incoming>
+      <bpmn:outgoing>SF_MergeToForward</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_ForwardToAgency" name="Forward case to collection agency" messageRef="Msg_ForwardCase">
+      <bpmn:incoming>SF_MergeToForward</bpmn:incoming>
+      <bpmn:outgoing>SF_ForwardToEnd</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Forwarded" name="Case forwarded to collection agency">
+      <bpmn:incoming>SF_ForwardToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="SF_StartToGetInfo" sourceRef="Start_Subrogation" targetRef="Task_GetInformation"/>
+    <bpmn:sequenceFlow id="SF_GetInfoToCheck" sourceRef="Task_GetInformation" targetRef="Task_CheckCase"/>
+    <bpmn:sequenceFlow id="SF_CheckToPossible" sourceRef="Task_CheckCase" targetRef="Gateway_RecoursePossible"/>
+    <bpmn:sequenceFlow id="SF_NotPossible" name="No" sourceRef="Gateway_RecoursePossible" targetRef="Task_CloseNoRecourse"/>
+    <bpmn:sequenceFlow id="SF_Possible" name="Yes" sourceRef="Gateway_RecoursePossible" targetRef="Task_SendPaymentRequest"/>
+    <bpmn:sequenceFlow id="SF_CloseNoRecourseToEnd" sourceRef="Task_CloseNoRecourse" targetRef="End_NoRecourse"/>
+    <bpmn:sequenceFlow id="SF_RequestToReminder" sourceRef="Task_SendPaymentRequest" targetRef="Task_CreateReminder"/>
+    <bpmn:sequenceFlow id="SF_ReminderToEvent" sourceRef="Task_CreateReminder" targetRef="Gateway_AwaitResponse"/>
+    <bpmn:sequenceFlow id="SF_EventToPayment" sourceRef="Gateway_AwaitResponse" targetRef="Catch_PaymentReceived"/>
+    <bpmn:sequenceFlow id="SF_EventToDisagreement" sourceRef="Gateway_AwaitResponse" targetRef="Catch_Disagreement"/>
+    <bpmn:sequenceFlow id="SF_EventToDeadline" sourceRef="Gateway_AwaitResponse" targetRef="Catch_DeadlineReached"/>
+    <bpmn:sequenceFlow id="SF_PaymentToBooking" sourceRef="Catch_PaymentReceived" targetRef="Task_BookPayment"/>
+    <bpmn:sequenceFlow id="SF_BookingToClose" sourceRef="Task_BookPayment" targetRef="Task_CloseAfterPayment"/>
+    <bpmn:sequenceFlow id="SF_CloseAfterPaymentToEnd" sourceRef="Task_CloseAfterPayment" targetRef="End_PaymentReceived"/>
+    <bpmn:sequenceFlow id="SF_DisagreementToCheck" sourceRef="Catch_Disagreement" targetRef="Task_CheckReasoning"/>
+    <bpmn:sequenceFlow id="SF_CheckReasoningToGateway" sourceRef="Task_CheckReasoning" targetRef="Gateway_ReasoningCorrect"/>
+    <bpmn:sequenceFlow id="SF_ReasoningRight" name="Yes" sourceRef="Gateway_ReasoningCorrect" targetRef="Task_CloseAccepted"/>
+    <bpmn:sequenceFlow id="SF_ReasoningWrong" name="No" sourceRef="Gateway_ReasoningCorrect" targetRef="Gateway_ForwardMerge"/>
+    <bpmn:sequenceFlow id="SF_CloseAcceptedToEnd" sourceRef="Task_CloseAccepted" targetRef="End_DisagreementAccepted"/>
+    <bpmn:sequenceFlow id="SF_DeadlineToMerge" sourceRef="Catch_DeadlineReached" targetRef="Gateway_ForwardMerge"/>
+    <bpmn:sequenceFlow id="SF_MergeToForward" sourceRef="Gateway_ForwardMerge" targetRef="Task_ForwardToAgency"/>
+    <bpmn:sequenceFlow id="SF_ForwardToEnd" sourceRef="Task_ForwardToAgency" targetRef="End_Forwarded"/>
+  </bpmn:process>
+</bpmn:definitions>

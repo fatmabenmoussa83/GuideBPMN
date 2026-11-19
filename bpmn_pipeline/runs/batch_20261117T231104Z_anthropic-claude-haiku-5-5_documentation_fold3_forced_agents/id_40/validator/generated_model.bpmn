@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_OEE" targetNamespace="http://example.com/bpmn/oee">
+  <bpmn:message id="Msg_MachineRestarted" name="Machine restarted"/>
+  <bpmn:message id="Msg_MachineDisconnected" name="Machine disconnected"/>
+  <bpmn:process id="Process_OEE" name="OEE" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_OEE" name="Start OEE measurement">
+      <bpmn:outgoing>Flow_Start_Merge</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="StartEvent_MachineRestarted" name="Machine restarted">
+      <bpmn:outgoing>Flow_Restart_Merge</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_MachineRestarted" messageRef="Msg_MachineRestarted"/>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_Measuring_Merge" name="Continue measuring">
+      <bpmn:incoming>Flow_Start_Merge</bpmn:incoming>
+      <bpmn:incoming>Flow_Restart_Merge</bpmn:incoming>
+      <bpmn:incoming>Flow_Continue_Loop</bpmn:incoming>
+      <bpmn:outgoing>Flow_Merge_Collect</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_CollectMachineData" name="Collect machine data">
+      <bpmn:incoming>Flow_Merge_Collect</bpmn:incoming>
+      <bpmn:outgoing>Flow_Collect_Calculate</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_CalculateOEE" name="Calculate OEE">
+      <bpmn:incoming>Flow_Collect_Calculate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Calculate_Split</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_OEEThreshold_Split" name="OEE below threshold?" default="Flow_Split_Continue">
+      <bpmn:incoming>Flow_Calculate_Split</bpmn:incoming>
+      <bpmn:outgoing>Flow_Split_Below</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Split_Continue</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_StopMachine" name="Stop machine">
+      <bpmn:incoming>Flow_Split_Below</bpmn:incoming>
+      <bpmn:outgoing>Flow_Stop_Email</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="Task_SendEmailEngineer" name="Send email to engineer">
+      <bpmn:incoming>Flow_Stop_Email</bpmn:incoming>
+      <bpmn:outgoing>Flow_Email_End</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_MachineHalted" name="Machine halted, engineer notified">
+      <bpmn:incoming>Flow_Email_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Merge" sourceRef="StartEvent_OEE" targetRef="Gateway_Measuring_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Restart_Merge" sourceRef="StartEvent_MachineRestarted" targetRef="Gateway_Measuring_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Merge_Collect" sourceRef="Gateway_Measuring_Merge" targetRef="Task_CollectMachineData"/>
+    <bpmn:sequenceFlow id="Flow_Collect_Calculate" sourceRef="Task_CollectMachineData" targetRef="Task_CalculateOEE"/>
+    <bpmn:sequenceFlow id="Flow_Calculate_Split" sourceRef="Task_CalculateOEE" targetRef="Gateway_OEEThreshold_Split"/>
+    <bpmn:sequenceFlow id="Flow_Split_Below" name="Yes" sourceRef="Gateway_OEEThreshold_Split" targetRef="Task_StopMachine"/>
+    <bpmn:sequenceFlow id="Flow_Split_Continue" name="No" sourceRef="Gateway_OEEThreshold_Split" targetRef="Flow_Continue_Target_Placeholder"/>
+    <bpmn:sequenceFlow id="Flow_Stop_Email" sourceRef="Task_StopMachine" targetRef="Task_SendEmailEngineer"/>
+    <bpmn:sequenceFlow id="Flow_Email_End" sourceRef="Task_SendEmailEngineer" targetRef="EndEvent_MachineHalted"/>
+    <bpmn:sequenceFlow id="Flow_Continue_Loop" sourceRef="Gateway_OEEThreshold_Split" targetRef="Gateway_Measuring_Merge"/>
+    <bpmn:subProcess id="SubProcess_MachineDisconnected" name="Machine disconnected" triggeredByEvent="true">
+      <bpmn:startEvent id="StartEvent_MachineDisconnected" name="Machine disconnected" isInterrupting="true">
+        <bpmn:outgoing>Flow_Disconnected_Stop</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="MED_MachineDisconnected" messageRef="Msg_MachineDisconnected"/>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="EndEvent_ProcessStopped" name="Process stopped">
+        <bpmn:incoming>Flow_Disconnected_Stop</bpmn:incoming>
+        <bpmn:terminateEventDefinition id="TED_ProcessStopped"/>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_Disconnected_Stop" sourceRef="StartEvent_MachineDisconnected" targetRef="EndEvent_ProcessStopped"/>
+    </bpmn:subProcess>
+  </bpmn:process>
+</bpmn:definitions>

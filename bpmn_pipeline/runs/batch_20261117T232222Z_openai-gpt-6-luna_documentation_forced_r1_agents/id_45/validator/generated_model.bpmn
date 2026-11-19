@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_OnlineShop" targetNamespace="http://example.com/bpmn/online-shop">
+  <bpmn:message id="Message_Credentials" name="Login credentials"/>
+  <bpmn:message id="Message_LoginSuccess" name="Successful login confirmation"/>
+  <bpmn:message id="Message_LoginFailure" name="Unsuccessful login confirmation"/>
+  <bpmn:message id="Message_Product" name="Selected product"/>
+  <bpmn:message id="Message_MoreProducts" name="More products required"/>
+  <bpmn:message id="Message_AllProductsSelected" name="All products selected"/>
+  <bpmn:message id="Message_PaymentData" name="Payment data"/>
+  <bpmn:message id="Message_PaymentRequest" name="Payment confirmation request"/>
+  <bpmn:message id="Message_BankConfirmation" name="Bank payment confirmation"/>
+  <bpmn:message id="Message_CustomerPaymentConfirmation" name="Payment confirmation"/>
+  <bpmn:message id="Message_AddressDetails" name="Address details"/>
+
+  <bpmn:collaboration id="Collaboration_OnlineShop">
+    <bpmn:participant id="Participant_Customer" name="Customer" processRef="Process_Customer"/>
+    <bpmn:participant id="Participant_Shop" name="E-Shop system" processRef="Process_Shop"/>
+    <bpmn:participant id="Participant_Bank" name="Bank"/>
+    <bpmn:messageFlow id="MessageFlow_Credentials" sourceRef="Task_Login" targetRef="Start_LoginRequest" messageRef="Message_Credentials"/>
+    <bpmn:messageFlow id="MessageFlow_LoginSuccess" sourceRef="Task_SendLoginSuccess" targetRef="Catch_LoginSuccess" messageRef="Message_LoginSuccess"/>
+    <bpmn:messageFlow id="MessageFlow_LoginFailure" sourceRef="Task_SendLoginFailure" targetRef="Catch_LoginFailure" messageRef="Message_LoginFailure"/>
+    <bpmn:messageFlow id="MessageFlow_Product" sourceRef="Task_SendProduct" targetRef="Task_ReceiveProduct" messageRef="Message_Product"/>
+    <bpmn:messageFlow id="MessageFlow_MoreProducts" sourceRef="Task_SendMoreProducts" targetRef="Catch_MoreProducts" messageRef="Message_MoreProducts"/>
+    <bpmn:messageFlow id="MessageFlow_AllProductsSelected" sourceRef="Task_SendAllProductsSelected" targetRef="Catch_AllProductsSelected" messageRef="Message_AllProductsSelected"/>
+    <bpmn:messageFlow id="MessageFlow_PaymentData" sourceRef="Task_SendPaymentData" targetRef="Task_ReceivePaymentData" messageRef="Message_PaymentData"/>
+    <bpmn:messageFlow id="MessageFlow_PaymentRequest" sourceRef="Task_SendPaymentRequest" targetRef="Participant_Bank" messageRef="Message_PaymentRequest"/>
+    <bpmn:messageFlow id="MessageFlow_BankConfirmation" sourceRef="Participant_Bank" targetRef="Catch_BankConfirmation" messageRef="Message_BankConfirmation"/>
+    <bpmn:messageFlow id="MessageFlow_CustomerPaymentConfirmation" sourceRef="Task_SendPaymentConfirmation" targetRef="Catch_CustomerPaymentConfirmation" messageRef="Message_CustomerPaymentConfirmation"/>
+    <bpmn:messageFlow id="MessageFlow_AddressDetails" sourceRef="Task_SendAddressDetails" targetRef="Task_ReceiveAddressDetails" messageRef="Message_AddressDetails"/>
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Customer" name="Customer ordering" isExecutable="false">
+    <bpmn:startEvent id="Start_Customer" name="Begin shopping"/>
+    <bpmn:userTask id="Task_Login" name="Log in and submit credentials"/>
+    <bpmn:eventBasedGateway id="Gateway_LoginResponse" name="Wait for login confirmation" eventGatewayType="Exclusive"/>
+    <bpmn:intermediateCatchEvent id="Catch_LoginSuccess" name="Login successful">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_LoginSuccess" messageRef="Message_LoginSuccess"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Catch_LoginFailure" name="Login unsuccessful">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_LoginFailure" messageRef="Message_LoginFailure"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End_LoginFailure" name="Shopping stops"/>
+    <bpmn:userTask id="Task_SelectProduct" name="Select a product"/>
+    <bpmn:userTask id="Task_AddProduct" name="Add product to shopping cart"/>
+    <bpmn:sendTask id="Task_SendProduct" name="Submit selected product" messageRef="Message_Product"/>
+    <bpmn:eventBasedGateway id="Gateway_SelectionResponse" name="Wait for product selection status" eventGatewayType="Exclusive"/>
+    <bpmn:intermediateCatchEvent id="Catch_MoreProducts" name="More products required">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_MoreProducts" messageRef="Message_MoreProducts"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Catch_AllProductsSelected" name="All products selected">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_AllProductsSelected" messageRef="Message_AllProductsSelected"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_EnterPaymentData" name="Enter payment data"/>
+    <bpmn:sendTask id="Task_SendPaymentData" name="Submit payment data" messageRef="Message_PaymentData"/>
+    <bpmn:parallelGateway id="Gateway_CustomerWorkSplit" name="Wait for payment confirmation while entering address"/>
+    <bpmn:intermediateCatchEvent id="Catch_CustomerPaymentConfirmation" name="Receive payment confirmation">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_CustomerPaymentConfirmation" messageRef="Message_CustomerPaymentConfirmation"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_EnterShippingAddress" name="Enter shipping address"/>
+    <bpmn:exclusiveGateway id="Gateway_BillingAddress" name="Is the billing address different?"/>
+    <bpmn:userTask id="Task_EnterBillingAddress" name="Enter independent billing address"/>
+    <bpmn:sendTask id="Task_SendAddressDetails" name="Submit address details" messageRef="Message_AddressDetails"/>
+    <bpmn:parallelGateway id="Gateway_CustomerWorkJoin" name="Payment and address steps completed"/>
+    <bpmn:endEvent id="End_Customer" name="Customer steps completed"/>
+
+    <bpmn:sequenceFlow id="Flow_Customer_1" sourceRef="Start_Customer" targetRef="Task_Login"/>
+    <bpmn:sequenceFlow id="Flow_Customer_2" sourceRef="Task_Login" targetRef="Gateway_LoginResponse"/>
+    <bpmn:sequenceFlow id="Flow_Customer_3" sourceRef="Gateway_LoginResponse" targetRef="Catch_LoginSuccess"/>
+    <bpmn:sequenceFlow id="Flow_Customer_4" sourceRef="Gateway_LoginResponse" targetRef="Catch_LoginFailure"/>
+    <bpmn:sequenceFlow id="Flow_Customer_5" sourceRef="Catch_LoginFailure" targetRef="End_LoginFailure"/>
+    <bpmn:sequenceFlow id="Flow_Customer_6" sourceRef="Catch_LoginSuccess" targetRef="Task_SelectProduct"/>
+    <bpmn:sequenceFlow id="Flow_Customer_7" sourceRef="Task_SelectProduct" targetRef="Task_AddProduct"/>
+    <bpmn:sequenceFlow id="Flow_Customer_8" sourceRef="Task_AddProduct" targetRef="Task_SendProduct"/>
+    <bpmn:sequenceFlow id="Flow_Customer_9" sourceRef="Task_SendProduct" targetRef="Gateway_SelectionResponse"/>
+    <bpmn:sequenceFlow id="Flow_Customer_10" sourceRef="Gateway_SelectionResponse" targetRef="Catch_MoreProducts"/>
+    <bpmn:sequenceFlow id="Flow_Customer_11" sourceRef="Gateway_SelectionResponse" targetRef="Catch_AllProductsSelected"/>
+    <bpmn:sequenceFlow id="Flow_Customer_12" sourceRef="Catch_MoreProducts" targetRef="Task_SelectProduct"/>
+    <bpmn:sequenceFlow id="Flow_Customer_13" sourceRef="Catch_AllProductsSelected" targetRef="Task_EnterPaymentData"/>
+    <bpmn:sequenceFlow id="Flow_Customer_14" sourceRef="Task_EnterPaymentData" targetRef="Task_SendPaymentData"/>
+    <bpmn:sequenceFlow id="Flow_Customer_15" sourceRef="Task_SendPaymentData" targetRef="Gateway_CustomerWorkSplit"/>
+    <bpmn:sequenceFlow id="Flow_Customer_16" sourceRef="Gateway_CustomerWorkSplit" targetRef="Catch_CustomerPaymentConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_Customer_17" sourceRef="Gateway_CustomerWorkSplit" targetRef="Task_EnterShippingAddress"/>
+    <bpmn:sequenceFlow id="Flow_Customer_18" sourceRef="Task_EnterShippingAddress" targetRef="Gateway_BillingAddress"/>
+    <bpmn:sequenceFlow id="Flow_Customer_19" sourceRef="Gateway_BillingAddress" targetRef="Task_EnterBillingAddress">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">shippingAddressDifferentFromBillingAddress</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Customer_20" sourceRef="Gateway_BillingAddress" targetRef="Task_SendAddressDetails" name="Billing address is the same">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">shippingAddressEqualsBillingAddress</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Customer_21" sourceRef="Task_EnterBillingAddress" targetRef="Task_SendAddressDetails"/>
+    <bpmn:sequenceFlow id="Flow_Customer_22" sourceRef="Catch_CustomerPaymentConfirmation" targetRef="Gateway_CustomerWorkJoin"/>
+    <bpmn:sequenceFlow id="Flow_Customer_23" sourceRef="Task_SendAddressDetails" targetRef="Gateway_CustomerWorkJoin"/>
+    <bpmn:sequenceFlow id="Flow_Customer_24" sourceRef="Gateway_CustomerWorkJoin" targetRef="End_Customer"/>
+  </bpmn:process>
+
+  <bpmn:process id="Process_Shop" name="E-Shop order processing" isExecutable="false">
+    <bpmn:startEvent id="Start_LoginRequest" name="Login request received">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_LoginRequest" messageRef="Message_Credentials"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_CheckCredentials" name="Check credentials"/>
+    <bpmn:exclusiveGateway id="Gateway_Credentials" name="Are credentials valid?"/>
+    <bpmn:sendTask id="Task_SendLoginSuccess" name="Confirm successful login" messageRef="Message_LoginSuccess"/>
+    <bpmn:sendTask id="Task_SendLoginFailure" name="Confirm unsuccessful login" messageRef="Message_LoginFailure"/>
+    <bpmn:endEvent id="End_LoginRejected" name="Login rejected"/>
+    <bpmn:receiveTask id="Task_ReceiveProduct" name="Receive selected product" messageRef="Message_Product"/>
+    <bpmn:serviceTask id="Task_SaveProduct" name="Save product"/>
+    <bpmn:serviceTask id="Task_CheckSelection" name="Check whether every product has been selected"/>
+    <bpmn:exclusiveGateway id="Gateway_AllSelected" name="Are all products selected?"/>
+    <bpmn:sendTask id="Task_SendMoreProducts" name="Request remaining products" messageRef="Message_MoreProducts"/>
+    <bpmn:sendTask id="Task_SendAllProductsSelected" name="Confirm all products selected" messageRef="Message_AllProductsSelected"/>
+    <bpmn:serviceTask id="Task_FinishInitialOrder" name="Finish order"/>
+    <bpmn:parallelGateway id="Gateway_PreparationSplit" name="Prepare payment and shipment simultaneously"/>
+    <bpmn:serviceTask id="Task_PreparePayment" name="Prepare payment"/>
+    <bpmn:serviceTask id="Task_PrepareShipment" name="Prepare shipment"/>
+    <bpmn:parallelGateway id="Gateway_PreparationJoin" name="Payment and shipment prepared"/>
+    <bpmn:parallelGateway id="Gateway_PaymentAddressSplit" name="Wait for payment and address steps"/>
+    <bpmn:receiveTask id="Task_ReceivePaymentData" name="Receive payment data" messageRef="Message_PaymentData"/>
+    <bpmn:sendTask id="Task_SendPaymentRequest" name="Submit payment for confirmation" messageRef="Message_PaymentRequest"/>
+    <bpmn:intermediateCatchEvent id="Catch_BankConfirmation" name="Receive bank payment confirmation">
+      <bpmn:messageEventDefinition id="MessageEventDefinition_BankConfirmation" messageRef="Message_BankConfirmation"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="Task_SendPaymentConfirmation" name="Inform customer of payment confirmation" messageRef="Message_CustomerPaymentConfirmation"/>
+    <bpmn:receiveTask id="Task_ReceiveAddressDetails" name="Receive address details" messageRef="Message_AddressDetails"/>
+    <bpmn:parallelGateway id="Gateway_PaymentAddressJoin" name="Payment and address steps completed"/>
+    <bpmn:serviceTask id="Task_FinishFinalOrder" name="Finish order after payment and address steps"/>
+    <bpmn:endEvent id="End_OrderFinished" name="Order finished"/>
+
+    <bpmn:sequenceFlow id="Flow_Shop_1" sourceRef="Start_LoginRequest" targetRef="Task_CheckCredentials"/>
+    <bpmn:sequenceFlow id="Flow_Shop_2" sourceRef="Task_CheckCredentials" targetRef="Gateway_Credentials"/>
+    <bpmn:sequenceFlow id="Flow_Shop_3" sourceRef="Gateway_Credentials" targetRef="Task_SendLoginSuccess">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">credentialsValid</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Shop_4" sourceRef="Gateway_Credentials" targetRef="Task_SendLoginFailure">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not credentialsValid</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Shop_5" sourceRef="Task_SendLoginSuccess" targetRef="Task_ReceiveProduct"/>
+    <bpmn:sequenceFlow id="Flow_Shop_6" sourceRef="Task_SendLoginFailure" targetRef="End_LoginRejected"/>
+    <bpmn:sequenceFlow id="Flow_Shop_7" sourceRef="Task_ReceiveProduct" targetRef="Task_SaveProduct"/>
+    <bpmn:sequenceFlow id="Flow_Shop_8" sourceRef="Task_SaveProduct" targetRef="Task_CheckSelection"/>
+    <bpmn:sequenceFlow id="Flow_Shop_9" sourceRef="Task_CheckSelection" targetRef="Gateway_AllSelected"/>
+    <bpmn:sequenceFlow id="Flow_Shop_10" sourceRef="Gateway_AllSelected" targetRef="Task_SendMoreProducts">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">not allProductsSelected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Shop_11" sourceRef="Gateway_AllSelected" targetRef="Task_SendAllProductsSelected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">allProductsSelected</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Shop_12" sourceRef="Task_SendMoreProducts" targetRef="Task_ReceiveProduct"/>
+    <bpmn:sequenceFlow id="Flow_Shop_13" sourceRef="Task_SendAllProductsSelected" targetRef="Task_FinishInitialOrder"/>
+    <bpmn:sequenceFlow id="Flow_Shop_14" sourceRef="Task_FinishInitialOrder" targetRef="Gateway_PreparationSplit"/>
+    <bpmn:sequenceFlow id="Flow_Shop_15" sourceRef="Gateway_PreparationSplit" targetRef="Task_PreparePayment"/>
+    <bpmn:sequenceFlow id="Flow_Shop_16" sourceRef="Gateway_PreparationSplit" targetRef="Task_PrepareShipment"/>
+    <bpmn:sequenceFlow id="Flow_Shop_17" sourceRef="Task_PreparePayment" targetRef="Gateway_PreparationJoin"/>
+    <bpmn:sequenceFlow id="Flow_Shop_18" sourceRef="Task_PrepareShipment" targetRef="Gateway_PreparationJoin"/>
+    <bpmn:sequenceFlow id="Flow_Shop_19" sourceRef="Gateway_PreparationJoin" targetRef="Gateway_PaymentAddressSplit"/>
+    <bpmn:sequenceFlow id="Flow_Shop_20" sourceRef="Gateway_PaymentAddressSplit" targetRef="Task_ReceivePaymentData"/>
+    <bpmn:sequenceFlow id="Flow_Shop_21" sourceRef="Task_ReceivePaymentData" targetRef="Task_SendPaymentRequest"/>
+    <bpmn:sequenceFlow id="Flow_Shop_22" sourceRef="Task_SendPaymentRequest" targetRef="Catch_BankConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_Shop_23" sourceRef="Catch_BankConfirmation" targetRef="Task_SendPaymentConfirmation"/>
+    <bpmn:sequenceFlow id="Flow_Shop_24" sourceRef="Task_SendPaymentConfirmation" targetRef="Gateway_PaymentAddressJoin"/>
+    <bpmn:sequenceFlow id="Flow_Shop_25" sourceRef="Gateway_PaymentAddressSplit" targetRef="Task_ReceiveAddressDetails"/>
+    <bpmn:sequenceFlow id="Flow_Shop_26" sourceRef="Task_ReceiveAddressDetails" targetRef="Gateway_PaymentAddressJoin"/>
+    <bpmn:sequenceFlow id="Flow_Shop_27" sourceRef="Gateway_PaymentAddressJoin" targetRef="Task_FinishFinalOrder"/>
+    <bpmn:sequenceFlow id="Flow_Shop_28" sourceRef="Task_FinishFinalOrder" targetRef="End_OrderFinished"/>
+  </bpmn:process>
+</bpmn:definitions>

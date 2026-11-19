@@ -1,0 +1,354 @@
+{
+ "id": "23",
+ "agent": "anthropic:claude-haiku-5-5",
+ "stopped": "stop_success",
+ "stop_reason": "Only remaining action.",
+ "error": null,
+ "detected_failures": [
+  "T5",
+  "T6",
+  "T7"
+ ],
+ "error_counts": {
+  "T5": 24,
+  "T6": 2,
+  "T7": 11
+ },
+ "first_pass_error_counts": {
+  "T5": 24,
+  "T6": 7,
+  "T7": 26
+ },
+ "guidelines": [
+  {
+   "failure_type": "T5",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: lead",
+   "guideline_id": "EXS-041",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T6",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: arrives, does, informs, later, presents, result",
+   "guideline_id": "EXS-042",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T7",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: later",
+   "guideline_id": "EXS-043",
+   "ref": null,
+   "after_iteration": 0
+  },
+  {
+   "failure_type": "T5",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: quick",
+   "guideline_id": "EXS-044",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T6",
+   "status": "promoted",
+   "detail": "refines GW-01 (GW-01 says to use gateways for divergence but does not say where the decision belongs relative to a send step. The reference puts an exclusive gateway right after the immediate-result send, routing either to the level 2 follow-up or to an end event (M1, M3). The generated model has a similar decision gateway (P1) but places it before the send, so the follow-up and end branches are not attached aft)",
+   "guideline_id": "LRN-056",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T7",
+   "status": "promoted",
+   "detail": "new guideline (The reference models the software frontend as an independent pool that sends the request to the process start and receives the delay and result messages. The generated model instead uses a pool for the human clerk and a send task in the process as the sender of the request, which is what C7 and C8 flag. The documented guidelines (COL-04, COL-03, LANE-03) only require message flows between pools an)",
+   "guideline_id": "LRN-057",
+   "ref": null,
+   "after_iteration": 1
+  },
+  {
+   "failure_type": "T5",
+   "status": "example_specific",
+   "detail": "kept for this example only, tied to it by: quick",
+   "guideline_id": "EXS-045",
+   "ref": null,
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T6",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-056 (The reference has an exclusive gateway after the immediate-result send (M1) and after the scoring-result send (M2), while the generated model places the immediate/delayed decision before the send (P1). The description says the immediate result is returned to the banking system and the level 2 path is needed only when the result is not immediate (S5, S7, S8). Placing the gateway after the send step)",
+   "guideline_id": "LRN-056",
+   "ref": "LRN-056",
+   "after_iteration": 2
+  },
+  {
+   "failure_type": "T7",
+   "status": "merged_with_learned",
+   "detail": "same as LRN-057 (The generated model made the human sales clerk a pool and put the message sending on a task with the clerk's pool as the counterpart, so the software frontend pool (C1) and its message flows (C2, C3, C4) are missing, and the extra pool (C7) and the extra message flow from the request task (C8) are the wrong participant. The description (S1) says the clerk uses a software frontend, which is the app)",
+   "guideline_id": "LRN-057",
+   "ref": "LRN-057",
+   "after_iteration": 2
+  }
+ ],
+ "rules_sent_back": [
+  {
+   "rule_id": "EXS-041",
+   "instruction": "When The description says that after a request is sent to an external party, that party performs its own processing steps (such as an initial evaluation, or a notice about an extended processing time followed by a further processing step) before it returns its outcome, and these steps are stated as actions the party performs, not as waits for a message, signal, time or condition.: Model each such external-party processing step as a bpmn:task placed in sequence after the send and before the reply is handled. Use an intermediate catch event only for a wait the description explicitly states. Where the party's outcome can take one of several described forms, route it with an exclusive gateway whose conditions come from the description, and let the path for the notice of extended processing lead to the further processing task and then to the awaited final reply.",
+   "situation": "The description says that after a request is sent to an external party, that party performs its own processing steps (such as an initial evaluation, or a notice about an extended processing time followed by a further processing step) before it returns its outcome, and these steps are stated as actions the party performs, not as waits for a message, signal, time or condition.",
+   "source": "example-specific guideline",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "EXS-042",
+   "instruction": "When the description says that after a request is sent to another party, the reply can take one of two forms, an immediate result or a delay notice that is followed by a later result, so the process must react to whichever form arrives: Model the send as a task, then a decision that branches on which reply arrives. In the immediate-result branch, a catch event for the reply leads directly to the task that presents the result. In the delay branch, a catch event for the delay notice leads to a task that informs the user of the delay, then to a catch event for the later result, and that event leads into the same result-presentation task. Join the two branches with a merging gateway before the presentation task, so the process does not continue with a reply that never arrives.",
+   "situation": "the description says that after a request is sent to another party, the reply can take one of two forms, an immediate result or a delay notice that is followed by a later result, so the process must react to whichever form arrives",
+   "source": "example-specific guideline",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "EXS-043",
+   "instruction": "When the description states that an outside participant starts a process by sending it a request, and that the process in turn sends requests to a further independent party that replies later with messages in both directions: Model each independent participant as its own pool. Model the process's start as a message start event in the process pool, and connect the starting participant's sending node in its own pool to that start event with a message flow. Connect each outgoing request from the process to a receiving node inside the other party's pool, and connect each later reply back to a catch event or receive task in the process pool. Keep any processing steps that the independent party performs inside its own pool. Never attach a message flow to a pool boundary.",
+   "situation": "the description states that an outside participant starts a process by sending it a request, and that the process in turn sends requests to a further independent party that replies later with messages in both directions",
+   "source": "example-specific guideline",
+   "failure_type": "T7"
+  },
+  {
+   "rule_id": "EXS-044",
+   "instruction": "When the description states that after an item is sent to a partner, a further processing step follows only when a stated circumstance holds (for example a clause introduced by 'sometimes' or 'if' that describes the case where an earlier quick outcome is not available): Place an exclusive decision gateway directly after the send activity. Give one outgoing flow to the further processing task, labelled with the stated circumstance as its condition, and a complementary outgoing flow to the path that ends the case. Do not omit the decision and do not let the send activity flow straight into the further step without a gateway.",
+   "situation": "the description states that after an item is sent to a partner, a further processing step follows only when a stated circumstance holds (for example a clause introduced by 'sometimes' or 'if' that describes the case where an earlier quick outcome is not available)",
+   "source": "example-specific guideline",
+   "failure_type": "T5"
+  },
+  {
+   "rule_id": "LRN-056",
+   "instruction": "When the description says a send step reports an outcome to another party, and the following work or the end of the request applies only when that outcome was not yet available: Model an exclusive gateway directly after the send task. One outgoing flow leads to the follow-up work, and the other leads to an end event that closes the request. Do not place the decision before the send task, and do not let the send task carry the branching.",
+   "situation": "the description says a send step reports an outcome to another party, and the following work or the end of the request applies only when that outcome was not yet available",
+   "source": "learned guideline (refines GW-01)",
+   "failure_type": "T6"
+  },
+  {
+   "rule_id": "LRN-057",
+   "instruction": "When the description says a person uses a software application to send requests to and receive results from a process running in another system, so the application itself exchanges messages with that process: Model the software application as its own pool, separate from any pool representing the human user. Connect the application pool to the process pool with message flows: one from the application pool to the process's message start event, one from the process's sending task to the application pool, and one from the process's sending task to a catch event in the process pool that waits for the reply. Do not let the human user's pool or a task in the process stand in for the application as the message sender.",
+   "situation": "the description says a person uses a software application to send requests to and receive results from a process running in another system, so the application itself exchanges messages with that process",
+   "source": "learned guideline (new)",
+   "failure_type": "T7"
+  },
+  {
+   "rule_id": "EXS-045",
+   "instruction": "When the description states that a first party sends a quick outcome that is returned at once when it is complete, and otherwise a further delayed processing step runs before a follow-up outcome is sent back, with both cases ending the same process: Model an exclusive gateway directly after the send of the first outcome that checks whether that outcome is complete. Give the complete flow a condition and route it to a merging exclusive gateway that leads to one shared end event. Give the incomplete flow a condition and route it through the delayed processing step and the send of the follow-up outcome, then into the same merging gateway. Do not let the first send flow straight into the delayed step, and do not give the two cases separate end events.",
+   "situation": "the description states that a first party sends a quick outcome that is returned at once when it is complete, and otherwise a further delayed processing step runs before a follow-up outcome is sent back, with both cases ending the same process",
+   "source": "example-specific guideline",
+   "failure_type": "T5"
+  }
+ ],
+ "first_pass_detected_failures": [
+  "T5",
+  "T6",
+  "T7"
+ ],
+ "decisions": [
+  {
+   "action": "generate",
+   "reason": "Only permitted action (generate).",
+   "allowed": [
+    "generate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "learn",
+   "reason": "Only permitted action (learn).",
+   "allowed": [
+    "learn"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "revise",
+   "reason": "Only permitted action (revise).",
+   "allowed": [
+    "revise"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "validate",
+   "reason": "Only permitted action (validate).",
+   "allowed": [
+    "validate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "evaluate",
+   "reason": "Only permitted action (evaluate).",
+   "allowed": [
+    "evaluate"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "detect_failures",
+   "reason": "Only permitted action (detect_failures).",
+   "allowed": [
+    "detect_failures"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  },
+  {
+   "action": "stop_success",
+   "reason": "Only remaining action.",
+   "allowed": [
+    "stop_success"
+   ],
+   "agent": "anthropic:claude-haiku-5-5",
+   "agent_chose": false,
+   "fallback": false
+  }
+ ]
+}
