@@ -316,6 +316,7 @@
       .catch(function (err) { if (box) box.textContent = "This XML cannot be drawn: " + (err && err.message ? err.message : err); });
   }
   window.addEventListener("resize", function () { fit("#orchestratorCanvasGen"); fit("#orchestratorCanvasGold"); });
+  document.addEventListener("fullscreenchange", function () { window.setTimeout(function () { fit("#orchestratorCanvasGen"); fit("#orchestratorCanvasGold"); }, 150); });
 
   /* ------------------------------------------------------ example view -- */
   var shownId = null, shownSignature = null, current = null, shownDraft = null;
@@ -580,6 +581,21 @@
       if (!v) return;
       var canvas = v.get("canvas"), how = zoom.getAttribute("data-zoom");
       if (how === "fit") fit(which); else canvas.zoom(canvas.zoom() * (how === "in" ? 1.25 : 0.8));
+    }
+    var ed = ev.target.closest("[data-edit]");
+    if (ed) {
+      var pane = document.querySelector(ed.getAttribute("data-target"));
+      if (pane) { var on = pane.classList.toggle("editing"); ed.textContent = on ? "Stop editing" : "Edit"; ed.classList.toggle("btn-warning", on); ed.classList.toggle("btn-light", !on); }
+      return;
+    }
+    var fs = ev.target.closest("[data-full]");
+    if (fs) {
+      var target = document.querySelector(fs.getAttribute("data-full"));
+      if (!target) return;
+      if (document.fullscreenElement) { document.exitFullscreen(); if (document.fullscreenElement === target) return; }
+      var ask = target.requestFullscreen || target.webkitRequestFullscreen;
+      if (ask) ask.call(target); else alert("Full screen is not available in this browser.");
+      return;
     }
     if (ev.target.closest("#orchestratorStack")) {
       var stacked = $("orchestratorDiagrams").classList.toggle("orchestrator-stacked");

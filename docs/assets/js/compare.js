@@ -163,10 +163,12 @@
   }
   function pane(key, title) {
     var safe = key.replace(/[^a-zA-Z0-9]/g, "_");
-    return '<div class="cmp-pane" data-key="' + esc(key) + '"><div class="d-flex align-items-center mb-1"><span class="small font-weight-bold mr-auto">' + esc(title) + "</span>" +
+    return '<div class="cmp-pane" id="pane_' + safe + '" data-key="' + esc(key) + '"><div class="d-flex align-items-center mb-1"><span class="small font-weight-bold mr-auto">' + esc(title) + "</span>" +
       '<button class="btn btn-xs btn-light border mr-1" data-zoom="out" data-target="cv_' + safe + '">&minus;</button>' +
       '<button class="btn btn-xs btn-light border mr-1" data-zoom="in" data-target="cv_' + safe + '">+</button>' +
-      '<button class="btn btn-xs btn-light border" data-zoom="fit" data-target="cv_' + safe + '">Fit</button></div>' +
+      '<button class="btn btn-xs btn-light border mr-1" data-zoom="fit" data-target="cv_' + safe + '">Fit</button>' +
+      '<button class="btn btn-xs btn-light border mr-1" data-edit="cv_' + safe + '" title="Switch this diagram between read-only and editable">Edit</button>' +
+      '<button class="btn btn-xs btn-light border" data-full="pane_' + safe + '" title="This diagram on the whole screen (Esc to leave)"><i class="fas fa-expand"></i></button></div>' +
       '<div id="cv_' + safe + '" class="cmp-canvas"></div><p class="small text-muted mt-1 mb-0 cmp-note"></p></div>';
   }
   function fit(cid) {
@@ -190,6 +192,7 @@
     var html = pane("ref", "Reference model (description " + id + ")");
     drawn.forEach(function (d) { html += pane(d.key, d.label); keep[d.key] = true; });
     grid.innerHTML = html;
+    grid.setAttribute("data-count", String(drawn.length + 1));
     viewers = {};
     var first = drawn[0];
     example(first.run, id).then(function (doc) { show("cv_ref", doc.gold_display_xml || doc.gold_xml, ""); });
@@ -304,6 +307,14 @@
       if (how === "fit") fit(cid); else c.zoom(c.zoom() * (how === "in" ? 1.25 : 0.8));
       return;
     }
+    var ed = ev.target.closest("[data-edit]");
+    if (ed) {
+      var pane = document.getElementById(ed.getAttribute("data-edit"));
+      if (pane) { var on = pane.classList.toggle("editing"); ed.textContent = on ? "Stop editing" : "Edit"; ed.classList.toggle("btn-warning", on); ed.classList.toggle("btn-light", !on); }
+      return;
+    }
+    var fs = ev.target.closest("[data-full]");
+    if (fs) { fullScreen(document.getElementById(fs.getAttribute("data-full"))); return; }
     if (ev.target.closest("#cmpStack")) {
       var stacked = $("cmpDiagrams").classList.toggle("cmp-stacked");
       $("cmpStack").textContent = stacked ? "Two per row" : "One per row";
@@ -316,6 +327,13 @@
     var row = ev.target.closest(".cmp-all-row");
     if (row) { select(row.getAttribute("data-id")); window.scrollTo({ top: 0, behavior: "smooth" }); }
   });
+  function fullScreen(el) {
+    if (!el) return;
+    if (document.fullscreenElement) { document.exitFullscreen(); if (document.fullscreenElement === el) return; }
+    var ask = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (ask) ask.call(el); else alert("Full screen is not available in this browser.");
+  }
+  document.addEventListener("fullscreenchange", function () { window.setTimeout(function () { Object.keys(viewers).forEach(fit); }, 150); });
   window.addEventListener("resize", function () { Object.keys(viewers).forEach(fit); });
   window.addEventListener("hashchange", function () { var h = hash(); if (h && (h.g !== generator || h.id !== id)) start(h.g, h.id); });
 
