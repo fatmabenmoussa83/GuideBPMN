@@ -85,15 +85,36 @@
       (learned.length ? "No guideline matches." : "No error-driven guideline yet: they appear here as runs learn them.") + "</td></tr>";
   }
 
+  /* Without the local API, the catalogues of the study are read from docs/data/saved/guidelines/
+     (made by _build/export_saved_guidelines.py): same answers as the API would give. */
+  var SAVED = false;
+  function savedCatalogue(chosen) {
+    var file = chosen ? "data/saved/guidelines/" + chosen.replace(/\//g, "__") + ".json.gz" : null;
+    var p = file ? Promise.resolve(file) : fetch("data/saved/guidelines/index.json").then(function (r) {
+      if (!r.ok) throw new Error("no saved catalogue");
+      return r.json();
+    }).then(function (idx) {
+      var first = (idx.catalogues || [])[0];
+      if (!first) throw new Error("no saved catalogue");
+      return "data/saved/guidelines/" + first.id.replace(/\//g, "__") + ".json.gz";
+    });
+    return p.then(function (f) { return fetch(f); }).then(function (r) {
+      if (!r.ok) throw new Error("saved catalogue not found (" + r.status + ")");
+      if (typeof DecompressionStream === "undefined") throw new Error("this browser cannot open the saved catalogues; use a recent Chrome, Edge, Firefox or Safari");
+      return new Response(r.body.pipeThrough(new DecompressionStream("gzip"))).json();
+    }).then(function (data) { SAVED = true; return data; });
+  }
   function loadLearned() {
     var base = ($("glApi").value.trim() || "http://127.0.0.1:8765").replace(/\/$/, "");
     remember("guidebpmn.api", $("glApi").value.trim());
     $("glLearnedNote").textContent = "Loading…";
     var chosen = $("glModel").value;
-    fetch(base + "/api/orchestrator/guidelines" + (chosen ? "?catalogue=" + encodeURIComponent(chosen) : "")).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function (data) {
+    (SAVED ? savedCatalogue(chosen)
+           : fetch(base + "/api/orchestrator/guidelines" + (chosen ? "?catalogue=" + encodeURIComponent(chosen) : "")).then(function (r) {
+               if (!r.ok) throw new Error("HTTP " + r.status);
+               return r.json();
+             }).catch(function () { return savedCatalogue(chosen); })
+    ).then(function (data) {
       learned = data.guidelines || [];
       var list = data.catalogues || [];
       $("glModel").innerHTML = (list.length ? "" : '<option value="">no catalogue yet</option>') + list.map(function (c) {
@@ -107,7 +128,8 @@
       $("glLearnedNote").textContent = general.length + " generic guideline(s), " + confirmed + " confirmed: " + news + " new, " +
         (general.length - news) + " refining a documentation guideline; " + (learned.length - general.length - traces) +
         " example-specific (sent back for their own description only, never given to another description); " + traces +
-        " first wordings kept for traceability (rewritten in general terms, never sent to the generator).";
+        " first wordings kept for traceability (rewritten in general terms, never sent to the generator)." +
+        (SAVED ? " Catalogues of the study as saved with the website (no local API)." : "");
       $("glLearnedTab").textContent = "Error-driven guidelines (" + learned.length + ")";
       renderLearned();
     }).catch(function (e) {

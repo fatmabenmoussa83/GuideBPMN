@@ -16,6 +16,15 @@ DI = "http://www.omg.org/spec/BPMN/20100524/DI"
 DC = "http://www.omg.org/spec/DD/20100524/DC"
 DD = "http://www.omg.org/spec/DD/20100524/DI"
 SUBPROCESSES = {"subProcess", "transaction", "adHocSubProcess"}
+# Display geometry (DI only). Compact enough for a whole model to be readable at once in the browser.
+TASK_WIDTH = 120          # bpmn-js default task size is 100 x 80; a little wider for the generated labels
+COLUMN_GAP = 60           # horizontal space between two ranks of the flow
+ROW_GAP = 46              # vertical space between two nodes of the same rank
+LANE_MIN_HEIGHT = 120
+POOL_GAP = 90             # vertical space between two participants (message-flow labels sit there)
+LABEL_WIDTH, LABEL_HEIGHT = 110, 36   # space kept free under events and gateways for their external label
+ROUTE_BUDGET = 30000      # A* steps per connection
+LABEL_CROSSING = 160      # cost of crossing a reserved label area
 ARTIFACTS = {"dataObjectReference", "dataStoreReference", "textAnnotation"}
 NODES = {"task", "userTask", "manualTask", "serviceTask", "scriptTask", "sendTask", "receiveTask",
          "businessRuleTask", "callActivity", *SUBPROCESSES, "startEvent", "endEvent",
@@ -94,13 +103,13 @@ def scope_plan(scope):
             nested[key] = scope_plan(node)
             sizes[key] = (max(420, nested[key].width + 40), nested[key].height + 60)
         elif tag.endswith("Event"):
-            sizes[key] = (40, 40)
+            sizes[key] = (36, 36)
         elif tag.endswith("Gateway"):
-            sizes[key] = (54, 54)
+            sizes[key] = (50, 50)
         elif tag == "textAnnotation":
-            sizes[key] = (220, 110)
+            sizes[key] = (200, 100)
         else:
-            sizes[key] = (180, min(140, 84 + 14 * (len(node.get("name", "")) // 80)))
+            sizes[key] = (TASK_WIDTH, min(120, 80 + 16 * (len(node.get("name", "")) // 48)))
     for node in nodes:
         boundary_count = sum(local(other) == "boundaryEvent" and other.get("attachedToRef") == node.get("id")
                              for other in nodes)
@@ -110,11 +119,11 @@ def scope_plan(scope):
     columns = {}
     for key, rank in ranks.items():
         columns[rank] = max(columns.get(rank, 0), sizes[key][0])
-    offsets, cursor = {}, 80
+    offsets, cursor = {}, 60
     for rank in sorted(columns):
         offsets[rank] = cursor
-        cursor += columns[rank] + 130
-    plan = Plan(max(600, cursor + 10), 180)
+        cursor += columns[rank] + COLUMN_GAP
+    plan = Plan(max(480, cursor + 10), LANE_MIN_HEIGHT)
     lane_set = scope.find(f"{{{MODEL}}}laneSet")
 
     def lane_groups(lane_set, ancestors=()):
@@ -143,13 +152,13 @@ def scope_plan(scope):
         bands = {}
         for node in members:
             bands.setdefault(ranks[node.get("id")], []).append(node)
-        height = max([sum(sizes[n.get("id")][1] + 75 for n in col) + 70 for col in bands.values()] + [180])
+        height = max([sum(sizes[n.get("id")][1] + ROW_GAP for n in col) + 60 for col in bands.values()] + [LANE_MIN_HEIGHT])
         for rank in sorted(bands):
             col = bands[rank]
             # A stable barycenter ordering reduces branch crossings.
             col.sort(key=lambda n: sum(plan.boxes[p][1] for p in graph.predecessors(n.get("id"))
                         if p in plan.boxes) / max(1, sum(p in plan.boxes for p in graph.predecessors(n.get("id")))))
-            total = sum(sizes[n.get("id")][1] + 75 for n in col) - 75
+            total = sum(sizes[n.get("id")][1] + ROW_GAP for n in col) - ROW_GAP
             cy = y + (height - total) / 2
             for node in col:
                 key, tag = node.get("id"), local(node)
@@ -159,7 +168,7 @@ def scope_plan(scope):
                 plan.parents[key] = chain[-1] if chain else None
                 if key in nested:
                     plan.add(nested[key], x + 20, cy + 45, key)
-                cy += node_height + 75
+                cy += node_height + ROW_GAP
         for depth, lane in enumerate(chain):
             if lane in lane_bounds:
                 top, _ = lane_bounds[lane][1:3]
@@ -179,7 +188,7 @@ def scope_plan(scope):
                 x, by, width, height, _ = host
                 siblings = [n for n in nodes if local(n) == "boundaryEvent" and n.get("attachedToRef") == node.get("attachedToRef")]
                 index = siblings.index(node)
-                plan.boxes[node.get("id")] = (x + 15 + index * 55, by + height - 20, 40, 40, "boundaryEvent")
+                plan.boxes[node.get("id")] = (x + 15 + index * 50, by + height - 18, 36, 36, "boundaryEvent")
                 plan.parents[node.get("id")] = plan.parents.get(node.get("attachedToRef"))
     plan.height = max(180, y + 45)
     return plan
@@ -237,15 +246,17 @@ def route(plan, source, target, message=False, occupied=()):
     excluded = (ancestors(plan, source) | ancestors(plan, target)) - {source, target}
     obstacles = [v for k, v in plan.boxes.items() if k not in excluded
                  and v[4] not in {"participant", "lane"}]
-    # Reserve space for the external labels rendered by bpmn.io.
-    obstacles += [(x+width/2-70, y+height+5, 140, 48, "label")
-                  for key, (x, y, width, height, tag) in plan.boxes.items()
-                  if tag.endswith("Event") or tag.endswith("Gateway")]
     # Boundary stubs can be adjacent to their attached host.
     obstacles = [v for v in obstacles if not any(v[0]-8 < p[0] < v[0]+v[2]+8 and
                   v[1]-8 < p[1] < v[1]+v[3]+8 for p in (a, b))]
-    xs = sorted({a[0], b[0], 10, plan.width+40, *[p for v in obstacles for p in (v[0]-18, v[0]+v[2]+18)]})
-    ys = sorted({a[1], b[1], 10, plan.height+40, *[p for v in obstacles for p in (v[1]-35, v[1]+v[3]+35)]})
+    # The external labels rendered by bpmn.io under events and gateways: avoided when possible
+    # (a cost), never a wall, so that a compact layout always finds a path.
+    labels = [(x+width/2-LABEL_WIDTH/2, y+height+5, LABEL_WIDTH, LABEL_HEIGHT, "label")
+              for key, (x, y, width, height, tag) in plan.boxes.items()
+              if (tag.endswith("Event") or tag.endswith("Gateway")) and key not in (source, target)]
+    grid = obstacles + labels
+    xs = sorted({a[0], b[0], 10, plan.width+40, *[p for v in grid for p in (v[0]-18, v[0]+v[2]+18)]})
+    ys = sorted({a[1], b[1], 10, plan.height+40, *[p for v in grid for p in (v[1]-35, v[1]+v[3]+35)]})
     if message:
         xs = sorted(set(xs) | {p[0] + delta for segment in occupied for p in segment for delta in (-14, 14)})
     origin, goal = (xs.index(a[0]), ys.index(a[1])), (xs.index(b[0]), ys.index(b[1]))
@@ -258,7 +269,7 @@ def route(plan, source, target, message=False, occupied=()):
     best, previous = {initial: 0}, {}
     queue = [(0, initial)]
     found = None
-    for _ in range(12000):
+    for _ in range(ROUTE_BUDGET):
         if not queue:
             break
         _, current = heapq.heappop(queue)
@@ -274,6 +285,7 @@ def route(plan, source, target, message=False, occupied=()):
             if not clear(first, second):
                 continue
             cost = best[current] + abs(first[0]-second[0])+abs(first[1]-second[1]) + (30 if direction and axis != direction else 0)
+            cost += LABEL_CROSSING * sum(crosses(first, second, rect, 4) for rect in labels)
             if message:
                 for c, d in occupied:
                     if first[0] == second[0] == c[0] == d[0]:
@@ -314,14 +326,14 @@ def add_flow_diagrams(root, fresh):
             plans = []
             for participant in target.findall(f"{{{MODEL}}}participant"):
                 process = processes.get(participant.get("processRef"))
-                plans.append((participant, scope_plan(process) if process is not None else Plan(600, 180)))
-            width = max([p.width for _, p in plans] + [600]) + 80
-            plan, cursor = Plan(width, 0), 50
+                plans.append((participant, scope_plan(process) if process is not None else Plan(480, 100)))
+            width = max([p.width for _, p in plans] + [480]) + 80
+            plan, cursor = Plan(width, 0), 40
             for participant, inner in plans:
                 key = participant.get("id")
                 plan.boxes[key] = (40, cursor, width-80, inner.height, "participant")
                 plan.add(inner, 40, cursor, key)
-                cursor += inner.height + 140
+                cursor += inner.height + POOL_GAP
             plan.height = cursor
         else:
             inner = scope_plan(target)

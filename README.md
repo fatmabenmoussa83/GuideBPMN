@@ -35,7 +35,9 @@ Documentation guidelines: 82 rules paraphrased from the OMG BPMN 2.0.2 specifica
 - **Scenarios** (`demo_scenarios/`): five process descriptions (two with pools, lanes and message flows) followed through First, the three
   Revised iterations and Reuse, with the diagram of every generated model, its errors and scores, and the
   guidelines learned.
-- **Video**: a short demonstration of the website and of one run will be linked here.
+- **Video** (`docs/demo/guidebpmn-demo.mp4`, 4 min 38 s, voice-over and captions): one description followed from the first draft to the
+  learned guideline and the revised model, the reuse of confirmed guidelines on a description never seen, and where the results of the paper are.
+  Recorded on the public website with the saved runs; `docs/demo/README.md` says what each part shows and how to open the same views yourself.
 
 ## Install
 
@@ -108,6 +110,8 @@ docs/                       the website (static pages; docs/_build/build.py rege
 | The learned guidelines, readable | `guidelines/learned/<model>/agents/{replicates/rN,folds/fold_N}/learned_guidelines.md` (also `.csv`; full records in `.json`); index in `guidelines/learned/README.md` |
 | The guidelines given to each Reuse test | `bpmn_pipeline/runs/<Reuse test run>/learned_guidelines_used.json` |
 | Demonstration scenarios (description, diagrams of First, Revised i1–i3 and Reuse) | `demo_scenarios/` |
+| Demonstration video and what it shows | `docs/demo/guidebpmn-demo.mp4`, `docs/demo/README.md` |
+| One description across all its runs (First r1–r3, Revised r1–r3, Reuse), online | `docs/compare.html` (`compare.html#luna/24`) |
 | The 82 documentation guidelines | `guidelines/bpmn_documentation_guidelines.json` |
 | Dataset (55 descriptions and reference models) | `bpmn_generator_catalogue/dataset.json` |
 
@@ -117,7 +121,11 @@ The website is the `docs/` folder. Published with GitHub Pages (source: `main`, 
 pages can be read online, and its Run page shows the 32 runs of the study without any installation: every
 description, every draft and iteration drawn next to the reference, its scores, the orchestrator's decisions,
 the agents' tool calls and the learned guidelines, and the results tables of the paper (saved in
-`docs/data/saved/` by `docs/_build/export_saved_runs.py`). To run GuideBPMN from it (page "Run GuideBPMN", card "Test one description
+`docs/data/saved/` by `docs/_build/export_saved_runs.py`). The Compare page puts every model the study kept for one
+description side by side (First r1–r3, Revised r1–r3 with draft 0, each iteration and Learned, Reuse) with their
+measures, and draws any of them next to the reference (`docs/_build/export_compare.py`); the Guidelines page shows
+the 16 learned catalogues (`docs/_build/export_saved_guidelines.py`). Diagrams are read-only; each has an *Edit*
+button that opens the bpmn-js editor on it (changes stay in the browser) and a full-screen button. To run GuideBPMN from it (page "Run GuideBPMN", card "Test one description
 from zero"), start the API on your own computer with your key (`.\start_webapi.ps1`, it listens on
 `http://127.0.0.1:8765`) and open the page, online or `docs\run.html` locally: the page calls the API
 on your computer; your key never leaves it. Your browser may ask once to allow the site to reach
