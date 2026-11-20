@@ -18,8 +18,55 @@
   if (recall("guidebpmn.api")) $("orchestratorApi").value = recall("guidebpmn.api");
   $("orchestratorApi").addEventListener("change", function () { remember("guidebpmn.api", $("orchestratorApi").value.trim()); });
 
+  /* Saved runs: when no local API answers, the page reads the answers it would have given for the
+     32 runs of the study, saved with the website (data/saved/, made by docs/_build/export_saved_runs.py). */
+  var SAVED = false;
+  var REPO = "https://github.com/fatmabenmoussa83/GuideBPMN/tree/main/bpmn_pipeline/runs/";
+  var LIVE_ONLY = "This needs GuideBPMN running on your computer: start the API with .\\start_webapi.ps1, then reload the page.";
+  function savedFile(path) {
+    var q = path.split("?"), p = q[0], params = {};
+    (q[1] || "").split("&").forEach(function (kv) { var a = kv.split("="); if (a[0]) params[a[0]] = decodeURIComponent(a[1] || ""); });
+    var m;
+    if (p === "/api/orchestrator/runs") return "data/saved/runs.json";
+    if ((m = p.match(/^\/api\/orchestrator\/runs\/(.+)$/))) return "data/saved/runs/" + decodeURIComponent(m[1]) + "/run.json.gz";
+    if ((m = p.match(/^\/api\/orchestrator\/example\/(.+)$/)) && params.run)
+      return "data/saved/runs/" + params.run + "/example_" + String(decodeURIComponent(m[1])).padStart(2, "0") + ".json.gz";
+    if (p === "/api/orchestrator/study" && params.generator) return "data/saved/study/" + params.generator.replace(":", "-") + ".json";
+    if (p === "/api/orchestrator/dataset" || p === "/api/orchestrator/folds" || p === "/api/orchestrator/models")
+      return "data/saved/" + p.split("/").pop() + ".json";
+    return null;
+  }
+  function savedApi(path, opts) {
+    if (opts.method && opts.method !== "GET") return Promise.reject(new Error(LIVE_ONLY));
+    if (path.indexOf("/api/orchestrator/status") === 0)
+      return Promise.resolve({ state: "saved runs", label: "no local API: choose one of the study's runs under \u201cOpen a past run\u201d", examples: {} });
+    var file = savedFile(path);
+    if (!file) return Promise.reject(new Error(LIVE_ONLY));
+    return fetch(file).then(function (r) {
+      if (!r.ok) throw new Error("not in the saved runs (" + r.status + ")");
+      if (!/\.gz$/.test(file)) return r.json();
+      if (typeof DecompressionStream === "undefined") throw new Error("this browser cannot open the saved runs; use a recent Chrome, Edge, Firefox or Safari");
+      return new Response(r.body.pipeThrough(new DecompressionStream("gzip"))).json();
+    });
+  }
+  function useSaved() {
+    if (SAVED) return;
+    SAVED = true;
+    var note = $("orchestratorSavedNote");
+    if (note) note.style.display = "";
+    ["orchestratorStart", "orchestratorResume", "orchestratorRescore", "cvSave", "oneStart"].forEach(function (id) {
+      var b = $(id);
+      if (b) { b.disabled = true; b.title = LIVE_ONLY; }
+    });
+    var dl = $("orchestratorDownloadRun");
+    if (dl) dl.innerHTML = '<i class="fab fa-github mr-1"></i>Open the run\u2019s files';
+    var dx = $("orchestratorDownloadExample");
+    if (dx) dx.innerHTML = '<i class="fab fa-github mr-1"></i>Open this description\u2019s files';
+    window.setTimeout(function () { var s = $("cvShow"); if (s && $("cvGenerator").value) s.click(); }, 1500);
+  }
   function api(path, opts) {
     opts = opts || {};
+    if (SAVED) return savedApi(path, opts);
     var base = ($("orchestratorApi").value.trim() || "http://127.0.0.1:8765").replace(/\/$/, "");
     var headers = { "Content-Type": "application/json" };
     var token = $("orchestratorToken").value.trim();
@@ -30,6 +77,10 @@
           throw new Error(d.detail || ("HTTP " + r.status));
         });
         return r.json();
+      }, function (e) {                       // no API answered: show the saved runs of the study
+        if (opts.method && opts.method !== "GET") throw new Error(LIVE_ONLY);
+        useSaved();
+        return savedApi(path, opts);
       });
   }
 
@@ -565,11 +616,11 @@
       }
       applyStatus(s);
       if (s.state === "running") { timer = setTimeout(poll, 2500); return; }
-      $("orchestratorStart").disabled = false;
+      $("orchestratorStart").disabled = SAVED;
       if (s.state === "error") $("orchestratorConn").innerHTML = '<span class="text-danger">' + esc(s.error || "failed") + "</span>";
       if (s.state === "done") { renderValidator(s.validator_performance); renderReport(s.report, s.report_after_rule_feedback); renderSummary(s.metrics_summary); loadRuns(); }
     }).catch(function (e) {
-      $("orchestratorStart").disabled = false;
+      $("orchestratorStart").disabled = SAVED;
       $("orchestratorConn").innerHTML = '<span class="text-danger">' + esc(e.message) +
         '</span> &mdash; is the API running? Start it with <code>.\\start_webapi.ps1</code>';
     });
@@ -632,7 +683,7 @@
     api("/api/orchestrator/run", { method: "POST", body: JSON.stringify({ resume: run }) })
       .then(function () { $("orchestratorConn").textContent = "resuming " + run; $("orchestratorRuns").value = ""; poll(); })
       .catch(function (e) {
-        $("orchestratorStart").disabled = false; runChoiceChanged();
+        $("orchestratorStart").disabled = SAVED; runChoiceChanged();
         $("orchestratorConn").innerHTML = '<span class="text-danger">' + esc(e.message) + "</span>";
       });
   });
@@ -758,7 +809,7 @@
     if (version === "first" || version === "revised") body.replicate = parseInt($("orchestratorReplicate").value, 10);
     if ((version === "reuse_train" || version === "reuse_test") && !$("orchestratorFold").value) {
       $("orchestratorConn").innerHTML = '<span class="text-danger">Choose the Reuse round (fold).</span>';
-      $("orchestratorStart").disabled = false; return;
+      $("orchestratorStart").disabled = SAVED; return;
     }
     var pick = $("orchestratorPick").value, value = $("orchestratorPickValue").value.trim();
     if ((version === "reuse_train" || version === "reuse_test") && $("orchestratorFold").value) {
@@ -775,7 +826,7 @@
     api("/api/orchestrator/run", { method: "POST", body: JSON.stringify(body) })
       .then(function () { $("orchestratorConn").textContent = "started"; poll(); })
       .catch(function (e) {
-        $("orchestratorStart").disabled = false;
+        $("orchestratorStart").disabled = SAVED;
         $("orchestratorConn").innerHTML = '<span class="text-danger">' + esc(e.message) + "</span>";
       });
   });
@@ -1015,6 +1066,14 @@
 
   /* --------------------------------------------- download the files ---- */
   function download(path, filename, note) {
+    if (SAVED) {                               // saved runs: the files are in the repository
+      var m = path.match(/run=([^&]+)/), e = path.match(/example=([^&]+)/);
+      var run = m ? decodeURIComponent(m[1]) : $("orchestratorRuns").value;
+      if (!run) { if (note) note.textContent = "choose a run first"; return Promise.resolve(); }
+      window.open(REPO + run + (e ? "/id_" + String(decodeURIComponent(e[1])).padStart(2, "0") : ""), "_blank", "noopener");
+      if (note) note.textContent = "opened the run's files on GitHub";
+      return Promise.resolve();
+    }
     var base = ($("orchestratorApi").value.trim() || "http://127.0.0.1:8765").replace(/\/$/, "");
     var headers = {}, token = $("orchestratorToken").value.trim();
     if (token) headers["X-API-Token"] = token;

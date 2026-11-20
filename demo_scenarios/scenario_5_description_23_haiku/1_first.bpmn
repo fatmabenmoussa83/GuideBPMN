@@ -1,0 +1,79 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_CreditScoring" targetNamespace="http://example.com/bpmn/credit-scoring">
+  <bpmn:message id="Msg_ClerkRequest" name="Credit scoring request" />
+  <bpmn:message id="Msg_ScoringRequest" name="Scoring request" />
+  <bpmn:message id="Msg_ImmediateResult" name="Immediate scoring result" />
+  <bpmn:message id="Msg_DelayNotification" name="Scoring delay notification" />
+  <bpmn:message id="Msg_FinalResult" name="Level 2 scoring result" />
+  <bpmn:message id="Msg_ShowResultToClerk" name="Scoring result to clerk" />
+  <bpmn:message id="Msg_ShowDelayToClerk" name="Check again later message to clerk" />
+
+  <bpmn:collaboration id="Collab_CreditScoring">
+    <bpmn:participant id="Participant_Clerk" name="Sales clerk (frontend)" />
+    <bpmn:participant id="Participant_Banking" name="Banking system" processRef="Process_Banking" />
+    <bpmn:participant id="Participant_Agency" name="Credit scoring agency" processRef="Process_Agency" />
+    <bpmn:messageFlow id="MF_ClerkRequest" name="Credit scoring request" sourceRef="Participant_Clerk" targetRef="StartEvent_Request" />
+    <bpmn:messageFlow id="MF_ScoringRequest" name="Scoring request" sourceRef="Task_SendRequest" targetRef="StartEvent_Agency" />
+    <bpmn:messageFlow id="MF_ImmediateResult" name="Immediate scoring result" sourceRef="Task_SendImmediate" targetRef="Catch_ImmediateResult" />
+    <bpmn:messageFlow id="MF_DelayNotification" name="Scoring delay notification" sourceRef="Task_SendDelay" targetRef="Catch_DelayNotification" />
+    <bpmn:messageFlow id="MF_FinalResult" name="Level 2 scoring result" sourceRef="Task_SendFinal" targetRef="Catch_FinalResult" />
+    <bpmn:messageFlow id="MF_ShowImmediateResult" name="Scoring result to clerk" sourceRef="Task_PresentImmediate" targetRef="Participant_Clerk" />
+    <bpmn:messageFlow id="MF_ShowDelay" name="Check again later message to clerk" sourceRef="Task_ShowDelay" targetRef="Participant_Clerk" />
+    <bpmn:messageFlow id="MF_ShowFinalResult" name="Scoring result to clerk" sourceRef="Task_PresentFinal" targetRef="Participant_Clerk" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Banking" name="Banking system credit scoring" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Request" name="Credit scoring requested by clerk">
+      <bpmn:messageEventDefinition id="MED_ClerkRequest" messageRef="Msg_ClerkRequest" />
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_SendRequest" name="Send scoring request to agency" messageRef="Msg_ScoringRequest" />
+    <bpmn:eventBasedGateway id="Gateway_AgencyResponse" name="Agency response" />
+    <bpmn:intermediateCatchEvent id="Catch_ImmediateResult" name="Immediate result received">
+      <bpmn:messageEventDefinition id="MED_ImmediateResult" messageRef="Msg_ImmediateResult" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Catch_DelayNotification" name="Delay notification received">
+      <bpmn:messageEventDefinition id="MED_DelayNotification" messageRef="Msg_DelayNotification" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="Task_PresentImmediate" name="Present result to clerk" messageRef="Msg_ShowResultToClerk" />
+    <bpmn:sendTask id="Task_ShowDelay" name="Display check again later message to clerk" messageRef="Msg_ShowDelayToClerk" />
+    <bpmn:intermediateCatchEvent id="Catch_FinalResult" name="Level 2 scoring result received">
+      <bpmn:messageEventDefinition id="MED_FinalResult" messageRef="Msg_FinalResult" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="Task_PresentFinal" name="Present result to clerk" messageRef="Msg_ShowResultToClerk" />
+    <bpmn:endEvent id="End_ImmediateResult" name="Result presented" />
+    <bpmn:endEvent id="End_FinalResult" name="Final result presented" />
+
+    <bpmn:sequenceFlow id="SF_B1" sourceRef="StartEvent_Request" targetRef="Task_SendRequest" />
+    <bpmn:sequenceFlow id="SF_B2" sourceRef="Task_SendRequest" targetRef="Gateway_AgencyResponse" />
+    <bpmn:sequenceFlow id="SF_B3" sourceRef="Gateway_AgencyResponse" targetRef="Catch_ImmediateResult" />
+    <bpmn:sequenceFlow id="SF_B4" sourceRef="Gateway_AgencyResponse" targetRef="Catch_DelayNotification" />
+    <bpmn:sequenceFlow id="SF_B5" sourceRef="Catch_ImmediateResult" targetRef="Task_PresentImmediate" />
+    <bpmn:sequenceFlow id="SF_B6" sourceRef="Task_PresentImmediate" targetRef="End_ImmediateResult" />
+    <bpmn:sequenceFlow id="SF_B7" sourceRef="Catch_DelayNotification" targetRef="Task_ShowDelay" />
+    <bpmn:sequenceFlow id="SF_B8" sourceRef="Task_ShowDelay" targetRef="Catch_FinalResult" />
+    <bpmn:sequenceFlow id="SF_B9" sourceRef="Catch_FinalResult" targetRef="Task_PresentFinal" />
+    <bpmn:sequenceFlow id="SF_B10" sourceRef="Task_PresentFinal" targetRef="End_FinalResult" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Agency" name="Credit scoring agency" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_Agency" name="Scoring request received">
+      <bpmn:messageEventDefinition id="MED_ScoringRequest" messageRef="Msg_ScoringRequest" />
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Level1" name="Perform level 1 scoring" />
+    <bpmn:exclusiveGateway id="Gateway_ResultAvailable" name="Result available immediately?" />
+    <bpmn:sendTask id="Task_SendImmediate" name="Send immediate result to banking system" messageRef="Msg_ImmediateResult" />
+    <bpmn:sendTask id="Task_SendDelay" name="Inform banking system of delay" messageRef="Msg_DelayNotification" />
+    <bpmn:task id="Task_Level2" name="Perform level 2 scoring" />
+    <bpmn:sendTask id="Task_SendFinal" name="Send scoring result to banking system" messageRef="Msg_FinalResult" />
+    <bpmn:endEvent id="End_ImmediateAgency" name="Immediate result returned" />
+    <bpmn:endEvent id="End_FinalAgency" name="Level 2 result returned" />
+
+    <bpmn:sequenceFlow id="SF_A1" sourceRef="StartEvent_Agency" targetRef="Task_Level1" />
+    <bpmn:sequenceFlow id="SF_A2" sourceRef="Task_Level1" targetRef="Gateway_ResultAvailable" />
+    <bpmn:sequenceFlow id="SF_A3" name="Immediate result" sourceRef="Gateway_ResultAvailable" targetRef="Task_SendImmediate" />
+    <bpmn:sequenceFlow id="SF_A4" name="Delay" sourceRef="Gateway_ResultAvailable" targetRef="Task_SendDelay" />
+    <bpmn:sequenceFlow id="SF_A5" sourceRef="Task_SendImmediate" targetRef="End_ImmediateAgency" />
+    <bpmn:sequenceFlow id="SF_A6" sourceRef="Task_SendDelay" targetRef="Task_Level2" />
+    <bpmn:sequenceFlow id="SF_A7" sourceRef="Task_Level2" targetRef="Task_SendFinal" />
+    <bpmn:sequenceFlow id="SF_A8" sourceRef="Task_SendFinal" targetRef="End_FinalAgency" />
+  </bpmn:process>
+<bpmndi:BPMNDiagram id="FlowDiagram_1"><bpmndi:BPMNPlane id="FlowPlane_1" bpmnElement="Collab_CreditScoring"><bpmndi:BPMNShape id="FlowShape_1" bpmnElement="Participant_Clerk" isHorizontal="true"><dc:Bounds x="40" y="50" width="1884" height="180" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_2" bpmnElement="Participant_Banking" isHorizontal="true"><dc:Bounds x="40" y="370" width="1884" height="468" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_3" bpmnElement="Participant_Agency" isHorizontal="true"><dc:Bounds x="40" y="978" width="1884" height="468" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_4" bpmnElement="StartEvent_Request"><dc:Bounds x="120.0" y="579.0" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_5" bpmnElement="Task_SendRequest"><dc:Bounds x="290.0" y="557.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_6" bpmnElement="Gateway_AgencyResponse"><dc:Bounds x="600.0" y="572.0" width="54" height="54" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_7" bpmnElement="Catch_ImmediateResult"><dc:Bounds x="784.0" y="521.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_8" bpmnElement="Catch_DelayNotification"><dc:Bounds x="784.0" y="636.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_9" bpmnElement="Task_PresentImmediate"><dc:Bounds x="954.0" y="477.5" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_10" bpmnElement="Task_ShowDelay"><dc:Bounds x="954.0" y="636.5" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_11" bpmnElement="End_ImmediateResult"><dc:Bounds x="1264.0" y="521.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_12" bpmnElement="Catch_FinalResult"><dc:Bounds x="1264.0" y="636.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_13" bpmnElement="Task_PresentFinal"><dc:Bounds x="1434.0" y="557.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_14" bpmnElement="End_FinalResult"><dc:Bounds x="1744.0" y="579.0" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_15" bpmnElement="StartEvent_Agency"><dc:Bounds x="120.0" y="1187.0" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_16" bpmnElement="Task_Level1"><dc:Bounds x="290.0" y="1165.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_17" bpmnElement="Gateway_ResultAvailable"><dc:Bounds x="600.0" y="1180.0" width="54" height="54" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_18" bpmnElement="Task_SendImmediate"><dc:Bounds x="784.0" y="1085.5" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_19" bpmnElement="Task_SendDelay"><dc:Bounds x="784.0" y="1244.5" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_20" bpmnElement="End_ImmediateAgency"><dc:Bounds x="1164.0" y="1107.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_21" bpmnElement="Task_Level2"><dc:Bounds x="1094.0" y="1222.5" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_22" bpmnElement="Task_SendFinal"><dc:Bounds x="1404.0" y="1165.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_23" bpmnElement="End_FinalAgency"><dc:Bounds x="1714.0" y="1187.0" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="FlowEdge_1" bpmnElement="MF_ClerkRequest"><di:waypoint x="982.0" y="230" /><di:waypoint x="982.0" y="254" /><di:waypoint x="96.0" y="254" /><di:waypoint x="96.0" y="599.0" /><di:waypoint x="120.0" y="599.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_2" bpmnElement="MF_ScoringRequest"><di:waypoint x="380.0" y="641.0" /><di:waypoint x="380.0" y="1152.0" /><di:waypoint x="96.0" y="1152.0" /><di:waypoint x="96.0" y="1207.0" /><di:waypoint x="120.0" y="1207.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_3" bpmnElement="MF_ImmediateResult"><di:waypoint x="874.0" y="1085.5" /><di:waypoint x="874.0" y="1061.5" /><di:waypoint x="716.0" y="1061.5" /><di:waypoint x="716.0" y="541.5" /><di:waypoint x="784.0" y="541.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_4" bpmnElement="MF_DelayNotification"><di:waypoint x="874.0" y="1244.5" /><di:waypoint x="874.0" y="1220.5" /><di:waypoint x="715.0" y="1220.5" /><di:waypoint x="715.0" y="656.5" /><di:waypoint x="784.0" y="656.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_5" bpmnElement="MF_FinalResult"><di:waypoint x="1494.0" y="1165.0" /><di:waypoint x="1494.0" y="755.5" /><di:waypoint x="1196.0" y="755.5" /><di:waypoint x="1196.0" y="656.5" /><di:waypoint x="1264.0" y="656.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_6" bpmnElement="MF_ShowImmediateResult"><di:waypoint x="1044.0" y="477.5" /><di:waypoint x="1044.0" y="453.5" /><di:waypoint x="982.0" y="453.5" /><di:waypoint x="982.0" y="230" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_7" bpmnElement="MF_ShowDelay"><di:waypoint x="1044.0" y="636.5" /><di:waypoint x="1044.0" y="612.5" /><di:waypoint x="936.0" y="612.5" /><di:waypoint x="936.0" y="442.5" /><di:waypoint x="996.0" y="442.5" /><di:waypoint x="996.0" y="254" /><di:waypoint x="982.0" y="254" /><di:waypoint x="982.0" y="230" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_8" bpmnElement="MF_ShowFinalResult"><di:waypoint x="1524.0" y="557.0" /><di:waypoint x="1524.0" y="254" /><di:waypoint x="982.0" y="254" /><di:waypoint x="982.0" y="230" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_9" bpmnElement="SF_B1"><di:waypoint x="160.0" y="599.0" /><di:waypoint x="290.0" y="599.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_10" bpmnElement="SF_B2"><di:waypoint x="470.0" y="599.0" /><di:waypoint x="600.0" y="599.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_11" bpmnElement="SF_B3"><di:waypoint x="654.0" y="599.0" /><di:waypoint x="678.0" y="599.0" /><di:waypoint x="678.0" y="541.5" /><di:waypoint x="784.0" y="541.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_12" bpmnElement="SF_B4"><di:waypoint x="654.0" y="599.0" /><di:waypoint x="716.0" y="599.0" /><di:waypoint x="716.0" y="656.5" /><di:waypoint x="784.0" y="656.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_13" bpmnElement="SF_B5"><di:waypoint x="824.0" y="541.5" /><di:waypoint x="848.0" y="541.5" /><di:waypoint x="848.0" y="519.5" /><di:waypoint x="954.0" y="519.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_14" bpmnElement="SF_B6"><di:waypoint x="1134.0" y="519.5" /><di:waypoint x="1158.0" y="519.5" /><di:waypoint x="1158.0" y="541.5" /><di:waypoint x="1264.0" y="541.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_15" bpmnElement="SF_B7"><di:waypoint x="824.0" y="656.5" /><di:waypoint x="930.0" y="656.5" /><di:waypoint x="930.0" y="678.5" /><di:waypoint x="954.0" y="678.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_16" bpmnElement="SF_B8"><di:waypoint x="1134.0" y="678.5" /><di:waypoint x="1158.0" y="678.5" /><di:waypoint x="1158.0" y="656.5" /><di:waypoint x="1264.0" y="656.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_17" bpmnElement="SF_B9"><di:waypoint x="1304.0" y="656.5" /><di:waypoint x="1410.0" y="656.5" /><di:waypoint x="1410.0" y="599.0" /><di:waypoint x="1434.0" y="599.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_18" bpmnElement="SF_B10"><di:waypoint x="1614.0" y="599.0" /><di:waypoint x="1744.0" y="599.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_19" bpmnElement="SF_A1"><di:waypoint x="160.0" y="1207.0" /><di:waypoint x="290.0" y="1207.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_20" bpmnElement="SF_A2"><di:waypoint x="470.0" y="1207.0" /><di:waypoint x="600.0" y="1207.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_21" bpmnElement="SF_A3"><di:waypoint x="654.0" y="1207.0" /><di:waypoint x="678.0" y="1207.0" /><di:waypoint x="678.0" y="1127.5" /><di:waypoint x="784.0" y="1127.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_22" bpmnElement="SF_A4"><di:waypoint x="654.0" y="1207.0" /><di:waypoint x="760.0" y="1207.0" /><di:waypoint x="760.0" y="1286.5" /><di:waypoint x="784.0" y="1286.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_23" bpmnElement="SF_A5"><di:waypoint x="964.0" y="1127.5" /><di:waypoint x="1164.0" y="1127.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_24" bpmnElement="SF_A6"><di:waypoint x="964.0" y="1286.5" /><di:waypoint x="988.0" y="1286.5" /><di:waypoint x="988.0" y="1264.5" /><di:waypoint x="1094.0" y="1264.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_25" bpmnElement="SF_A7"><di:waypoint x="1274.0" y="1264.5" /><di:waypoint x="1298.0" y="1264.5" /><di:waypoint x="1298.0" y="1207.0" /><di:waypoint x="1404.0" y="1207.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_26" bpmnElement="SF_A8"><di:waypoint x="1584.0" y="1207.0" /><di:waypoint x="1714.0" y="1207.0" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

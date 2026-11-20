@@ -30,6 +30,13 @@ of the study and the scripts that produce its tables.
 Dataset: 55 descriptions with their reference models (PMo), `bpmn_generator_catalogue/dataset.json`.
 Documentation guidelines: 82 rules paraphrased from the OMG BPMN 2.0.2 specification.
 
+## Demonstration
+
+- **Scenarios** (`demo_scenarios/`): five process descriptions (two with pools, lanes and message flows) followed through First, the three
+  Revised iterations and Reuse, with the diagram of every generated model, its errors and scores, and the
+  guidelines learned.
+- **Video**: a short demonstration of the website and of one run will be linked here.
+
 ## Install
 
 Python 3.10 or later. Windows (PowerShell):
@@ -100,13 +107,17 @@ docs/                       the website (static pages; docs/_build/build.py rege
 | One description of a run: drafts, validator and similarity results, decisions, agents' trace | `bpmn_pipeline/runs/<run>/id_NN/` |
 | The learned guidelines, readable | `guidelines/learned/<model>/agents/{replicates/rN,folds/fold_N}/learned_guidelines.md` (also `.csv`; full records in `.json`); index in `guidelines/learned/README.md` |
 | The guidelines given to each Reuse test | `bpmn_pipeline/runs/<Reuse test run>/learned_guidelines_used.json` |
+| Demonstration scenarios (description, diagrams of First, Revised i1–i3 and Reuse) | `demo_scenarios/` |
 | The 82 documentation guidelines | `guidelines/bpmn_documentation_guidelines.json` |
 | Dataset (55 descriptions and reference models) | `bpmn_generator_catalogue/dataset.json` |
 
 ## The website
 
 The website is the `docs/` folder. Published with GitHub Pages (source: `main`, folder `/docs`), its
-pages can be read online. To run GuideBPMN from it (page "Run GuideBPMN", card "Test one description
+pages can be read online, and its Run page shows the 32 runs of the study without any installation: every
+description, every draft and iteration drawn next to the reference, its scores, the orchestrator's decisions,
+the agents' tool calls and the learned guidelines, and the results tables of the paper (saved in
+`docs/data/saved/` by `docs/_build/export_saved_runs.py`). To run GuideBPMN from it (page "Run GuideBPMN", card "Test one description
 from zero"), start the API on your own computer with your key (`.\start_webapi.ps1`, it listens on
 `http://127.0.0.1:8765`) and open the page, online or `docs\run.html` locally: the page calls the API
 on your computer; your key never leaves it. Your browser may ask once to allow the site to reach

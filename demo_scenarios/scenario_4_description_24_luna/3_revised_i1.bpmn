@@ -1,0 +1,126 @@
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" targetNamespace="http://example.com/restaurant">
+  <bpmn:message id="Message_Order" name="Meal order" />
+  <bpmn:message id="Message_Payment" name="Payment" />
+  <bpmn:message id="Message_BuzzerHandover" name="Buzzer and readiness information" />
+  <bpmn:message id="Message_ChefOrder" name="New meal order for chef" />
+  <bpmn:message id="Message_MealReady" name="Meal placed in service hatch" />
+  <bpmn:message id="Message_BuzzerRings" name="Buzzer rings" />
+  <bpmn:message id="Message_GuestCall" name="Call for guest" />
+  <bpmn:message id="Message_GuestArrival" name="Guest arrives at service hatch" />
+  <bpmn:message id="Message_MealHandover" name="Meal handover" />
+
+  <bpmn:process id="Process_Guest" name="Guest orders and collects meal" isExecutable="false">
+    <bpmn:startEvent id="Guest_Start" name="Feel hungry and enter restaurant" />
+    <bpmn:task id="Guest_ChooseDish" name="Choose a dish from the changing meal range" />
+    <bpmn:task id="Guest_WaitTurn" name="Wait until it is his turn" />
+    <bpmn:sendTask id="Guest_PlaceOrder" name="Place order with employee" messageRef="Message_Order" />
+    <bpmn:sendTask id="Guest_Pay" name="Pay for order" messageRef="Message_Payment" />
+    <bpmn:receiveTask id="Guest_ReceiveBuzzer" name="Receive buzzer and readiness information" messageRef="Message_BuzzerHandover" />
+    <bpmn:eventBasedGateway id="Guest_WaitForReadyOrCall" name="Wait for buzzer or employee call" />
+    <bpmn:intermediateCatchEvent id="Guest_BuzzerRings" name="Buzzer rings">
+      <bpmn:messageEventDefinition id="Guest_BuzzerRings_Definition" messageRef="Message_BuzzerRings" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Guest_EmployeeCalls" name="Employee calls">
+      <bpmn:messageEventDefinition id="Guest_EmployeeCalls_Definition" messageRef="Message_GuestCall" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Guest_MergeReadyOrCall" name="Continue after buzzer or call" />
+    <bpmn:task id="Guest_GoToHatch" name="Go to service hatch" />
+    <bpmn:intermediateThrowEvent id="Guest_ArriveAtHatch" name="Arrive at service hatch">
+      <bpmn:messageEventDefinition id="Guest_ArriveAtHatch_Definition" messageRef="Message_GuestArrival" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:receiveTask id="Guest_PickUpMeal" name="Pick up meal" messageRef="Message_MealHandover" />
+    <bpmn:task id="Guest_EatMeal" name="Eat meal" />
+    <bpmn:endEvent id="Guest_End" name="Meal eaten" />
+
+    <bpmn:sequenceFlow id="Guest_Flow_1" sourceRef="Guest_Start" targetRef="Guest_ChooseDish" />
+    <bpmn:sequenceFlow id="Guest_Flow_2" sourceRef="Guest_ChooseDish" targetRef="Guest_WaitTurn" />
+    <bpmn:sequenceFlow id="Guest_Flow_3" sourceRef="Guest_WaitTurn" targetRef="Guest_PlaceOrder" />
+    <bpmn:sequenceFlow id="Guest_Flow_4" sourceRef="Guest_PlaceOrder" targetRef="Guest_Pay" />
+    <bpmn:sequenceFlow id="Guest_Flow_5" sourceRef="Guest_Pay" targetRef="Guest_ReceiveBuzzer" />
+    <bpmn:sequenceFlow id="Guest_Flow_6" sourceRef="Guest_ReceiveBuzzer" targetRef="Guest_WaitForReadyOrCall" />
+    <bpmn:sequenceFlow id="Guest_Flow_7" sourceRef="Guest_WaitForReadyOrCall" targetRef="Guest_BuzzerRings" />
+    <bpmn:sequenceFlow id="Guest_Flow_8" sourceRef="Guest_WaitForReadyOrCall" targetRef="Guest_EmployeeCalls" />
+    <bpmn:sequenceFlow id="Guest_Flow_9" sourceRef="Guest_BuzzerRings" targetRef="Guest_MergeReadyOrCall" />
+    <bpmn:sequenceFlow id="Guest_Flow_10" sourceRef="Guest_EmployeeCalls" targetRef="Guest_MergeReadyOrCall" />
+    <bpmn:sequenceFlow id="Guest_Flow_11" sourceRef="Guest_MergeReadyOrCall" targetRef="Guest_GoToHatch" />
+    <bpmn:sequenceFlow id="Guest_Flow_12" sourceRef="Guest_GoToHatch" targetRef="Guest_ArriveAtHatch" />
+    <bpmn:sequenceFlow id="Guest_Flow_13" sourceRef="Guest_ArriveAtHatch" targetRef="Guest_PickUpMeal" />
+    <bpmn:sequenceFlow id="Guest_Flow_14" sourceRef="Guest_PickUpMeal" targetRef="Guest_EatMeal" />
+    <bpmn:sequenceFlow id="Guest_Flow_15" sourceRef="Guest_EatMeal" targetRef="Guest_End" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Employee" name="Employee takes order and hands over meal" isExecutable="false">
+    <bpmn:startEvent id="Employee_Start" name="Meal order received">
+      <bpmn:messageEventDefinition id="Employee_Start_OrderDefinition" messageRef="Message_Order" />
+    </bpmn:startEvent>
+    <bpmn:task id="Employee_EnterOrderInPOS" name="Enter order into POS system" />
+    <bpmn:task id="Employee_CollectPayment" name="Collect money from guest" />
+    <bpmn:task id="Employee_SetUpBuzzer" name="Set up buzzer" />
+    <bpmn:sendTask id="Employee_HandOverBuzzer" name="Pass buzzer and explain when dinner is ready" messageRef="Message_BuzzerHandover">
+      <bpmn:documentation>When the buzzer rings, your dinner is ready.</bpmn:documentation>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Employee_InformChef" name="Inform chef of new meal order" messageRef="Message_ChefOrder" />
+    <bpmn:intermediateCatchEvent id="Employee_MealReady" name="Chef reports meal in service hatch">
+      <bpmn:messageEventDefinition id="Employee_MealReady_Definition" messageRef="Message_MealReady" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Employee_SetOffBuzzer" name="Set off guest's buzzer" />
+    <bpmn:eventBasedGateway id="Employee_WaitForGuestOrTimer" name="Wait for guest or five minutes" />
+    <bpmn:intermediateCatchEvent id="Employee_GuestArrives" name="Guest arrives at service hatch">
+      <bpmn:messageEventDefinition id="Employee_GuestArrives_Definition" messageRef="Message_GuestArrival" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Employee_FiveMinutesElapsed" name="Five minutes elapsed">
+      <bpmn:timerEventDefinition id="Employee_FiveMinutesElapsed_Definition">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="Employee_CallGuest" name="Call for guest" messageRef="Message_GuestCall" />
+    <bpmn:task id="Employee_HandOverMeal" name="Hand over meal" />
+    <bpmn:endEvent id="Employee_End" name="Meal handed over" />
+
+    <bpmn:sequenceFlow id="Employee_Flow_1" sourceRef="Employee_Start" targetRef="Employee_EnterOrderInPOS" />
+    <bpmn:sequenceFlow id="Employee_Flow_2" sourceRef="Employee_EnterOrderInPOS" targetRef="Employee_CollectPayment" />
+    <bpmn:sequenceFlow id="Employee_Flow_3" sourceRef="Employee_CollectPayment" targetRef="Employee_SetUpBuzzer" />
+    <bpmn:sequenceFlow id="Employee_Flow_4" sourceRef="Employee_SetUpBuzzer" targetRef="Employee_HandOverBuzzer" />
+    <bpmn:sequenceFlow id="Employee_Flow_5" sourceRef="Employee_HandOverBuzzer" targetRef="Employee_InformChef" />
+    <bpmn:sequenceFlow id="Employee_Flow_6" sourceRef="Employee_InformChef" targetRef="Employee_MealReady" />
+    <bpmn:sequenceFlow id="Employee_Flow_7" sourceRef="Employee_MealReady" targetRef="Employee_SetOffBuzzer" />
+    <bpmn:sequenceFlow id="Employee_Flow_8" sourceRef="Employee_SetOffBuzzer" targetRef="Employee_WaitForGuestOrTimer" />
+    <bpmn:sequenceFlow id="Employee_Flow_9" sourceRef="Employee_WaitForGuestOrTimer" targetRef="Employee_GuestArrives" />
+    <bpmn:sequenceFlow id="Employee_Flow_10" sourceRef="Employee_WaitForGuestOrTimer" targetRef="Employee_FiveMinutesElapsed" />
+    <bpmn:sequenceFlow id="Employee_Flow_11" sourceRef="Employee_GuestArrives" targetRef="Employee_HandOverMeal" />
+    <bpmn:sequenceFlow id="Employee_Flow_12" sourceRef="Employee_FiveMinutesElapsed" targetRef="Employee_CallGuest" />
+    <bpmn:sequenceFlow id="Employee_Flow_13" sourceRef="Employee_CallGuest" targetRef="Employee_WaitForGuestOrTimer" />
+    <bpmn:sequenceFlow id="Employee_Flow_14" sourceRef="Employee_HandOverMeal" targetRef="Employee_End" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Chef" name="Chef prepares meal" isExecutable="false">
+    <bpmn:startEvent id="Chef_Start" name="New meal order received">
+      <bpmn:messageEventDefinition id="Chef_Start_OrderDefinition" messageRef="Message_ChefOrder" />
+    </bpmn:startEvent>
+    <bpmn:task id="Chef_PrepareMeal" name="Prepare meal" />
+    <bpmn:task id="Chef_PlaceMealInHatch" name="Place meal in service hatch" />
+    <bpmn:sendTask id="Chef_InformEmployee" name="Inform employee meal is in service hatch" messageRef="Message_MealReady" />
+    <bpmn:endEvent id="Chef_End" name="Employee informed meal is ready" />
+
+    <bpmn:sequenceFlow id="Chef_Flow_1" sourceRef="Chef_Start" targetRef="Chef_PrepareMeal" />
+    <bpmn:sequenceFlow id="Chef_Flow_2" sourceRef="Chef_PrepareMeal" targetRef="Chef_PlaceMealInHatch" />
+    <bpmn:sequenceFlow id="Chef_Flow_3" sourceRef="Chef_PlaceMealInHatch" targetRef="Chef_InformEmployee" />
+    <bpmn:sequenceFlow id="Chef_Flow_4" sourceRef="Chef_InformEmployee" targetRef="Chef_End" />
+  </bpmn:process>
+
+  <bpmn:collaboration id="Restaurant_Collaboration">
+    <bpmn:participant id="Participant_Guest" name="Guest" processRef="Process_Guest" />
+    <bpmn:participant id="Participant_Employee" name="Employee" processRef="Process_Employee" />
+    <bpmn:participant id="Participant_Chef" name="Chef" processRef="Process_Chef" />
+
+    <bpmn:messageFlow id="MessageFlow_Order" name="Meal order" sourceRef="Guest_PlaceOrder" targetRef="Employee_Start" messageRef="Message_Order" />
+    <bpmn:messageFlow id="MessageFlow_Payment" name="Payment" sourceRef="Guest_Pay" targetRef="Employee_CollectPayment" messageRef="Message_Payment" />
+    <bpmn:messageFlow id="MessageFlow_BuzzerHandover" name="Buzzer and readiness information" sourceRef="Employee_HandOverBuzzer" targetRef="Guest_ReceiveBuzzer" messageRef="Message_BuzzerHandover" />
+    <bpmn:messageFlow id="MessageFlow_ChefOrder" name="New meal order" sourceRef="Employee_InformChef" targetRef="Chef_Start" messageRef="Message_ChefOrder" />
+    <bpmn:messageFlow id="MessageFlow_MealReady" name="Meal in service hatch" sourceRef="Chef_InformEmployee" targetRef="Employee_MealReady" messageRef="Message_MealReady" />
+    <bpmn:messageFlow id="MessageFlow_BuzzerRings" name="Buzzer rings" sourceRef="Employee_SetOffBuzzer" targetRef="Guest_BuzzerRings" messageRef="Message_BuzzerRings" />
+    <bpmn:messageFlow id="MessageFlow_GuestCall" name="Call for guest" sourceRef="Employee_CallGuest" targetRef="Guest_EmployeeCalls" messageRef="Message_GuestCall" />
+    <bpmn:messageFlow id="MessageFlow_GuestArrival" name="Guest arrives" sourceRef="Guest_ArriveAtHatch" targetRef="Employee_GuestArrives" messageRef="Message_GuestArrival" />
+    <bpmn:messageFlow id="MessageFlow_MealHandover" name="Meal handover" sourceRef="Employee_HandOverMeal" targetRef="Guest_PickUpMeal" messageRef="Message_MealHandover" />
+  </bpmn:collaboration>
+<bpmndi:BPMNDiagram id="FlowDiagram_1"><bpmndi:BPMNPlane id="FlowPlane_1" bpmnElement="Restaurant_Collaboration"><bpmndi:BPMNShape id="FlowShape_1" bpmnElement="Participant_Guest" isHorizontal="true"><dc:Bounds x="40" y="50" width="3618" height="380" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_2" bpmnElement="Participant_Employee" isHorizontal="true"><dc:Bounds x="40" y="570" width="3618" height="468" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_3" bpmnElement="Participant_Chef" isHorizontal="true"><dc:Bounds x="40" y="1178" width="3618" height="309" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_4" bpmnElement="Guest_Start"><dc:Bounds x="120.0" y="215.0" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_5" bpmnElement="Guest_ChooseDish"><dc:Bounds x="290.0" y="193.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_6" bpmnElement="Guest_WaitTurn"><dc:Bounds x="600.0" y="193.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_7" bpmnElement="Guest_PlaceOrder"><dc:Bounds x="910.0" y="193.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_8" bpmnElement="Guest_Pay"><dc:Bounds x="1220.0" y="193.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_9" bpmnElement="Guest_ReceiveBuzzer"><dc:Bounds x="1530.0" y="193.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_10" bpmnElement="Guest_WaitForReadyOrCall"><dc:Bounds x="1840.0" y="208.0" width="54" height="54" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_11" bpmnElement="Guest_BuzzerRings"><dc:Bounds x="2024.0" y="157.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_12" bpmnElement="Guest_EmployeeCalls"><dc:Bounds x="2024.0" y="272.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_13" bpmnElement="Guest_MergeReadyOrCall"><dc:Bounds x="2194.0" y="208.0" width="54" height="54" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_14" bpmnElement="Guest_GoToHatch"><dc:Bounds x="2378.0" y="193.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_15" bpmnElement="Guest_ArriveAtHatch"><dc:Bounds x="2688.0" y="215.0" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_16" bpmnElement="Guest_PickUpMeal"><dc:Bounds x="2858.0" y="193.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_17" bpmnElement="Guest_EatMeal"><dc:Bounds x="3168.0" y="193.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_18" bpmnElement="Guest_End"><dc:Bounds x="3478.0" y="215.0" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_19" bpmnElement="Employee_Start"><dc:Bounds x="120.0" y="779.0" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_20" bpmnElement="Employee_EnterOrderInPOS"><dc:Bounds x="290.0" y="757.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_21" bpmnElement="Employee_CollectPayment"><dc:Bounds x="600.0" y="757.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_22" bpmnElement="Employee_SetUpBuzzer"><dc:Bounds x="910.0" y="757.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_23" bpmnElement="Employee_HandOverBuzzer"><dc:Bounds x="1220.0" y="757.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_24" bpmnElement="Employee_InformChef"><dc:Bounds x="1530.0" y="757.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_25" bpmnElement="Employee_MealReady"><dc:Bounds x="1840.0" y="779.0" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_26" bpmnElement="Employee_SetOffBuzzer"><dc:Bounds x="2010.0" y="757.0" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_27" bpmnElement="Employee_WaitForGuestOrTimer"><dc:Bounds x="2320.0" y="772.0" width="54" height="54" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_28" bpmnElement="Employee_GuestArrives"><dc:Bounds x="2504.0" y="721.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_29" bpmnElement="Employee_FiveMinutesElapsed"><dc:Bounds x="2504.0" y="836.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_30" bpmnElement="Employee_HandOverMeal"><dc:Bounds x="2674.0" y="677.5" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_31" bpmnElement="Employee_CallGuest"><dc:Bounds x="2674.0" y="836.5" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_32" bpmnElement="Employee_End"><dc:Bounds x="2984.0" y="779.0" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_33" bpmnElement="Chef_Start"><dc:Bounds x="120.0" y="1307.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_34" bpmnElement="Chef_PrepareMeal"><dc:Bounds x="290.0" y="1285.5" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_35" bpmnElement="Chef_PlaceMealInHatch"><dc:Bounds x="600.0" y="1285.5" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_36" bpmnElement="Chef_InformEmployee"><dc:Bounds x="910.0" y="1285.5" width="180" height="84" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="FlowShape_37" bpmnElement="Chef_End"><dc:Bounds x="1220.0" y="1307.5" width="40" height="40" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="FlowEdge_1" bpmnElement="Guest_Flow_1"><di:waypoint x="160.0" y="235.0" /><di:waypoint x="290.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_2" bpmnElement="Guest_Flow_2"><di:waypoint x="470.0" y="235.0" /><di:waypoint x="600.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_3" bpmnElement="Guest_Flow_3"><di:waypoint x="780.0" y="235.0" /><di:waypoint x="910.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_4" bpmnElement="Guest_Flow_4"><di:waypoint x="1090.0" y="235.0" /><di:waypoint x="1220.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_5" bpmnElement="Guest_Flow_5"><di:waypoint x="1400.0" y="235.0" /><di:waypoint x="1530.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_6" bpmnElement="Guest_Flow_6"><di:waypoint x="1710.0" y="235.0" /><di:waypoint x="1840.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_7" bpmnElement="Guest_Flow_7"><di:waypoint x="1894.0" y="235.0" /><di:waypoint x="1918.0" y="235.0" /><di:waypoint x="1918.0" y="177.5" /><di:waypoint x="2024.0" y="177.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_8" bpmnElement="Guest_Flow_8"><di:waypoint x="1894.0" y="235.0" /><di:waypoint x="1956.0" y="235.0" /><di:waypoint x="1956.0" y="292.5" /><di:waypoint x="2024.0" y="292.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_9" bpmnElement="Guest_Flow_9"><di:waypoint x="2064.0" y="177.5" /><di:waypoint x="2170.0" y="177.5" /><di:waypoint x="2170.0" y="235.0" /><di:waypoint x="2194.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_10" bpmnElement="Guest_Flow_10"><di:waypoint x="2064.0" y="292.5" /><di:waypoint x="2133.0" y="292.5" /><di:waypoint x="2133.0" y="235.0" /><di:waypoint x="2194.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_11" bpmnElement="Guest_Flow_11"><di:waypoint x="2248.0" y="235.0" /><di:waypoint x="2378.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_12" bpmnElement="Guest_Flow_12"><di:waypoint x="2558.0" y="235.0" /><di:waypoint x="2688.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_13" bpmnElement="Guest_Flow_13"><di:waypoint x="2728.0" y="235.0" /><di:waypoint x="2858.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_14" bpmnElement="Guest_Flow_14"><di:waypoint x="3038.0" y="235.0" /><di:waypoint x="3168.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_15" bpmnElement="Guest_Flow_15"><di:waypoint x="3348.0" y="235.0" /><di:waypoint x="3478.0" y="235.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_16" bpmnElement="Employee_Flow_1"><di:waypoint x="160.0" y="799.0" /><di:waypoint x="290.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_17" bpmnElement="Employee_Flow_2"><di:waypoint x="470.0" y="799.0" /><di:waypoint x="600.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_18" bpmnElement="Employee_Flow_3"><di:waypoint x="780.0" y="799.0" /><di:waypoint x="910.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_19" bpmnElement="Employee_Flow_4"><di:waypoint x="1090.0" y="799.0" /><di:waypoint x="1220.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_20" bpmnElement="Employee_Flow_5"><di:waypoint x="1400.0" y="799.0" /><di:waypoint x="1530.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_21" bpmnElement="Employee_Flow_6"><di:waypoint x="1710.0" y="799.0" /><di:waypoint x="1840.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_22" bpmnElement="Employee_Flow_7"><di:waypoint x="1880.0" y="799.0" /><di:waypoint x="2010.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_23" bpmnElement="Employee_Flow_8"><di:waypoint x="2190.0" y="799.0" /><di:waypoint x="2320.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_24" bpmnElement="Employee_Flow_9"><di:waypoint x="2374.0" y="799.0" /><di:waypoint x="2398.0" y="799.0" /><di:waypoint x="2398.0" y="741.5" /><di:waypoint x="2504.0" y="741.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_25" bpmnElement="Employee_Flow_10"><di:waypoint x="2374.0" y="799.0" /><di:waypoint x="2436.0" y="799.0" /><di:waypoint x="2436.0" y="856.5" /><di:waypoint x="2504.0" y="856.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_26" bpmnElement="Employee_Flow_11"><di:waypoint x="2544.0" y="741.5" /><di:waypoint x="2568.0" y="741.5" /><di:waypoint x="2568.0" y="719.5" /><di:waypoint x="2674.0" y="719.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_27" bpmnElement="Employee_Flow_12"><di:waypoint x="2544.0" y="856.5" /><di:waypoint x="2650.0" y="856.5" /><di:waypoint x="2650.0" y="878.5" /><di:waypoint x="2674.0" y="878.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_28" bpmnElement="Employee_Flow_13"><di:waypoint x="2854.0" y="878.5" /><di:waypoint x="2878.0" y="878.5" /><di:waypoint x="2878.0" y="789.0" /><di:waypoint x="2612.0" y="789.0" /><di:waypoint x="2612.0" y="686.5" /><di:waypoint x="2347.0" y="686.5" /><di:waypoint x="2347.0" y="772.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_29" bpmnElement="Employee_Flow_14"><di:waypoint x="2854.0" y="719.5" /><di:waypoint x="2878.0" y="719.5" /><di:waypoint x="2878.0" y="799.0" /><di:waypoint x="2984.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_30" bpmnElement="Chef_Flow_1"><di:waypoint x="160.0" y="1327.5" /><di:waypoint x="290.0" y="1327.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_31" bpmnElement="Chef_Flow_2"><di:waypoint x="470.0" y="1327.5" /><di:waypoint x="600.0" y="1327.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_32" bpmnElement="Chef_Flow_3"><di:waypoint x="780.0" y="1327.5" /><di:waypoint x="910.0" y="1327.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_33" bpmnElement="Chef_Flow_4"><di:waypoint x="1090.0" y="1327.5" /><di:waypoint x="1220.0" y="1327.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_34" bpmnElement="MessageFlow_Order"><di:waypoint x="1000.0" y="277.0" /><di:waypoint x="1000.0" y="744.0" /><di:waypoint x="96.0" y="744.0" /><di:waypoint x="96.0" y="799.0" /><di:waypoint x="120.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_35" bpmnElement="MessageFlow_Payment"><di:waypoint x="1310.0" y="277.0" /><di:waypoint x="1310.0" y="301.0" /><di:waypoint x="690.0" y="301.0" /><di:waypoint x="690.0" y="757.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_36" bpmnElement="MessageFlow_BuzzerHandover"><di:waypoint x="1310.0" y="757.0" /><di:waypoint x="1310.0" y="301.0" /><di:waypoint x="1620.0" y="301.0" /><di:waypoint x="1620.0" y="277.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_37" bpmnElement="MessageFlow_ChefOrder"><di:waypoint x="1620.0" y="841.0" /><di:waypoint x="1620.0" y="1272.5" /><di:waypoint x="96.0" y="1272.5" /><di:waypoint x="96.0" y="1327.5" /><di:waypoint x="120.0" y="1327.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_38" bpmnElement="MessageFlow_MealReady"><di:waypoint x="1000.0" y="1285.5" /><di:waypoint x="1000.0" y="1261.5" /><di:waypoint x="1779.0" y="1261.5" /><di:waypoint x="1779.0" y="801.5" /><di:waypoint x="1816.0" y="801.5" /><di:waypoint x="1816.0" y="799.0" /><di:waypoint x="1840.0" y="799.0" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_39" bpmnElement="MessageFlow_BuzzerRings"><di:waypoint x="2100.0" y="757.0" /><di:waypoint x="2100.0" y="733.0" /><di:waypoint x="1955.0" y="733.0" /><di:waypoint x="1955.0" y="180.0" /><di:waypoint x="2000.0" y="180.0" /><di:waypoint x="2000.0" y="177.5" /><di:waypoint x="2024.0" y="177.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_40" bpmnElement="MessageFlow_GuestCall"><di:waypoint x="2764.0" y="836.5" /><di:waypoint x="2764.0" y="812.5" /><di:waypoint x="2620.0" y="812.5" /><di:waypoint x="2620.0" y="400.5" /><di:waypoint x="1956.0" y="400.5" /><di:waypoint x="1956.0" y="297.0" /><di:waypoint x="2000.0" y="297.0" /><di:waypoint x="2000.0" y="292.5" /><di:waypoint x="2024.0" y="292.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_41" bpmnElement="MessageFlow_GuestArrival"><di:waypoint x="2728.0" y="235.0" /><di:waypoint x="2752.0" y="235.0" /><di:waypoint x="2752.0" y="237.5" /><di:waypoint x="2796.0" y="237.5" /><di:waypoint x="2796.0" y="642.5" /><di:waypoint x="2480.0" y="642.5" /><di:waypoint x="2480.0" y="741.5" /><di:waypoint x="2504.0" y="741.5" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="FlowEdge_42" bpmnElement="MessageFlow_MealHandover"><di:waypoint x="2764.0" y="677.5" /><di:waypoint x="2764.0" y="653.5" /><di:waypoint x="2948.0" y="653.5" /><di:waypoint x="2948.0" y="277.0" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>
