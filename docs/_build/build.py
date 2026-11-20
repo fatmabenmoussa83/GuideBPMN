@@ -16,6 +16,8 @@ PAGES = [
      "GuideBPMN generates BPMN from text and learns reusable modeling guidelines from the OMG documentation and from its own verified mistakes."),
     ("run.html", "run", "Run GuideBPMN",
      "Test one description from zero, download everything the tool did, or launch the study on the 55-description dataset and watch the orchestrator, the agents, the metrics and the diagrams in real time."),
+    ("compare.html", "compare", "Compare the runs",
+     "Every model the study kept for one description, side by side: First, Revised (draft 0, each iteration, Learned) and Reuse, with their measures and their diagrams next to the reference."),
     ("guidelines.html", "guidelines", "Guidelines",
      "The documentation guidelines (OMG BPMN 2.0.2) and the guidelines GuideBPMN has learned from verified mistakes."),
     ("guideline_learning.html", "learning", "Guideline learning (agents)",

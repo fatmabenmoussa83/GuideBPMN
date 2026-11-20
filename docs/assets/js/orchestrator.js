@@ -627,6 +627,12 @@
   }
 
   /* --------------------------------------------------------- past runs - */
+  /* run.html#run=<run>&id=<description> opens that run and that description (links of the Compare page). */
+  var deepLink = (function () {
+    var h = location.hash || "", m = h.match(/run=([^&]+)/), i = h.match(/[#&]id=(\d+)/);
+    return m ? { run: decodeURIComponent(m[1]), id: i ? i[1] : null } : null;
+  })();
+  var pendingId = null;
   function loadRuns() {
     api("/api/orchestrator/runs").then(function (data) {
       var keep = $("orchestratorRuns").value;
@@ -661,6 +667,11 @@
       $("orchestratorRuns").value = keep;
       runChoiceChanged();
       fillCvGenerators(runs);
+      if (deepLink) {
+        var want = deepLink; deepLink = null;
+        $("orchestratorRuns").value = want.run;
+        if ($("orchestratorRuns").value) { pendingId = want.id; $("orchestratorOpenRun").click(); }
+      }
     }).catch(function () { /* API not started yet */ });
   }
 
@@ -727,7 +738,10 @@
       renderValidator(s.validator_performance);
       renderReport(s.report, s.report_after_rule_feedback);
       renderSummary(s.metrics_summary);
-      if ((s.ids || []).length) openExample(s.ids[0]);
+      var want = pendingId; pendingId = null;
+      var ids = s.ids || [];
+      if (ids.length) openExample(want && ids.indexOf(want) >= 0 ? want : ids[0]);
+      if (want) window.setTimeout(function () { $("orchestratorDetail").scrollIntoView({ behavior: "smooth" }); }, 400);
     }).catch(function (e) { $("orchestratorConn").innerHTML = '<span class="text-danger">' + esc(e.message) + "</span>"; });
   });
 

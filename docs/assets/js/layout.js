@@ -11,6 +11,7 @@
   var NAV = [
     { group: null, items: [{ id: "home", href: "index.html", icon: "fa-home", label: "Overview" },
                            { id: "run", href: "run.html", icon: "fa-play-circle", label: "Run GuideBPMN" },
+                           { id: "compare", href: "compare.html", icon: "fa-columns", label: "Compare the runs" },
                            { id: "guidelines", href: "guidelines.html", icon: "fa-clipboard-list", label: "Guidelines" }] },
     { group: "Methodology", items: [
       { id: "orchestrator", href: "orchestrator.html", icon: "fa-project-diagram", label: "Orchestrator & budgets" },
