@@ -1,6 +1,6 @@
 # GuideBPMN demonstration video (ICPC 2027 tool track)
 
-[guidebpmn-demo.mp4](guidebpmn-demo.mp4): 4 min 38 s, 1280×720, English voice-over and captions.
+[guidebpmn-demo.mp4](guidebpmn-demo.mp4): 4 min 45 s, 1280×720, English voice-over and captions.
 
 ![Draft 1 of description 24 next to its reference, in the video](demo-poster.jpg)
 

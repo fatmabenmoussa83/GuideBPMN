@@ -4,6 +4,11 @@
 
 Website: https://fatmabenmoussa83.github.io/GuideBPMN/ · Archived version: https://doi.org/10.5281/zenodo.24362597
 
+<p align="center">
+  <a href="docs/demo/guidebpmn-demo.mp4"><img src="docs/demo/demo-poster.jpg" alt="GuideBPMN demonstration video (4 min 45 s): draft 1 of description 24 next to its reference model" width="760"></a><br>
+  <sub><a href="docs/demo/guidebpmn-demo.mp4">▶ Demonstration video (4:45, voice-over and captions)</a> · <a href="docs/demo/README.md">what it shows and how to open the same views</a> · <a href="https://fatmabenmoussa83.github.io/GuideBPMN/compare.html#luna/24">try the Compare page</a></sub>
+</p>
+
 GuideBPMN generates BPMN 2.0 models from textual process descriptions with LLMs and
 learns modeling guidelines from the mistakes it verifies. An orchestrator agent
 (LLM + LangGraph) calls the components as tools:
@@ -35,7 +40,7 @@ Documentation guidelines: 82 rules paraphrased from the OMG BPMN 2.0.2 specifica
 - **Scenarios** (`demo_scenarios/`): five process descriptions (two with pools, lanes and message flows) followed through First, the three
   Revised iterations and Reuse, with the diagram of every generated model, its errors and scores, and the
   guidelines learned.
-- **Video** (`docs/demo/guidebpmn-demo.mp4`, 4 min 38 s, voice-over and captions): one description followed from the first draft to the
+- **Video** (`docs/demo/guidebpmn-demo.mp4`, 4 min 45 s, voice-over and captions): one description followed from the first draft to the
   learned guideline and the revised model, the reuse of confirmed guidelines on a description never seen, and where the results of the paper are.
   Recorded on the public website with the saved runs; `docs/demo/README.md` says what each part shows and how to open the same views yourself.
 
