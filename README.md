@@ -198,5 +198,14 @@ number of errors over First without that reference.
   
 ## License
 
-No license file is currently included. Add one before redistributing the
-project outside the terms agreed by its contributors.
+This replication package is released under the **Creative Commons Attribution 4.0 International** license.
+
+```The Creative Commons Attribution license allows re-distribution and re-use of a licensed work on the condition that the creator is appropriately credited```
+
+## Contact
+
+For questions or issues, please open an issue on this repository or contact the authors directly.
+
+- Fatma Benmoussa (fatma.benmoussa.1@ens.etsmtl.ca)
+- Narjes Bessghaier (cc-narjes.bessghaier@etsmtl.ca)
+- Imen Benzarti (imen.benzarti@etsmtl.ca)
