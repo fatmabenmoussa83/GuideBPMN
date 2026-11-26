@@ -192,9 +192,9 @@ number of errors over First without that reference.
 
 ## Contributors
 
-- Fatma Benmoussa ([@Fatma Benmoussa](https://github.com/Fatma Benmoussa))
+- Fatma Benmoussa ([@fatmabenmoussa83](https://github.com/fatmabenmoussa83))
 - Narjes Bessghaier ([@Narjes-b](https://github.com/Narjes-b))
-- Imen Benzarti ([@Narjes-b](https://github.com/Narjes-b))
+- Imen Benzarti ([@imenbenzarti](https://github.com/imenbenzarti))
   
 ## License
 
