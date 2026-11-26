@@ -188,3 +188,15 @@ number of errors over First without that reference.
 | SciPy | Hungarian matching, Wilcoxon tests |
 | FastAPI | Local API behind the website |
 | HTML/JavaScript, bpmn-js | Website; drawing of the generated and reference models |
+
+
+## Contributors
+
+- Fatma Benmoussa ([@Fatma Benmoussa](https://github.com/Fatma Benmoussa))
+- Narjes Bessghaier ([@Narjes-b](https://github.com/Narjes-b))
+- Imen Benzarti ([@Narjes-b](https://github.com/Narjes-b))
+  
+## License
+
+No license file is currently included. Add one before redistributing the
+project outside the terms agreed by its contributors.
