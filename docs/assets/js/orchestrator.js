@@ -86,9 +86,9 @@
 
   /* ------------------------------------------------------- vocabulary -- */
   var METRICS = [
-    ["activity_semantic_similarity", "Activities"], ["semantic_similarity", "All labels"], ["workflow_order_similarity", "Flow order"],
-    ["connection_f1", "Connections F1"], ["collaboration_similarity", "Participants"],
-    ["alignment_coverage", "Coverage"]];
+    ["activity_semantic_similarity", "Activities"], ["connection_f1", "Connections F1"], ["alignment_coverage", "Coverage"],
+    ["workflow_order_similarity", "Workflow order"], ["collaboration_similarity", "Swimlanes & messages"],
+    ["semantic_similarity", "All labels"]];
   var KIND = { draft: "first draft", rule_feedback: "next iteration (guidelines sent back)" };
   var OTHER_KIND = "draft from the validator report";
   var OUTCOME = { promoted: "promoted", merged_with_learned: "merged", existing_documentation_rule: "rule not applied",
@@ -98,7 +98,7 @@
                   generalized: "generalized" };
 
   /* ---------------------------------------------------- run summaries -- */
-  var LEVEL_NAME = { L1: "L1 · Syntax & schema", L2: "L2 · Gateways", L3: "L3 · Sequence flows", L4: "L4 · Collaboration (pools, lanes, message flows)" };
+  var LEVEL_NAME = { L1: "L1 · Syntax & schema", L2: "L2 · Gateways", L3: "L3 · Control flow", L4: "L4 · Swimlanes & messages (pools, lanes, message flows)" };
 
   /* validator performance of a run: per level, examples and elements, first draft and kept draft */
   function renderValidator(perf) {
@@ -438,8 +438,8 @@
       }
       else if (d.action === "evaluate") {
         var m = it.metrics || {};
-        what = "activities F1 " + fmt(m.activity_label_f1) + " · connections F1 " + fmt(m.connection_f1) + " · flow order " + fmt(m.workflow_order_similarity) +
-          " · element coverage " + fmt(m.alignment_coverage) + " · participants " + (m.collaboration_similarity == null ? "n/a" : fmt(m.collaboration_similarity));
+        what = "activities F1 " + fmt(m.activity_label_f1) + " · connections F1 " + fmt(m.connection_f1) + " · workflow order " + fmt(m.workflow_order_similarity) +
+          " · coverage " + fmt(m.alignment_coverage) + " · swimlanes & messages " + (m.collaboration_similarity == null ? "n/a" : fmt(m.collaboration_similarity));
       }
       else if (d.action === "detect_failures") {
         var det, err;
@@ -492,7 +492,7 @@
       return '<th class="text-right">draft ' + it.round + (it.kind === "rule_feedback" ? " (next it.)" : it.kind !== "draft" ? " (validator report)" : "") + "</th>";
     }).join("") + "</tr>";
     var rows = METRICS.map(function (pair) {
-      return "<tr><td>" + esc(pair[0]) + "</td>" + doc.iterations.map(function (it) {
+      return "<tr><td>" + esc(pair[1]) + "</td>" + doc.iterations.map(function (it) {
         return '<td class="text-right">' + fmt((it.metrics || {})[pair[0]]) + "</td>";
       }).join("") + "</tr>";
     }).join("");
@@ -903,12 +903,12 @@
     activity_label_precision: "Activities precision", activity_label_recall: "Activities recall",
     activity_label_f1: "Activities F1", connection_precision: "Connections precision",
     connection_recall: "Connections recall", connection_f1: "Connections F1",
-    workflow_order_similarity: "Flow order", alignment_coverage: "Element coverage",
-    semantic_similarity: "Label meaning (all labels)", activity_semantic_similarity: "Label meaning (activities)",
-    collaboration_similarity: "Participants", errors_total: "Errors, total",
+    workflow_order_similarity: "Workflow order", alignment_coverage: "Coverage",
+    semantic_similarity: "All labels (label similarity)", activity_semantic_similarity: "Activities (label similarity)",
+    collaboration_similarity: "Swimlanes & messages", errors_total: "Errors, total",
     errors_T1: "Errors T1 (L1)", errors_T2: "Errors T2 (L2)", errors_T3: "Errors T3 (L3)",
     errors_T4: "Errors T4 (L4)", errors_T5: "Errors T5 (connections)", errors_T6: "Errors T6 (activities)",
-    errors_T7: "Errors T7 (participants)" };
+    errors_T7: "Errors T7 (swimlanes & messages)" };
   function stat(s, key) {
     if (!s || s.mean === null || s.mean === undefined) return "&mdash;";
     var d = key && key.indexOf("errors") === 0 ? 1 : 3;     // errors are counts
@@ -991,11 +991,13 @@
     if (keep && order.indexOf(keep) >= 0) $("cvGenerator").value = keep;
   }
 
-  var STUDY_LABELS = { precision_L1: "Structural validator precision L1", precision_L2: "Structural validator precision L2", precision_L3: "Structural validator precision L3",
-    precision_L4: "Structural validator precision L4", precision_levels_average: "Structural validator precision, average of the levels",
+  var STUDY_LABELS = {
     activity_label_precision: "Activities P", activity_label_recall: "Activities R", activity_label_f1: "Activities F1",
     connection_precision: "Connections P", connection_recall: "Connections R", connection_f1: "Connections F1",
-    workflow_order_similarity: "Flow order", alignment_coverage: "Element coverage", errors_total: "Errors (T1–T7)", valid: "Valid models (share)" };
+    alignment_coverage: "Coverage", workflow_order_similarity: "Workflow order", collaboration_similarity: "Swimlanes & messages (6 descriptions)",
+    valid: "Valid models (share)", errors_total: "Errors (T1–T7)",
+    precision_L1: "Structural validator precision L1", precision_L2: "Structural validator precision L2", precision_L3: "Structural validator precision L3",
+    precision_L4: "Structural validator precision L4", precision_levels_average: "Structural validator precision, average of the levels" };
   var STUDY_CONFIGS = ["First", "Revised i1", "Revised i2", "Learned", "Reuse"];
   function renderStudy(r) {
     var cols = STUDY_CONFIGS.filter(function (c) { return r.table[c]; });

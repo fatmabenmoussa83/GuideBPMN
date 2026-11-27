@@ -23,8 +23,8 @@ of the study and the scripts that produce its tables.
 |---|---|---|---|
 | 1 | Inputs: task prompt, process description, documentation guidelines | `bpmn_generator_catalogue/prompts/`, `bpmn_generator_catalogue/dataset.json`, `guidelines/bpmn_documentation_guidelines.json` | – |
 | 2 | Generator | `bpmn_generator_catalogue/generator.py`, `bpmn_pipeline/generation.py` | yes |
-| 3 | Structural validator (L1 syntax & schema, L2 gateways, L3 sequence flows, L4 collaboration) | `validator.py`, `soundness.py`, `xsd/`, `bpmn_pipeline/validation.py` | no |
-| 4 | Similarity evaluator (flow order, participants, connections, label meaning, element coverage) | `similarity_evaluator/`, `bpmn_pipeline/evaluation.py` | no (sentence embeddings, BAAI/bge-base-en-v1.5) |
+| 3 | Structural validator (L1 syntax & schema, L2 gateways, L3 control flow, L4 swimlanes and messages) | `validator.py`, `soundness.py`, `xsd/`, `bpmn_pipeline/validation.py` | no |
+| 4 | Similarity evaluator (activities, connections, coverage, workflow order, swimlanes and messages) | `similarity_evaluator/`, `bpmn_pipeline/evaluation.py` | no (sentence embeddings, BAAI/bge-base-en-v1.5) |
 | 5 | Failure detector (T1–T7) | `bpmn_pipeline/diagnosis.py` | no |
 | 6 | Guideline agents: Retriever and Expert (ReAct loops with tools) | `bpmn_pipeline/guideline_agents_tools.py` (the agents), `bpmn_pipeline/guideline_agents.py` (evidence records, code guards, catalogue update) | yes |
 | 7 | Guideline catalogue (documentation, generic and example-specific error-driven guidelines) | `bpmn_pipeline/guideline_store.py`, `guidelines/learned/<model>/agents/` | – |
@@ -141,38 +141,38 @@ your local network: accept.
 The tables of the paper are in `bpmn_pipeline/runs/_study_reports/<model>_agents_<date>/study.md`
 (`study.json` holds the per-run values and the Wilcoxon tests). Distribution of the similarity
 scores over the 55 descriptions (each description: its mean over the 3 runs of First and Learned;
-its single Reuse test), mean / SD / min / max:
+its single Reuse test), mean / SD / min / max. Swimlanes and messages are measured on the 6 descriptions whose reference has pools or lanes:
 
-| Model | Setting | Stat | Act. P | Act. R | Act. F1 | Conn. P | Conn. R | Conn. F1 | Flow order | Coverage |
-|---|---|---|---|---|---|---|---|---|---|---|
-| GPT-6 Luna | First | Mean | 0.76 | 0.70 | 0.71 | 0.31 | 0.26 | 0.28 | 0.43 | 0.55 |
-| | | SD | 0.21 | 0.21 | 0.19 | 0.20 | 0.19 | 0.19 | 0.21 | 0.19 |
-| | | Min | 0.23 | 0.13 | 0.16 | 0.01 | 0.01 | 0.01 | 0.03 | 0.14 |
-| | | Max | 1.00 | 1.00 | 0.99 | 0.94 | 0.92 | 0.93 | 0.97 | 0.97 |
-| | Learned | Mean | 0.80 | 0.74 | 0.76 | 0.39 | 0.34 | 0.36 | 0.50 | 0.59 |
-| | | SD | 0.19 | 0.23 | 0.20 | 0.23 | 0.24 | 0.23 | 0.23 | 0.20 |
-| | | Min | 0.23 | 0.18 | 0.20 | 0.00 | 0.00 | 0.00 | 0.11 | 0.18 |
-| | | Max | 1.00 | 1.00 | 1.00 | 0.96 | 0.95 | 0.96 | 0.98 | 0.98 |
-| | Reuse | Mean | 0.79 | 0.70 | 0.73 | 0.33 | 0.28 | 0.29 | 0.46 | 0.56 |
-| | | SD | 0.21 | 0.22 | 0.20 | 0.22 | 0.21 | 0.21 | 0.21 | 0.20 |
-| | | Min | 0.14 | 0.05 | 0.07 | 0.00 | 0.00 | 0.00 | 0.06 | 0.09 |
-| | | Max | 1.00 | 1.00 | 1.00 | 0.89 | 0.86 | 0.87 | 0.95 | 0.95 |
-| Claude Haiku 5.5 | First | Mean | 0.77 | 0.63 | 0.68 | 0.32 | 0.25 | 0.27 | 0.43 | 0.53 |
-| | | SD | 0.20 | 0.21 | 0.20 | 0.19 | 0.19 | 0.19 | 0.20 | 0.18 |
-| | | Min | 0.26 | 0.19 | 0.22 | 0.05 | 0.03 | 0.04 | 0.08 | 0.26 |
-| | | Max | 1.00 | 1.00 | 0.98 | 0.91 | 0.87 | 0.89 | 0.95 | 0.95 |
-| | Learned | Mean | 0.80 | 0.75 | 0.76 | 0.46 | 0.41 | 0.43 | 0.54 | 0.64 |
-| | | SD | 0.18 | 0.23 | 0.20 | 0.23 | 0.25 | 0.24 | 0.23 | 0.20 |
-| | | Min | 0.27 | 0.19 | 0.22 | 0.06 | 0.05 | 0.06 | 0.10 | 0.24 |
-| | | Max | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
-| | Reuse | Mean | 0.75 | 0.64 | 0.68 | 0.33 | 0.26 | 0.28 | 0.44 | 0.54 |
-| | | SD | 0.23 | 0.24 | 0.23 | 0.23 | 0.22 | 0.22 | 0.23 | 0.21 |
-| | | Min | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.01 | 0.10 |
-| | | Max | 1.00 | 1.00 | 1.00 | 0.93 | 0.93 | 0.93 | 0.98 | 1.00 |
+| Model | Setting | Stat | Act. P | Act. R | Act. F1 | Conn. P | Conn. R | Conn. F1 | Coverage | Workflow order | Swimlanes & msg. (6 desc.) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| GPT-6 Luna | First | Mean | 0.76 | 0.70 | 0.71 | 0.31 | 0.26 | 0.28 | 0.55 | 0.43 | 0.11 |
+| | | SD | 0.21 | 0.21 | 0.19 | 0.20 | 0.19 | 0.19 | 0.19 | 0.21 | 0.04 |
+| | | Min | 0.23 | 0.13 | 0.16 | 0.01 | 0.01 | 0.01 | 0.14 | 0.03 | 0.03 |
+| | | Max | 1.00 | 1.00 | 0.99 | 0.94 | 0.92 | 0.93 | 0.97 | 0.97 | 0.15 |
+| | Learned | Mean | 0.80 | 0.74 | 0.76 | 0.39 | 0.34 | 0.36 | 0.59 | 0.50 | 0.37 |
+| | | SD | 0.19 | 0.23 | 0.20 | 0.23 | 0.24 | 0.23 | 0.20 | 0.23 | 0.16 |
+| | | Min | 0.23 | 0.18 | 0.20 | 0.00 | 0.00 | 0.00 | 0.18 | 0.11 | 0.16 |
+| | | Max | 1.00 | 1.00 | 1.00 | 0.96 | 0.95 | 0.96 | 0.98 | 0.98 | 0.57 |
+| | Reuse | Mean | 0.79 | 0.70 | 0.73 | 0.33 | 0.28 | 0.29 | 0.56 | 0.46 | 0.18 |
+| | | SD | 0.21 | 0.22 | 0.20 | 0.22 | 0.21 | 0.21 | 0.20 | 0.21 | 0.13 |
+| | | Min | 0.14 | 0.05 | 0.07 | 0.00 | 0.00 | 0.00 | 0.09 | 0.06 | 0.04 |
+| | | Max | 1.00 | 1.00 | 1.00 | 0.89 | 0.86 | 0.87 | 0.95 | 0.95 | 0.36 |
+| Claude Haiku 5.5 | First | Mean | 0.77 | 0.63 | 0.68 | 0.32 | 0.25 | 0.27 | 0.53 | 0.43 | 0.16 |
+| | | SD | 0.20 | 0.21 | 0.20 | 0.19 | 0.19 | 0.19 | 0.18 | 0.20 | 0.20 |
+| | | Min | 0.26 | 0.19 | 0.22 | 0.05 | 0.03 | 0.04 | 0.26 | 0.08 | 0.05 |
+| | | Max | 1.00 | 1.00 | 0.98 | 0.91 | 0.87 | 0.89 | 0.95 | 0.95 | 0.56 |
+| | Learned | Mean | 0.80 | 0.75 | 0.76 | 0.46 | 0.41 | 0.43 | 0.64 | 0.54 | 0.28 |
+| | | SD | 0.18 | 0.23 | 0.20 | 0.23 | 0.25 | 0.24 | 0.20 | 0.23 | 0.21 |
+| | | Min | 0.27 | 0.19 | 0.22 | 0.06 | 0.05 | 0.06 | 0.24 | 0.10 | 0.06 |
+| | | Max | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.67 |
+| | Reuse | Mean | 0.75 | 0.64 | 0.68 | 0.33 | 0.26 | 0.28 | 0.54 | 0.44 | 0.16 |
+| | | SD | 0.23 | 0.24 | 0.23 | 0.23 | 0.22 | 0.22 | 0.21 | 0.23 | 0.20 |
+| | | Min | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.10 | 0.01 | 0.00 |
+| | | Max | 1.00 | 1.00 | 1.00 | 0.93 | 0.93 | 0.93 | 1.00 | 0.98 | 0.54 |
 
 The scores vary widely between descriptions (minima near 0, maxima at 1): the difficulty of the
 descriptions is far from uniform. Learned has the strongest results, as expected when the
-feedback of the description's own reference is available; Reuse improves the flow order and the
+feedback of the description's own reference is available; Reuse improves the workflow order and the
 number of errors over First without that reference.
 
 ## Main technologies
@@ -183,7 +183,7 @@ number of errors over First without that reference.
 | OpenAI, Anthropic SDKs | Access to the configured LLMs |
 | Pydantic | Validation of the agents' structured outputs |
 | lxml and the BPMN 2.0 XSD | XML parsing and schema validation (L1) |
-| NetworkX | Process graphs, reachability, flow order |
+| NetworkX | Process graphs, reachability, workflow order |
 | Sentence Transformers (BAAI/bge-base-en-v1.5) | Label and guideline embeddings |
 | SciPy | Hungarian matching, Wilcoxon tests |
 | FastAPI | Local API behind the website |

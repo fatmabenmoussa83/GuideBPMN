@@ -13,8 +13,8 @@
   var SHORT = { "openai:gpt-6-luna": "Luna", "anthropic:claude-haiku-5-5": "Haiku" };
   var GH = "https://github.com/fatmabenmoussa83/GuideBPMN/tree/main/bpmn_pipeline/runs/";
   var MEASURES = [["activity_label_f1", "Activities F1"], ["connection_f1", "Connections F1"],
-                  ["workflow_order_similarity", "Flow order"], ["alignment_coverage", "Coverage"],
-                  ["collaboration_similarity", "Participants"]];
+                  ["alignment_coverage", "Coverage"], ["workflow_order_similarity", "Workflow order"],
+                  ["collaboration_similarity", "Swimlanes & messages"]];
 
   function gz(url) {
     return fetch(url).then(function (r) {
@@ -245,7 +245,7 @@
       ". <strong>Reuse vs First</strong>: decrease for " + rb + ", increase for " + rw + ", unchanged for " + (rows.length - rb - rw) + ".";
     var cols = [["id", "Description"], ["first", "First"], ["i1", "Revised i1"], ["i2", "Revised i2"], ["learned", "Learned"], ["dLearned", "Learned − First"],
                 ["reuse", "Reuse"], ["dReuse", "Reuse − First"], ["validFirst", "Valid First / Learned / Reuse"], ["connFirst", "Connections F1 First / Learned / Reuse"],
-                ["orderFirst", "Flow order First / Learned / Reuse"]];
+                ["orderFirst", "Workflow order First / Learned / Reuse"]];
     $("cmpAll").querySelector("thead").innerHTML = "<tr>" + cols.map(function (c) {
       return '<th class="cmp-sort' + (c[0] === "id" ? "" : " text-right") + '" data-key="' + c[0] + '" style="cursor:pointer">' + c[1] + (sortKey === c[0] ? (sortDir > 0 ? " ▲" : " ▼") : "") + "</th>";
     }).join("") + "</tr>";

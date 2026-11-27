@@ -27,7 +27,7 @@ PAGES = [
     ("validator.html", "validator", "Structural validator L1-L4",
      "The four levels of the structural validator (L1-L4), how its results are measured and the deadlock check."),
     ("similarity.html", "similarity", "Similarity evaluator",
-     "Every score of the similarity evaluator with its equation: pairing, label meaning, connections, flow order, participants, element coverage."),
+     "Every score of the similarity evaluator with its equation: pairing, activities, connections, coverage, workflow order, swimlanes and messages."),
     ("documentation.html", "docs", "Documentation",
      "Installation, configuration, usage and outputs of GuideBPMN."),
     ("404.html", "none", "Page not found", "This page does not exist."),

@@ -22,6 +22,6 @@ Numbers in the video and where they come from:
 - LRN-049, LRN-026, LRN-001 — `guidelines/learned/openai-gpt-6-luna/agents/replicates/r1/learned_guidelines.md`.
 - Round 2, Luna: 37 confirmed generic guidelines — `guidelines/learned/openai-gpt-6-luna/agents/folds/fold_2/`.
 - Description 23, Luna: First 51 / 55 / 65 errors, Reuse 35 (valid) — `docs/data/saved/compare/openai-gpt-6-luna.json.gz`, or the Compare page.
-- 44.6 → 38.4 and 43.0 → 36.0 open errors (−13.8 % / −16.3 %), 45 / 48 descriptions improved, −5.6 % / −4.3 % in Reuse — `bpmn_pipeline/runs/_study_reports/`, the study table of the Run page, and the paper.
+- 44.6 → 38.4 and 43.0 → 36.0 open errors (−13.9 % / −16.3 %), 45 / 48 descriptions improved, −5.6 % / −4.4 % in Reuse — `bpmn_pipeline/runs/_study_reports/`, the study table of the Run page, and the paper.
 
 To rerun any description from zero, start the local API (`.\start_webapi.ps1`) and use the card *Test one description from zero* of the Run page.

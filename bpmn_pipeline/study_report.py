@@ -33,7 +33,7 @@ import fold_report as fr
 LEVELS = ("L1", "L2", "L3", "L4")
 SIM = ("activity_label_precision", "activity_label_recall", "activity_label_f1",
        "connection_precision", "connection_recall", "connection_f1",
-       "workflow_order_similarity", "alignment_coverage")
+       "workflow_order_similarity", "alignment_coverage", "collaboration_similarity")
 VAL = tuple(f"precision_{l}" for l in LEVELS) + ("precision_levels_average",)
 OTHER = ("errors_total", "valid")
 ALL = SIM + VAL + OTHER
